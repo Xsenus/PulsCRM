@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="DevExpress.Xpo" Version="24.2.6" />
+  </ItemGroup>
+</Project>

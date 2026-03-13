@@ -1,0 +1,81 @@
+# OS / Explorer
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDE
+.vs/
+.vscode/
+.idea/
+.cr/
+.history/
+*.suo
+*.user
+*.userosscache
+*.rsuser
+*.sln.docstates
+*.DotSettings.user
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# .NET / MSBuild
+**/bin/
+**/obj/
+**/out/
+**/publish/
+artifacts/
+TestResults/
+*.cache
+*.nupkg
+*.snupkg
+**/*.csproj.user
+
+# Node / frontend
+**/node_modules/
+**/dist/
+**/.vite/
+**/coverage/
+**/*.tsbuildinfo
+frontend/package-lock.json
+frontend/puls-next-web/vite.config.js
+frontend/puls-next-web/vite.config.d.ts
+frontend/puls-next-web/vite-*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.production.example
+**/appsettings.Development.json
+!**/appsettings.Development.example.json
+**/appsettings.Local.json
+**/appsettings.Production.json
+!**/appsettings.Production.example.json
+**/appsettings.*.local.json
+**/secrets.json
+**/Properties/launchSettings.json
+*.pfx
+
+# Runtime data
+storage/*
+!storage/.gitkeep
+backend/src/storage/
+keys/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.log
+
+# Archives
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
