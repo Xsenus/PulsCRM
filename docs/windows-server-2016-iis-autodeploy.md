@@ -54,7 +54,7 @@ Install-WindowsFeature `
 
 ### ASP.NET Core Hosting Bundle
 
-Установи `ASP.NET Core Hosting Bundle` для `.NET 8`. Без него IIS не сможет запускать `PulsNext.Api`.
+Установи `ASP.NET Core Hosting Bundle` для `.NET 9`. Без него IIS не сможет запускать `PulsNext.Api`.
 
 ### IIS URL Rewrite
 
@@ -71,7 +71,7 @@ Install-WindowsFeature `
 
 - Git for Windows
 - Node.js 20 LTS
-- .NET 8 SDK
+- .NET 9 SDK
 
 Проверка:
 
@@ -81,6 +81,20 @@ node --version
 npm --version
 dotnet --info
 ```
+
+### Лицензия DevExpress на сервере
+
+Если сервер только запускает уже опубликованные файлы, лицензия DevExpress на нем не нужна.
+
+Если этот же сервер сам делает `dotnet build` или `dotnet publish` через self-hosted runner, лицензия нужна именно для учетной записи, под которой работает runner service.
+
+Коротко:
+
+- не копируй `DevExpress_License.txt` в папки IIS-сайта и в артефакты публикации;
+- не коммить ключ в Git;
+- храни ключ в `%AppData%\DevExpress\DevExpress_License.txt` учетной записи сборки или настрой `DevExpress_License` / `DevExpress_LicensePath`.
+
+Подробная инструкция: `docs/devexpress-license.md`.
 
 ## 3. Создание каталогов
 
@@ -276,7 +290,7 @@ HEALTHCHECK_URL = https://api.example.com/health
 
 1. запускается по `push` в `main`
 2. забирает код на Windows runner
-3. ставит `.NET 8` и `Node.js 20`
+3. ставит `.NET 9` и `Node.js 20`
 4. делает `dotnet restore`
 5. собирает frontend через `npm ci` и `npm run build`
 6. публикует API в `artifacts\api`
@@ -320,9 +334,20 @@ git push origin main
 
 Проверь:
 
-- установлен ли `.NET 8 Hosting Bundle`
+- установлен ли `.NET 9 Hosting Bundle`
 - скопировался ли `appsettings.Production.json` из `C:\PulsCRMConfig\Api`
 - есть ли у app pool права на сайт и `C:\PulsCRMData`
+
+### Во время сборки или публикации на сервере вижу DX1001
+
+Проверь:
+
+- действительно ли сервер сам выполняет `dotnet build` или `dotnet publish`
+- есть ли ключ у учетной записи, под которой работает GitHub Actions runner
+- не положен ли ключ ошибочно в папку публикации вместо `%AppData%\DevExpress`
+- был ли перезапущен runner service после добавления ключа
+
+Подробная инструкция: `docs/devexpress-license.md`.
 
 ### После деплоя исчезают загруженные файлы или SQLite база
 

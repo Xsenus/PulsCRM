@@ -2,7 +2,7 @@
 
 Готовый стартовый проект для миграции legacy WinForms/DevExpress приложения на современный стек:
 
-- backend: ASP.NET Core Web API на .NET 8;
+- backend: ASP.NET Core Web API на .NET 9;
 - ORM: DevExpress XPO;
 - frontend: React + Vite + DevExtreme React;
 - фоновые процессы: отдельный Worker Service;
@@ -93,6 +93,8 @@ copy backend\src\PulsNext.Worker\appsettings.Development.example.json backend\sr
 cd backend
 dotnet build PulsNextMailing.sln
 ```
+
+Если во время сборки появляется `DX1001`, см. `docs/devexpress-license.md`.
 
 ### 3) Поднимите backend
 

@@ -84,9 +84,10 @@ public sealed class MailComposer(IFileStorageService fileStorageService) : IMail
 
         message.From.Add(new MailboxAddress(profile.SenderName ?? fromEmail, fromEmail));
 
-        if (EmailHelper.IsValid(profile.ReplyToEmail))
+        var replyToEmail = TextHelper.NullIfWhiteSpace(profile.ReplyToEmail);
+        if (replyToEmail is not null && EmailHelper.IsValid(replyToEmail))
         {
-            message.ReplyTo.Add(MailboxAddress.Parse(profile.ReplyToEmail));
+            message.ReplyTo.Add(MailboxAddress.Parse(replyToEmail));
         }
 
         message.To.Add(new MailboxAddress(item.RecipientDisplayName ?? item.RecipientEmail ?? item.LegacyOrgName ?? string.Empty, item.RecipientEmail ?? throw new InvalidOperationException("Recipient email is empty.")));
