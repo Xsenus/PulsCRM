@@ -19,6 +19,8 @@ public sealed class CurrentUserDto
     public string? UserGroup { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? AvatarBase64 { get; set; }
+    public string? AvatarContentType { get; set; }
 }
 
 public sealed class LoginUserOptionDto
@@ -36,7 +38,7 @@ public sealed class AuthResponse
     public CurrentUserDto User { get; set; } = new();
 }
 
-public sealed class EmployeeListItemDto
+public class EmployeeListItemDto
 {
     public int Id { get; set; }
     public string Login { get; set; } = string.Empty;
@@ -45,6 +47,73 @@ public sealed class EmployeeListItemDto
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public bool IsDismissed { get; set; }
+}
+
+public sealed class EmployeeLookupItemDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class EmployeeEditorLookupsDto
+{
+    public IReadOnlyCollection<EmployeeLookupItemDto> Groups { get; set; } = Array.Empty<EmployeeLookupItemDto>();
+    public IReadOnlyCollection<EmployeeLookupItemDto> Rules { get; set; } = Array.Empty<EmployeeLookupItemDto>();
+    public IReadOnlyCollection<EmployeeLookupItemDto> PrivacyGroups { get; set; } = Array.Empty<EmployeeLookupItemDto>();
+    public int? DefaultGroupId { get; set; }
+    public int? DefaultRuleId { get; set; }
+    public int? DefaultPrivacyGroupId { get; set; }
+}
+
+public sealed class EmployeeUpsertRequest
+{
+    public string Login { get; set; } = string.Empty;
+    public string? FullName { get; set; }
+    public int? UserGroupId { get; set; }
+    public int? RuleId { get; set; }
+    public int? PrivacyGroupId { get; set; }
+    public string? Email { get; set; }
+    public string? Phone { get; set; }
+    public string? PhoneWorkRedirect { get; set; }
+    public string? Site { get; set; }
+    public string? Address { get; set; }
+    public string? Position { get; set; }
+    public string? Icq { get; set; }
+    public string? Skype { get; set; }
+    public string? Comment { get; set; }
+    public string? S1cCode { get; set; }
+    public DateTime? BirthDay { get; set; }
+    public bool IsMale { get; set; } = true;
+    public bool IsRoot { get; set; }
+    public string? Password { get; set; }
+    public string? AvatarBase64 { get; set; }
+    public string? AvatarContentType { get; set; }
+    public string? PhotoBase64 { get; set; }
+    public string? PhotoContentType { get; set; }
+}
+
+public sealed class EmployeeDetailsDto : EmployeeListItemDto
+{
+    public int? UserGroupId { get; set; }
+    public int? RuleId { get; set; }
+    public string? RuleName { get; set; }
+    public int? PrivacyGroupId { get; set; }
+    public string? PrivacyGroupName { get; set; }
+    public bool IsRoot { get; set; }
+    public bool IsMale { get; set; }
+    public string? PhoneWorkRedirect { get; set; }
+    public string? Site { get; set; }
+    public string? Address { get; set; }
+    public string? Position { get; set; }
+    public string? Icq { get; set; }
+    public string? Skype { get; set; }
+    public string? Comment { get; set; }
+    public string? S1cCode { get; set; }
+    public DateTime? BirthDay { get; set; }
+    public string? AvatarBase64 { get; set; }
+    public string? AvatarContentType { get; set; }
+    public string? PhotoBase64 { get; set; }
+    public string? PhotoContentType { get; set; }
 }
 
 public sealed class OrganizationContactDto

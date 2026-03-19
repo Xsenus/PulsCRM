@@ -148,6 +148,12 @@ public class LegacyUser(Session session) : XPObject(session)
         set => SetPropertyValue(nameof(PrivacyGroup), ref _privacyGroup, value);
     }
 
+    [Association("User-Raion")]
+    public XPCollection<LegacyRaion> Raions => GetCollection<LegacyRaion>(nameof(Raions));
+
+    [Association("User-Task")]
+    public XPCollection<LegacyTask> Tasks => GetCollection<LegacyTask>(nameof(Tasks));
+
     public override string ToString() => FullName ?? Name ?? $"User#{Oid}";
 }
 
@@ -352,10 +358,19 @@ public class LegacyRule(Session session) : XPObject(session)
 [Persistent("set_PrivacyGroup")]
 public class LegacyPrivacyGroup(Session session) : XPObject(session)
 {
+    private int _imageIndex;
     private string? _name;
     private string? _fullName;
+    private bool _flDefault;
+    private int _privacyVariant;
 
     public LegacyPrivacyGroup() : this(Session.DefaultSession) { }
+
+    public int ImageIndex
+    {
+        get => _imageIndex;
+        set => SetPropertyValue(nameof(ImageIndex), ref _imageIndex, value);
+    }
 
     public string? Name
     {
@@ -367,6 +382,19 @@ public class LegacyPrivacyGroup(Session session) : XPObject(session)
     {
         get => _fullName;
         set => SetPropertyValue(nameof(FullName), ref _fullName, value);
+    }
+
+    [Persistent("fl_def")]
+    public bool FlDefault
+    {
+        get => _flDefault;
+        set => SetPropertyValue(nameof(FlDefault), ref _flDefault, value);
+    }
+
+    public int PrivacyVariant
+    {
+        get => _privacyVariant;
+        set => SetPropertyValue(nameof(PrivacyVariant), ref _privacyVariant, value);
     }
 }
 
@@ -420,6 +448,9 @@ public class LegacyTask(Session session) : XPObject(session)
         set => SetPropertyValue(nameof(TaskVariant), ref _taskVariant, value);
     }
 
+    [Association("User-Task")]
+    public XPCollection<LegacyUser> Users => GetCollection<LegacyUser>(nameof(Users));
+
     public override string ToString() => Name ?? FullName ?? $"Task#{Oid}";
 }
 
@@ -438,6 +469,9 @@ public class LegacyRaion(Session session) : XPObject(session)
 
     [NonPersistent]
     public string? FullName => Name;
+
+    [Association("User-Raion")]
+    public XPCollection<LegacyUser> Users => GetCollection<LegacyUser>(nameof(Users));
 
     public override string ToString() => Name ?? $"Raion#{Oid}";
 }

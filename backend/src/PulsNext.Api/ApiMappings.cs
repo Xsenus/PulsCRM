@@ -74,10 +74,36 @@ public static class ApiMappings
             return TypedResults.Ok(result);
         });
 
-        group.MapGet("/{id:int}", async Task<Results<Ok<EmployeeListItemDto>, NotFound>> (int id, IEmployeeService employeeService, CancellationToken cancellationToken) =>
+        group.MapGet("/lookups", async Task<Ok<EmployeeEditorLookupsDto>> (
+            IEmployeeService employeeService,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await employeeService.GetLookupsAsync(cancellationToken);
+            return TypedResults.Ok(result);
+        });
+
+        group.MapGet("/{id:int}", async Task<Results<Ok<EmployeeDetailsDto>, NotFound>> (int id, IEmployeeService employeeService, CancellationToken cancellationToken) =>
         {
             var result = await employeeService.GetByIdAsync(id, cancellationToken);
             return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        });
+
+        group.MapPost(string.Empty, async Task<Ok<EmployeeDetailsDto>> (EmployeeUpsertRequest request, IEmployeeService employeeService, CancellationToken cancellationToken) =>
+        {
+            var result = await employeeService.UpsertAsync(null, request, cancellationToken);
+            return TypedResults.Ok(result);
+        });
+
+        group.MapPut("/{id:int}", async Task<Ok<EmployeeDetailsDto>> (int id, EmployeeUpsertRequest request, IEmployeeService employeeService, CancellationToken cancellationToken) =>
+        {
+            var result = await employeeService.UpsertAsync(id, request, cancellationToken);
+            return TypedResults.Ok(result);
+        });
+
+        group.MapDelete("/{id:int}", async Task<NoContent> (int id, IEmployeeService employeeService, CancellationToken cancellationToken) =>
+        {
+            await employeeService.DeleteAsync(id, cancellationToken);
+            return TypedResults.NoContent();
         });
     }
 

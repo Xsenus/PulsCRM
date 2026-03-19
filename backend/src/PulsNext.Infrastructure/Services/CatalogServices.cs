@@ -91,10 +91,15 @@ public sealed class AuthService(
 public interface IEmployeeService
 {
     Task<PagedResult<EmployeeListItemDto>> GetAsync(string? search, int skip, int take, bool includeDismissed, CancellationToken cancellationToken);
-    Task<EmployeeListItemDto?> GetByIdAsync(int id, CancellationToken cancellationToken);
+    Task<EmployeeEditorLookupsDto> GetLookupsAsync(CancellationToken cancellationToken);
+    Task<EmployeeDetailsDto?> GetByIdAsync(int id, CancellationToken cancellationToken);
+    Task<EmployeeDetailsDto> UpsertAsync(int? id, EmployeeUpsertRequest request, CancellationToken cancellationToken);
+    Task DeleteAsync(int id, CancellationToken cancellationToken);
 }
 
-public sealed class EmployeeService(LegacyUnitOfWork legacyUnitOfWork) : IEmployeeService
+public sealed class EmployeeService(
+    LegacyUnitOfWork legacyUnitOfWork,
+    ICurrentUserAccessor currentUserAccessor) : IEmployeeService
 {
     public Task<PagedResult<EmployeeListItemDto>> GetAsync(string? search, int skip, int take, bool includeDismissed, CancellationToken cancellationToken)
     {
@@ -122,13 +127,275 @@ public sealed class EmployeeService(LegacyUnitOfWork legacyUnitOfWork) : IEmploy
         return Task.FromResult(new PagedResult<EmployeeListItemDto>(items, totalCount));
     }
 
-    public Task<EmployeeListItemDto?> GetByIdAsync(int id, CancellationToken cancellationToken)
+    public Task<EmployeeEditorLookupsDto> GetLookupsAsync(CancellationToken cancellationToken)
+    {
+        var groups = new XPQuery<LegacyUserGroup>(legacyUnitOfWork)
+            .ToList()
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name) || !string.IsNullOrWhiteSpace(x.FullName))
+            .Where(x => !IsPseudoUserGroup(x))
+            .OrderBy(x => x.FullName ?? x.Name ?? string.Empty)
+            .ThenBy(x => x.Name ?? string.Empty)
+            .Select(x => new EmployeeLookupItemDto
+            {
+                Id = x.Oid,
+                Name = x.FullName ?? x.Name ?? string.Empty
+            })
+            .ToArray();
+
+        var rules = new XPQuery<LegacyRule>(legacyUnitOfWork)
+            .ToList()
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name) || !string.IsNullOrWhiteSpace(x.FullName))
+            .OrderBy(x => x.Index)
+            .ThenBy(x => x.FullName ?? x.Name ?? string.Empty)
+            .Select(x => new EmployeeLookupItemDto
+            {
+                Id = x.Oid,
+                Name = x.FullName ?? x.Name ?? string.Empty
+            })
+            .ToArray();
+
+        var privacyGroups = new XPQuery<LegacyPrivacyGroup>(legacyUnitOfWork)
+            .ToList()
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name) || !string.IsNullOrWhiteSpace(x.FullName))
+            .OrderByDescending(x => x.FlDefault)
+            .ThenBy(x => x.PrivacyVariant)
+            .ThenBy(x => x.FullName ?? x.Name ?? string.Empty)
+            .Select(x => new EmployeeLookupItemDto
+            {
+                Id = x.Oid,
+                Name = x.FullName ?? x.Name ?? string.Empty
+            })
+            .ToArray();
+
+        var defaultGroupId = new XPQuery<LegacyUserGroup>(legacyUnitOfWork)
+            .ToList()
+            .Where(x => !IsPseudoUserGroup(x))
+            .OrderByDescending(x => string.Equals(x.Name, "MainGroup", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(x.FullName, "Главная группа", StringComparison.OrdinalIgnoreCase))
+            .ThenBy(x => x.FullName ?? x.Name ?? string.Empty)
+            .Select(x => (int?)x.Oid)
+            .FirstOrDefault();
+
+        var defaultRuleId = new XPQuery<LegacyRule>(legacyUnitOfWork)
+            .ToList()
+            .OrderBy(x => x.Index)
+            .ThenBy(x => x.FullName ?? x.Name ?? string.Empty)
+            .Select(x => (int?)x.Oid)
+            .FirstOrDefault();
+
+        var defaultPrivacyGroupId = new XPQuery<LegacyPrivacyGroup>(legacyUnitOfWork)
+            .ToList()
+            .OrderByDescending(x => x.FlDefault)
+            .ThenBy(x => x.PrivacyVariant)
+            .ThenBy(x => x.FullName ?? x.Name ?? string.Empty)
+            .Select(x => (int?)x.Oid)
+            .FirstOrDefault();
+
+        return Task.FromResult(new EmployeeEditorLookupsDto
+        {
+            Groups = groups,
+            Rules = rules,
+            PrivacyGroups = privacyGroups,
+            DefaultGroupId = defaultGroupId,
+            DefaultRuleId = defaultRuleId,
+            DefaultPrivacyGroupId = defaultPrivacyGroupId
+        });
+    }
+
+    public Task<EmployeeDetailsDto?> GetByIdAsync(int id, CancellationToken cancellationToken)
     {
         var user = legacyUnitOfWork.GetObjectByKey<LegacyUser>(id);
-        return Task.FromResult(user is null ? null : MappingHelper.ToEmployeeDto(user));
+        return Task.FromResult(user is null ? null : MappingHelper.ToEmployeeDetailsDto(user));
+    }
+
+    public Task<EmployeeDetailsDto> UpsertAsync(int? id, EmployeeUpsertRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        EnsureCurrentRootAccess();
+
+        var login = TextHelper.NullIfWhiteSpace(request.Login);
+        var fullName = TextHelper.NullIfWhiteSpace(request.FullName);
+        ValidationHelper.Guard(!string.IsNullOrWhiteSpace(fullName), "Введите ФИО.");
+        ValidationHelper.Guard(!string.IsNullOrWhiteSpace(login), "Введите логин.");
+        ValidationHelper.Guard(id is > 0 || !string.IsNullOrWhiteSpace(request.Password), "Для нового сотрудника нужно указать пароль.");
+        ValidateOptionalEmail(request.Email);
+
+        var hasDuplicateLogin = new XPQuery<LegacyUser>(legacyUnitOfWork)
+            .ToList()
+            .Any(x => x.Oid != (id ?? 0) && string.Equals(x.Name, login, StringComparison.OrdinalIgnoreCase));
+
+        ValidationHelper.Guard(!hasDuplicateLogin, "Пользователь с таким логином уже существует.");
+
+        var entity = id is > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyUser>(id.Value) ?? throw new KeyNotFoundException($"Сотрудник #{id} не найден.")
+            : new LegacyUser(legacyUnitOfWork)
+            {
+                GId = Guid.NewGuid().ToString("N"),
+                Index = 0,
+                ImageIndex = 3,
+                RuleSimple = 0
+            };
+
+        var hasDuplicateFullName = !string.Equals(entity.FullName, fullName, StringComparison.OrdinalIgnoreCase)
+            && new XPQuery<LegacyUser>(legacyUnitOfWork)
+                .ToList()
+                .Any(x => x.Oid != entity.Oid && string.Equals(x.FullName, fullName, StringComparison.OrdinalIgnoreCase));
+
+        ValidationHelper.Guard(!hasDuplicateFullName, "Сотрудник с таким ФИО уже существует.");
+
+        entity.Name = login;
+        entity.FullName = fullName;
+        entity.FlRoot = request.IsRoot;
+        entity.MaleFemale = request.IsMale;
+        entity.UserGroup = request.UserGroupId is > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyUserGroup>(request.UserGroupId.Value) ?? throw new KeyNotFoundException($"Группа #{request.UserGroupId} не найдена.")
+            : null;
+
+        entity.Rule = request.RuleId is > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyRule>(request.RuleId.Value) ?? throw new KeyNotFoundException($"Набор правил #{request.RuleId} не найден.")
+            : null;
+        entity.RuleSimple = entity.Rule?.Index ?? 0;
+        entity.PrivacyGroup = request.PrivacyGroupId is > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyPrivacyGroup>(request.PrivacyGroupId.Value) ?? throw new KeyNotFoundException($"Группа приватности #{request.PrivacyGroupId} не найдена.")
+            : null;
+
+        if (entity.UserInfo is null)
+        {
+            entity.UserInfo = new LegacyUserInfo(legacyUnitOfWork)
+            {
+                User = entity
+            };
+        }
+
+        entity.UserInfo.User = entity;
+        entity.UserInfo.Email = TextHelper.NullIfWhiteSpace(request.Email);
+        entity.UserInfo.Phone = TextHelper.NullIfWhiteSpace(request.Phone);
+        entity.UserInfo.PhoneWorkRedirect = TextHelper.NullIfWhiteSpace(request.PhoneWorkRedirect);
+        entity.UserInfo.Site = TextHelper.NullIfWhiteSpace(request.Site);
+        entity.UserInfo.Address = TextHelper.NullIfWhiteSpace(request.Address);
+        entity.UserInfo.Dolgnost = TextHelper.NullIfWhiteSpace(request.Position);
+        entity.UserInfo.ICQ = TextHelper.NullIfWhiteSpace(request.Icq);
+        entity.UserInfo.Skype = TextHelper.NullIfWhiteSpace(request.Skype);
+        entity.UserInfo.Comment = TextHelper.NullIfWhiteSpace(request.Comment);
+        entity.UserInfo.S1cCode = TextHelper.NullIfWhiteSpace(request.S1cCode);
+        entity.UserInfo.BirthDay = request.BirthDay?.Date ?? DateTime.MinValue;
+        entity.UserInfo.Avatar = DecodeOptionalImage(request.AvatarBase64);
+        entity.UserInfo.Photo = DecodeOptionalImage(request.PhotoBase64);
+
+        if (!string.IsNullOrWhiteSpace(request.Password))
+        {
+            entity.Password = LegacyPasswordHasher.HashUnicodeMd5(request.Password);
+        }
+
+        legacyUnitOfWork.CommitChanges();
+        return Task.FromResult(MappingHelper.ToEmployeeDetailsDto(entity));
+    }
+
+    public Task DeleteAsync(int id, CancellationToken cancellationToken)
+    {
+        EnsureCurrentRootAccess();
+
+        var entity = legacyUnitOfWork.GetObjectByKey<LegacyUser>(id)
+            ?? throw new KeyNotFoundException($"Сотрудник #{id} не найден.");
+
+        var currentUserId = currentUserAccessor.GetLegacyUserId();
+        ValidationHelper.Guard(currentUserId != id, "Нельзя удалить текущего пользователя.");
+        ValidationHelper.Guard(!entity.FlRoot, "Нельзя удалить root-пользователя.");
+
+        var dismissedGroup = new XPQuery<LegacyUserGroup>(legacyUnitOfWork)
+            .ToList()
+            .FirstOrDefault(x => string.Equals(x.Name, "Уволенные", StringComparison.OrdinalIgnoreCase));
+
+        if (dismissedGroup is null)
+        {
+            throw new ValidationException("Не найдена группа 'Уволенные'.");
+        }
+
+        entity.UserGroup = dismissedGroup;
+        entity.FlRoot = false;
+        legacyUnitOfWork.CommitChanges();
+        return Task.CompletedTask;
     }
 
     private static int NormalizeTake(int take) => take <= 0 ? 100 : Math.Min(take, 500);
+
+    private static bool IsPseudoUserGroup(LegacyUserGroup group)
+    {
+        var name = (group.Name ?? group.FullName ?? string.Empty).Trim().ToLowerInvariant();
+        return name is "все" or "итого" or "выбранные";
+    }
+
+    private void EnsureCurrentRootAccess()
+    {
+        var currentUserId = currentUserAccessor.GetLegacyUserId();
+        if (currentUserId is null or <= 0)
+        {
+            throw new UnauthorizedAccessException("Недостаточно прав для изменения сотрудников.");
+        }
+
+        var currentUser = legacyUnitOfWork.GetObjectByKey<LegacyUser>(currentUserId.Value);
+        if (currentUser is null || !currentUser.FlRoot)
+        {
+            throw new UnauthorizedAccessException("Недостаточно прав для изменения сотрудников.");
+        }
+    }
+
+    private void ReplaceRaions(LegacyUser user, IReadOnlyCollection<int> raionIds)
+    {
+        var normalizedIds = raionIds.Where(x => x > 0).Distinct().ToArray();
+
+        while (user.Raions.Count > 0)
+        {
+            user.Raions.Remove(user.Raions[0]);
+        }
+
+        foreach (var raionId in normalizedIds)
+        {
+            var raion = legacyUnitOfWork.GetObjectByKey<LegacyRaion>(raionId)
+                ?? throw new KeyNotFoundException($"Район #{raionId} не найден.");
+            user.Raions.Add(raion);
+        }
+    }
+
+    private void ReplaceTasks(LegacyUser user, IReadOnlyCollection<int> taskIds)
+    {
+        var normalizedIds = taskIds.Where(x => x > 0).Distinct().ToArray();
+
+        while (user.Tasks.Count > 0)
+        {
+            user.Tasks.Remove(user.Tasks[0]);
+        }
+
+        foreach (var taskId in normalizedIds)
+        {
+            var task = legacyUnitOfWork.GetObjectByKey<LegacyTask>(taskId)
+                ?? throw new KeyNotFoundException($"Задача #{taskId} не найдена.");
+            user.Tasks.Add(task);
+        }
+    }
+
+    private static byte[]? DecodeOptionalImage(string? base64)
+    {
+        var normalized = TextHelper.NullIfWhiteSpace(base64);
+        if (normalized is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Convert.FromBase64String(normalized);
+        }
+        catch (FormatException)
+        {
+            throw new ValidationException("Некорректный формат изображения.");
+        }
+    }
+
+    private static void ValidateOptionalEmail(string? value)
+    {
+        ValidationHelper.Guard(string.IsNullOrWhiteSpace(value) || EmailHelper.IsValid(value), "Введите корректный email.");
+    }
 
     private static bool Contains(string? source, string term)
         => !string.IsNullOrWhiteSpace(source) && source.Contains(term, StringComparison.OrdinalIgnoreCase);

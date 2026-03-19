@@ -118,10 +118,66 @@ internal static class HashHelper
     }
 }
 
+internal static class BinaryImageHelper
+{
+    public static string? ToBase64(byte[]? bytes)
+        => bytes is { Length: > 0 } ? Convert.ToBase64String(bytes) : null;
+
+    public static string? DetectContentType(byte[]? bytes)
+    {
+        if (bytes is null || bytes.Length < 4)
+        {
+            return null;
+        }
+
+        if (bytes.Length >= 8
+            && bytes[0] == 0x89
+            && bytes[1] == 0x50
+            && bytes[2] == 0x4E
+            && bytes[3] == 0x47)
+        {
+            return "image/png";
+        }
+
+        if (bytes[0] == 0xFF && bytes[1] == 0xD8)
+        {
+            return "image/jpeg";
+        }
+
+        if (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46)
+        {
+            return "image/gif";
+        }
+
+        if (bytes[0] == 0x42 && bytes[1] == 0x4D)
+        {
+            return "image/bmp";
+        }
+
+        if (bytes.Length >= 12
+            && bytes[0] == 0x52
+            && bytes[1] == 0x49
+            && bytes[2] == 0x46
+            && bytes[3] == 0x46
+            && bytes[8] == 0x57
+            && bytes[9] == 0x45
+            && bytes[10] == 0x42
+            && bytes[11] == 0x50)
+        {
+            return "image/webp";
+        }
+
+        return "application/octet-stream";
+    }
+}
+
 internal static class MappingHelper
 {
     public static CurrentUserDto ToCurrentUserDto(LegacyUser user)
     {
+        var avatar = user.UserInfo?.Avatar;
+        var fallbackAvatar = avatar is { Length: > 0 } ? avatar : user.UserInfo?.Photo;
+
         return new CurrentUserDto
         {
             Id = user.Oid,
@@ -130,7 +186,9 @@ internal static class MappingHelper
             IsRoot = user.FlRoot,
             UserGroup = user.UserGroup?.Name,
             Email = user.UserInfo?.Email,
-            Phone = user.UserInfo?.Phone
+            Phone = user.UserInfo?.Phone,
+            AvatarBase64 = BinaryImageHelper.ToBase64(fallbackAvatar),
+            AvatarContentType = BinaryImageHelper.DetectContentType(fallbackAvatar)
         };
     }
 
@@ -158,6 +216,45 @@ internal static class MappingHelper
             Email = user.UserInfo?.Email,
             Phone = user.UserInfo?.Phone,
             IsDismissed = isDismissed
+        };
+    }
+
+    public static EmployeeDetailsDto ToEmployeeDetailsDto(LegacyUser user)
+    {
+        var dto = ToEmployeeDto(user);
+        var avatar = user.UserInfo?.Avatar;
+        var photo = user.UserInfo?.Photo;
+        var fallbackAvatar = avatar is { Length: > 0 } ? avatar : photo;
+
+        return new EmployeeDetailsDto
+        {
+            Id = dto.Id,
+            Login = dto.Login,
+            FullName = dto.FullName,
+            UserGroup = dto.UserGroup,
+            Email = dto.Email,
+            Phone = dto.Phone,
+            IsDismissed = dto.IsDismissed,
+            UserGroupId = user.UserGroup?.Oid,
+            RuleId = user.Rule?.Oid,
+            RuleName = user.Rule?.FullName ?? user.Rule?.Name,
+            PrivacyGroupId = user.PrivacyGroup?.Oid,
+            PrivacyGroupName = user.PrivacyGroup?.FullName ?? user.PrivacyGroup?.Name,
+            IsRoot = user.FlRoot,
+            IsMale = user.MaleFemale,
+            PhoneWorkRedirect = user.UserInfo?.PhoneWorkRedirect,
+            Site = user.UserInfo?.Site,
+            Address = user.UserInfo?.Address,
+            Position = user.UserInfo?.Dolgnost,
+            Icq = user.UserInfo?.ICQ,
+            Skype = user.UserInfo?.Skype,
+            Comment = user.UserInfo?.Comment,
+            S1cCode = user.UserInfo?.S1cCode,
+            BirthDay = DateTimeHelper.NullIfMin(user.UserInfo?.BirthDay ?? DateTime.MinValue),
+            AvatarBase64 = BinaryImageHelper.ToBase64(fallbackAvatar),
+            AvatarContentType = BinaryImageHelper.DetectContentType(fallbackAvatar),
+            PhotoBase64 = BinaryImageHelper.ToBase64(photo),
+            PhotoContentType = BinaryImageHelper.DetectContentType(photo)
         };
     }
 
