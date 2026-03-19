@@ -31,6 +31,7 @@ const WITHOUT_RAION_ID = -1;
 const DEFAULT_SIDEBAR_WIDTH = 360;
 const MIN_SIDEBAR_WIDTH = 320;
 const MAX_SIDEBAR_WIDTH = 520;
+const ORGANIZATIONS_TABLE_STORAGE_ID = 'organizations-list';
 
 interface RowContextMenuState {
   row: OrganizationListItemDto;
@@ -94,15 +95,21 @@ function raionSelectionId(raion: OrganizationRaionDto) {
   return raion.id ?? WITHOUT_RAION_ID;
 }
 
-function loadStoredPageSize(storageKey: string) {
+function loadStoredPageSize(storageKey: string, ...fallbackStorageKeys: string[]) {
   if (typeof window === 'undefined') {
     return DEFAULT_PAGE_SIZE;
   }
 
-  const rawValue = window.localStorage.getItem(storageKey);
-  const parsedValue = rawValue ? Number(rawValue) : NaN;
+  for (const currentKey of [storageKey, ...fallbackStorageKeys]) {
+    const rawValue = window.localStorage.getItem(currentKey);
+    const parsedValue = rawValue ? Number(rawValue) : NaN;
 
-  return PAGE_SIZE_OPTIONS.includes(parsedValue) ? parsedValue : DEFAULT_PAGE_SIZE;
+    if (PAGE_SIZE_OPTIONS.includes(parsedValue)) {
+      return parsedValue;
+    }
+  }
+
+  return DEFAULT_PAGE_SIZE;
 }
 
 function clampSidebarWidth(value: number) {
@@ -148,6 +155,11 @@ function SearchActionIcon({ kind }: { kind: 'clear' | 'refresh' | 'search' }) {
 
 export function OrganizationsPage() {
   const { user } = useAuth();
+  const currentUserId = String(user?.id ?? 'guest');
+  const tableSettingsKey = `puls-organizations-table:${currentUserId}`;
+  const pageSizeStorageKey = `puls-organizations-page-size:${ORGANIZATIONS_TABLE_STORAGE_ID}:${currentUserId}`;
+  const legacyPageSizeStorageKey = `puls-organizations-page-size:${currentUserId}`;
+  const sidebarWidthStorageKey = `puls-organizations-sidebar-width:${currentUserId}`;
 
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -158,7 +170,7 @@ export function OrganizationsPage() {
   const [lookups, setLookups] = useState<OrganizationEditorLookupsDto | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<number | undefined>();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey, legacyPageSizeStorageKey));
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -178,19 +190,6 @@ export function OrganizationsPage() {
   const selectedRaionIdsKey = useMemo(
     () => [...selectedRaionIds].sort((left, right) => left - right).join(','),
     [selectedRaionIds]
-  );
-
-  const tableSettingsKey = useMemo(
-    () => `puls-organizations-table:${user?.id ?? 'guest'}`,
-    [user?.id]
-  );
-  const pageSizeStorageKey = useMemo(
-    () => `puls-organizations-page-size:${user?.id ?? 'guest'}`,
-    [user?.id]
-  );
-  const sidebarWidthStorageKey = useMemo(
-    () => `puls-organizations-sidebar-width:${user?.id ?? 'guest'}`,
-    [user?.id]
   );
 
   const filteredRaions = useMemo(() => {
@@ -272,9 +271,9 @@ export function OrganizationsPage() {
   }, []);
 
   useEffect(() => {
-    setPageSize(loadStoredPageSize(pageSizeStorageKey));
+    setPageSize(loadStoredPageSize(pageSizeStorageKey, legacyPageSizeStorageKey));
     setPage(1);
-  }, [pageSizeStorageKey]);
+  }, [legacyPageSizeStorageKey, pageSizeStorageKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -282,7 +281,8 @@ export function OrganizationsPage() {
     }
 
     window.localStorage.setItem(pageSizeStorageKey, String(pageSize));
-  }, [pageSize, pageSizeStorageKey]);
+    window.localStorage.removeItem(legacyPageSizeStorageKey);
+  }, [legacyPageSizeStorageKey, pageSize, pageSizeStorageKey]);
 
   useEffect(() => {
     setSidebarWidth(loadStoredSidebarWidth(sidebarWidthStorageKey));

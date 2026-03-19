@@ -311,11 +311,6 @@ export function OrganizationsTable({
     window.localStorage.setItem(settingsKey, JSON.stringify(settings));
   }, [settings, settingsKey]);
 
-  const visibleCount = useMemo(
-    () => settings.columns.filter((column) => column.visible).length,
-    [settings.columns]
-  );
-
   const draftVisibleCount = useMemo(
     () => draftSettings.columns.filter((column) => column.visible).length,
     [draftSettings.columns]
@@ -331,17 +326,21 @@ export function OrganizationsTable({
     [settings.columns]
   );
 
+  const updateSettings = (updater: (current: OrganizationTableSettings) => OrganizationTableSettings) => {
+    setSettings((current) => normalizeSettings(updater(current)));
+  };
+
   const updateDraftSettings = (updater: (current: OrganizationTableSettings) => OrganizationTableSettings) => {
     setDraftSettings((current) => normalizeSettings(updater(current)));
   };
 
-  const moveColumn = (sourceId: OrganizationColumnId, targetId: OrganizationColumnId) => {
-    updateDraftSettings((current) => ({
+  const moveCommittedColumn = (sourceId: OrganizationColumnId, targetId: OrganizationColumnId) => {
+    updateSettings((current) => ({
       columns: reorderColumns(current.columns, sourceId, targetId)
     }));
   };
 
-  const moveColumnByOffset = (columnId: OrganizationColumnId, offset: -1 | 1) => {
+  const moveDraftColumnByOffset = (columnId: OrganizationColumnId, offset: -1 | 1) => {
     updateDraftSettings((current) => {
       const index = current.columns.findIndex((column) => column.id === columnId);
       const nextIndex = index + offset;
@@ -357,7 +356,7 @@ export function OrganizationsTable({
     });
   };
 
-  const setColumnVisibility = (columnId: OrganizationColumnId, visible: boolean) => {
+  const setDraftColumnVisibility = (columnId: OrganizationColumnId, visible: boolean) => {
     updateDraftSettings((current) => ({
       columns: current.columns.map((column) => {
         if (column.id !== columnId) {
@@ -369,7 +368,17 @@ export function OrganizationsTable({
     }));
   };
 
-  const setColumnWidth = (columnId: OrganizationColumnId, width: number) => {
+  const setCommittedColumnWidth = (columnId: OrganizationColumnId, width: number) => {
+    const minWidth = COLUMN_DEFINITIONS[columnId].minWidth;
+
+    updateSettings((current) => ({
+      columns: current.columns.map((column) => column.id === columnId
+        ? { ...column, width: Math.max(minWidth, Math.round(width)) }
+        : column)
+    }));
+  };
+
+  const setDraftColumnWidth = (columnId: OrganizationColumnId, width: number) => {
     const minWidth = COLUMN_DEFINITIONS[columnId].minWidth;
 
     updateDraftSettings((current) => ({
@@ -392,7 +401,7 @@ export function OrganizationsTable({
 
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
-      setColumnWidth(columnId, width + delta);
+      setCommittedColumnWidth(columnId, width + delta);
     };
 
     const onMouseUp = () => {
@@ -459,7 +468,7 @@ export function OrganizationsTable({
       if (session?.active) {
         setDragState((current) => {
           if (current && current.sourceId !== current.targetId) {
-            moveColumn(current.sourceId, current.targetId);
+            moveCommittedColumn(current.sourceId, current.targetId);
           }
 
           return null;
@@ -591,7 +600,7 @@ export function OrganizationsTable({
                       type="checkbox"
                       checked={column.visible}
                       disabled={column.visible && draftVisibleCount === 1}
-                      onChange={(event) => setColumnVisibility(column.id, event.target.checked)}
+                      onChange={(event) => setDraftColumnVisibility(column.id, event.target.checked)}
                     />
 
                     <span>
@@ -607,7 +616,7 @@ export function OrganizationsTable({
                       type="button"
                       className="secondary-button button-inline icon-button table-settings-icon-button"
                       disabled={index === 0}
-                      onClick={() => moveColumnByOffset(column.id, -1)}
+                      onClick={() => moveDraftColumnByOffset(column.id, -1)}
                       aria-label={`Переместить ${definition.title} выше`}
                       title="Выше"
                     >
@@ -617,7 +626,7 @@ export function OrganizationsTable({
                       type="button"
                       className="secondary-button button-inline icon-button table-settings-icon-button"
                       disabled={index === draftSettings.columns.length - 1}
-                      onClick={() => moveColumnByOffset(column.id, 1)}
+                      onClick={() => moveDraftColumnByOffset(column.id, 1)}
                       aria-label={`Переместить ${definition.title} ниже`}
                       title="Ниже"
                     >
@@ -626,7 +635,7 @@ export function OrganizationsTable({
                     <button
                       type="button"
                       className="secondary-button button-inline icon-button table-settings-icon-button"
-                      onClick={() => setColumnWidth(column.id, definition.defaultWidth)}
+                      onClick={() => setDraftColumnWidth(column.id, definition.defaultWidth)}
                       aria-label={`Сбросить ширину колонки ${definition.title}`}
                       title="Ширина по умолчанию"
                     >
