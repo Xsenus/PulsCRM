@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { deleteTransportProfile, getTransportProfiles, saveTransportProfile, testTransportProfile } from '../app/api';
+import { useAuth } from '../app/AuthContext';
+import { formatDateTime } from '../app/format';
+import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type { TransportProfileDto, TransportProfileUpsertRequest } from '../app/types';
 import { DataTable } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
+import { Pagination } from '../components/Pagination';
+import { SearchPanel } from '../components/SearchPanel';
 
 const emptyModel: TransportProfileUpsertRequest = {
   name: '',
@@ -24,17 +29,44 @@ const emptyModel: TransportProfileUpsertRequest = {
 
 type SettingsGroupKey = 'general' | 'smtp';
 
+const EMPTY_VALUE = '—';
+const TRANSPORT_PROFILES_TABLE_STORAGE_ID = 'transport-profiles-list';
+
 export function TransportProfilesPage() {
+  const { user } = useAuth();
+  const currentUserId = String(user?.id ?? 'guest');
+  const tableSettingsKey = `puls-table-settings:${TRANSPORT_PROFILES_TABLE_STORAGE_ID}:${currentUserId}`;
+  const pageSizeStorageKey = `puls-page-size:${TRANSPORT_PROFILES_TABLE_STORAGE_ID}:${currentUserId}`;
+
   const [activeGroup, setActiveGroup] = useState<SettingsGroupKey>('smtp');
+  const [search, setSearch] = useState('');
+  const [appliedSearch, setAppliedSearch] = useState('');
   const [rows, setRows] = useState<TransportProfileDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | undefined>();
   const [model, setModel] = useState<TransportProfileUpsertRequest>(emptyModel);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey));
 
   const editingProfile = useMemo(() => rows.find((item) => item.id === editingId), [editingId, rows]);
   const isSmtpGroup = activeGroup === 'smtp';
+  const filteredRows = useMemo(() => {
+    const term = appliedSearch.trim().toLowerCase();
+    if (!term) {
+      return rows;
+    }
+
+    return rows.filter((row) => [row.name, row.host, row.senderEmail, row.senderName, row.username]
+      .filter(Boolean)
+      .some((value) => value!.toLowerCase().includes(term)));
+  }, [appliedSearch, rows]);
+  const totalCount = filteredRows.length;
+  const pagedRows = useMemo(
+    () => filteredRows.slice((page - 1) * pageSize, page * pageSize),
+    [filteredRows, page, pageSize]
+  );
 
   const load = async () => {
     setLoading(true);
@@ -48,6 +80,26 @@ export function TransportProfilesPage() {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    setPageSize(loadStoredPageSize(pageSizeStorageKey));
+    setPage(1);
+  }, [pageSizeStorageKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(pageSizeStorageKey, String(pageSize));
+  }, [pageSize, pageSizeStorageKey]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, pageSize, totalCount]);
 
   const openCreate = () => {
     setEditingId(undefined);
@@ -126,11 +178,25 @@ export function TransportProfilesPage() {
     }
   };
 
+  const applySearchValue = (value: string) => {
+    const nextSearch = value.trim();
+    setAppliedSearch((current) => (current === nextSearch ? current : nextSearch));
+    setPage((current) => (current === 1 ? current : 1));
+  };
+
+  const applySearch = () => {
+    applySearchValue(search);
+  };
+
+  const clearSearch = () => {
+    setSearch('');
+    applySearchValue('');
+  };
+
   return (
     <div className="page">
       <PageHeader
         title="Настройки"
-        subtitle="Параметры системы и профили отправки"
         actions={isSmtpGroup ? <button type="button" className="primary-button" onClick={openCreate}>Новый профиль</button> : undefined}
       />
 
@@ -175,23 +241,45 @@ export function TransportProfilesPage() {
         <section className="panel">
           <div className="section-header-inline">
             <h3>SMTP профили</h3>
-            <button type="button" className="secondary-button button-inline" onClick={() => void load()}>Обновить</button>
           </div>
 
+          <SearchPanel
+            value={search}
+            placeholder="Поиск по профилю, серверу, логину или email"
+            onChange={setSearch}
+            onSearch={applySearch}
+            onClear={clearSearch}
+            onDebouncedChange={applySearchValue}
+            onRefresh={load}
+            refreshSuccessMessage="Список SMTP профилей обновлен."
+          />
+
           <DataTable
-            rows={rows}
+            rows={pagedRows}
             getRowKey={(row) => row.id}
-            emptyText={loading ? 'Загрузка...' : 'Нет SMTP профилей'}
+            loading={loading}
+            emptyText="Нет SMTP профилей"
+            settingsKey={tableSettingsKey}
+            title="Список профилей"
             columns={[
-              { key: 'name', title: 'Профиль', render: (row) => row.name },
-              { key: 'host', title: 'Сервер', render: (row) => row.host },
-              { key: 'port', title: 'Порт', render: (row) => row.port },
-              { key: 'senderEmail', title: 'Отправитель', render: (row) => row.senderEmail || '—' },
-              { key: 'limits', title: 'Лимиты', render: (row) => `${row.maxConnections} / ${row.messagesPerMinute}` },
-              { key: 'status', title: 'Статус', render: (row) => `${row.isEnabled ? 'Активен' : 'Выключен'}${row.isDefault ? ' • По умолчанию' : ''}` },
+              { key: 'name', title: 'Профиль', width: 220, minWidth: 180, render: (row) => row.name },
+              { key: 'host', title: 'Сервер', width: 220, minWidth: 180, render: (row) => row.host },
+              { key: 'port', title: 'Порт', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.port },
+              { key: 'username', title: 'Логин', width: 200, minWidth: 160, visible: false, render: (row) => row.username || EMPTY_VALUE },
+              { key: 'senderEmail', title: 'Отправитель', width: 220, minWidth: 180, render: (row) => row.senderEmail || EMPTY_VALUE },
+              { key: 'senderName', title: 'Имя отправителя', width: 220, minWidth: 180, visible: false, render: (row) => row.senderName || EMPTY_VALUE },
+              { key: 'replyToEmail', title: 'Reply-To', width: 220, minWidth: 180, visible: false, render: (row) => row.replyToEmail || EMPTY_VALUE },
+              { key: 'ssl', title: 'SSL', width: 90, minWidth: 80, visible: false, render: (row) => (row.useSsl ? 'Да' : 'Нет') },
+              { key: 'limits', title: 'Лимиты', width: 130, minWidth: 110, render: (row) => `${row.maxConnections} / ${row.messagesPerMinute}` },
+              { key: 'status', title: 'Статус', width: 190, minWidth: 160, render: (row) => `${row.isEnabled ? 'Активен' : 'Выключен'}${row.isDefault ? ' • По умолчанию' : ''}` },
+              { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.createdAtUtc) || EMPTY_VALUE },
+              { key: 'updatedAtUtc', title: 'Обновлено', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.updatedAtUtc) || EMPTY_VALUE },
               {
                 key: 'actions',
                 title: 'Действия',
+                width: 320,
+                minWidth: 280,
+                canHide: false,
                 render: (row) => (
                   <div className="button-group">
                     <button type="button" className="secondary-button button-inline" onClick={(event) => { event.stopPropagation(); openEdit(row); }}>
@@ -207,6 +295,18 @@ export function TransportProfilesPage() {
                 )
               }
             ]}
+          />
+
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            onPageChange={setPage}
+            onPageSizeChange={(value) => {
+              setPageSize(value);
+              setPage(1);
+            }}
+            pageSizeOptions={PAGE_SIZE_OPTIONS}
           />
         </section>
       ) : null}

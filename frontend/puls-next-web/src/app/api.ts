@@ -8,7 +8,10 @@ import type {
   CampaignStatusChangeRequest,
   CampaignUpsertRequest,
   DashboardDto,
+  EmployeeDetailsDto,
+  EmployeeEditorLookupsDto,
   EmployeeListItemDto,
+  EmployeeUpsertRequest,
   OrganizationEditorLookupsDto,
   OrganizationDetailsDto,
   OrganizationListItemDto,
@@ -129,6 +132,43 @@ export async function getEmployees(search = '', skip = 0, take = 200): Promise<P
       params: { search, skip, take }
     });
     return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function getEmployeeLookups(): Promise<EmployeeEditorLookupsDto> {
+  try {
+    const { data } = await api.get<EmployeeEditorLookupsDto>('/api/employees/lookups');
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function getEmployee(id: number): Promise<EmployeeDetailsDto> {
+  try {
+    const { data } = await api.get<EmployeeDetailsDto>(`/api/employees/${id}`);
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function saveEmployee(request: EmployeeUpsertRequest, id?: number): Promise<EmployeeDetailsDto> {
+  try {
+    const { data } = id
+      ? await api.put<EmployeeDetailsDto>(`/api/employees/${id}`, request)
+      : await api.post<EmployeeDetailsDto>('/api/employees', request);
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function deleteEmployee(id: number): Promise<void> {
+  try {
+    await api.delete(`/api/employees/${id}`);
   } catch (error) {
     unwrapError(error);
   }

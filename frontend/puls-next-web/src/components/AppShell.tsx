@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 
 type MenuIconKey = 'dashboard' | 'employees' | 'organizations' | 'campaigns' | 'settings';
@@ -69,6 +69,17 @@ function CollapseIcon({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function ProfileIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function LogoutIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -91,6 +102,31 @@ function getInitials(fullName?: string, login?: string) {
   return source.slice(0, 2).toUpperCase();
 }
 
+function getShortProfileName(fullName?: string, login?: string) {
+  const source = (fullName || login || 'Пользователь').trim();
+  const parts = source.split(/\s+/).filter(Boolean);
+
+  if (parts.length <= 1) {
+    return source;
+  }
+
+  const [lastName, firstName = '', middleName = ''] = parts;
+  const initials = [firstName, middleName]
+    .filter(Boolean)
+    .map((part) => `${part[0]}.`)
+    .join('');
+
+  return initials ? `${lastName} ${initials}` : lastName;
+}
+
+function buildImageSource(base64?: string, contentType?: string) {
+  if (!base64) {
+    return undefined;
+  }
+
+  return `data:${contentType || 'image/jpeg'};base64,${base64}`;
+}
+
 function getCurrentSection(pathname: string) {
   if (pathname.startsWith('/campaigns/')) {
     return 'Рассылки';
@@ -100,6 +136,7 @@ function getCurrentSection(pathname: string) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -108,7 +145,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const currentSection = useMemo(() => getCurrentSection(location.pathname), [location.pathname]);
   const initials = useMemo(() => getInitials(user?.fullName, user?.login), [user?.fullName, user?.login]);
-  const profileSecondaryText = user?.phone || user?.email || user?.login || 'Пользователь';
+  const shortProfileName = useMemo(() => getShortProfileName(user?.fullName, user?.login), [user?.fullName, user?.login]);
+  const avatarSource = useMemo(
+    () => buildImageSource(user?.avatarBase64, user?.avatarContentType),
+    [user?.avatarBase64, user?.avatarContentType]
+  );
+  const profileRole = user?.userGroup?.trim() || 'Разработчик';
+  const profileContact = user?.phone?.trim() || user?.email?.trim() || user?.login || 'Контакт не указан';
+  const profileTitle = user?.fullName || user?.login || 'Пользователь';
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_STATE_KEY, collapsed ? '1' : '0');
@@ -132,6 +176,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     document.addEventListener('pointerdown', handlePointerDown);
     return () => document.removeEventListener('pointerdown', handlePointerDown);
   }, [profileOpen]);
+
+  const handleOpenProfile = () => {
+    if (!user?.id) {
+      return;
+    }
+
+    setProfileOpen(false);
+    navigate(`/employees/${user.id}/edit`);
+  };
 
   return (
     <div className={`app-shell${collapsed ? ' app-shell-collapsed' : ''}`}>
@@ -184,28 +237,60 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="profile-menu-shell" ref={profileMenuRef}>
               <button
                 type="button"
-                className="profile-button"
+                className={`profile-button${profileOpen ? ' active' : ''}`}
                 onClick={() => setProfileOpen((current) => !current)}
                 aria-label="Открыть меню пользователя"
                 aria-expanded={profileOpen}
+                title={profileTitle}
               >
-                <span className="profile-avatar">{initials}</span>
+                <span className="profile-avatar">
+                  {avatarSource ? <img src={avatarSource} alt="" /> : initials}
+                </span>
               </button>
 
               {profileOpen ? (
                 <div className="profile-menu">
                   <div className="profile-menu-head">
-                    <div className="profile-menu-name">{user?.fullName || user?.login}</div>
-                    <div className="profile-menu-meta">{user?.userGroup || 'Пользователь'}</div>
-                    <div className="profile-menu-login">{profileSecondaryText}</div>
+                    <div className="profile-menu-identity">
+                      <span className="profile-menu-avatar">
+                        {avatarSource ? <img src={avatarSource} alt="" /> : initials}
+                      </span>
+
+                      <div className="profile-menu-copy">
+                        <div className="profile-menu-caption">Пользователь системы</div>
+                        <div className="profile-menu-name" title={profileTitle}>
+                          {shortProfileName}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="profile-menu-details">
+                      <div className="profile-menu-meta">{profileRole}</div>
+                      <div className="profile-menu-login">{profileContact}</div>
+                    </div>
                   </div>
 
-                  <button type="button" className="profile-menu-action" onClick={logout}>
-                    <span className="profile-menu-action-icon">
-                      <LogoutIcon />
-                    </span>
-                    <span>Выйти</span>
-                  </button>
+                  <div className="profile-menu-actions">
+                    <button
+                      type="button"
+                      className="profile-menu-action profile-menu-action-secondary"
+                      onClick={handleOpenProfile}
+                      disabled={!user?.id}
+                      title={user?.id ? 'Открыть карточку сотрудника' : 'Карточка сотрудника недоступна'}
+                    >
+                      <span className="profile-menu-action-icon">
+                        <ProfileIcon />
+                      </span>
+                      <span>Профиль</span>
+                    </button>
+
+                    <button type="button" className="profile-menu-action profile-menu-action-danger" onClick={logout}>
+                      <span className="profile-menu-action-icon">
+                        <LogoutIcon />
+                      </span>
+                      <span>Выйти</span>
+                    </button>
+                  </div>
                 </div>
               ) : null}
             </div>

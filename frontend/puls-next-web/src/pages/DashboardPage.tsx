@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getDashboard } from '../app/api';
 import type { DashboardDto } from '../app/types';
 import { PageHeader } from '../components/PageHeader';
+import { SearchActionIcon } from '../components/SearchPanel';
 import { StatsCards } from '../components/StatsCards';
 
 export function DashboardPage() {
@@ -26,8 +27,17 @@ export function DashboardPage() {
     <div className="page">
       <PageHeader
         title="Дашборд"
-        subtitle="Ключевые показатели системы и состояния рассылок"
-        actions={<button type="button" className="secondary-button" onClick={() => void load()}>Обновить</button>}
+        actions={(
+          <button
+            type="button"
+            className="secondary-button button-inline icon-button search-button"
+            onClick={() => void load()}
+            aria-label="Обновить"
+            title="Обновить"
+          >
+            <SearchActionIcon kind="refresh" />
+          </button>
+        )}
       />
 
       {loading && !dashboard ? <div className="panel">Загрузка...</div> : null}

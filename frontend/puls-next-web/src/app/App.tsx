@@ -7,7 +7,9 @@ import { LoginPage } from '../pages/LoginPage';
 const AppShell = lazy(() => import('../components/AppShell').then((module) => ({ default: module.AppShell })));
 const DashboardPage = lazy(() => import('../pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const EmployeesPage = lazy(() => import('../pages/EmployeesPage').then((module) => ({ default: module.EmployeesPage })));
+const EmployeeEditPage = lazy(() => import('../pages/EmployeeEditPage').then((module) => ({ default: module.EmployeeEditPage })));
 const OrganizationsPage = lazy(() => import('../pages/OrganizationsPage').then((module) => ({ default: module.OrganizationsPage })));
+const OrganizationEditPage = lazy(() => import('../pages/OrganizationEditPage').then((module) => ({ default: module.OrganizationEditPage })));
 const CampaignsPage = lazy(() => import('../pages/CampaignsPage').then((module) => ({ default: module.CampaignsPage })));
 const CampaignEditPage = lazy(() => import('../pages/CampaignEditPage').then((module) => ({ default: module.CampaignEditPage })));
 const TransportProfilesPage = lazy(() => import('../pages/TransportProfilesPage').then((module) => ({ default: module.TransportProfilesPage })));
@@ -33,7 +35,11 @@ export function App() {
           <Route element={<ShellLayout />}>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
+            <Route path="/employees/new" element={<EmployeeEditPage />} />
+            <Route path="/employees/:id/edit" element={<EmployeeEditPage />} />
             <Route path="/organizations" element={<OrganizationsPage />} />
+            <Route path="/organizations/new" element={<OrganizationEditPage />} />
+            <Route path="/organizations/:id/edit" element={<OrganizationEditPage />} />
             <Route path="/campaigns" element={<CampaignsPage />} />
             <Route path="/campaigns/new" element={<CampaignEditPage />} />
             <Route path="/campaigns/:id" element={<CampaignEditPage />} />

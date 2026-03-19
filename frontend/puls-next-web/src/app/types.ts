@@ -15,6 +15,8 @@ export interface CurrentUserDto {
   userGroup?: string;
   email?: string;
   phone?: string;
+  avatarBase64?: string;
+  avatarContentType?: string;
 }
 
 export interface LoginUserOptionDto {
@@ -47,6 +49,69 @@ export interface EmployeeListItemDto {
   email?: string;
   phone?: string;
   isDismissed: boolean;
+}
+
+export interface EmployeeLookupItemDto {
+  id: number;
+  name: string;
+}
+
+export interface EmployeeEditorLookupsDto {
+  groups: EmployeeLookupItemDto[];
+  rules: EmployeeLookupItemDto[];
+  privacyGroups: EmployeeLookupItemDto[];
+  defaultGroupId?: number;
+  defaultRuleId?: number;
+  defaultPrivacyGroupId?: number;
+}
+
+export interface EmployeeUpsertRequest {
+  login: string;
+  fullName?: string;
+  userGroupId?: number;
+  ruleId?: number;
+  privacyGroupId?: number;
+  email?: string;
+  phone?: string;
+  phoneWorkRedirect?: string;
+  site?: string;
+  address?: string;
+  position?: string;
+  icq?: string;
+  skype?: string;
+  comment?: string;
+  s1cCode?: string;
+  birthDay?: string;
+  isMale: boolean;
+  isRoot: boolean;
+  password?: string;
+  avatarBase64?: string;
+  avatarContentType?: string;
+  photoBase64?: string;
+  photoContentType?: string;
+}
+
+export interface EmployeeDetailsDto extends EmployeeListItemDto {
+  userGroupId?: number;
+  ruleId?: number;
+  ruleName?: string;
+  privacyGroupId?: number;
+  privacyGroupName?: string;
+  isRoot: boolean;
+  isMale: boolean;
+  phoneWorkRedirect?: string;
+  site?: string;
+  address?: string;
+  position?: string;
+  icq?: string;
+  skype?: string;
+  comment?: string;
+  s1cCode?: string;
+  birthDay?: string;
+  avatarBase64?: string;
+  avatarContentType?: string;
+  photoBase64?: string;
+  photoContentType?: string;
 }
 
 export interface OrganizationContactDto {

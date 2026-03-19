@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getOrganizationRaions, getOrganizations } from '../app/api';
+import { useAuth } from '../app/AuthContext';
 import type { OrganizationListItemDto, OrganizationRaionDto } from '../app/types';
 import { DataTable } from './DataTable';
 import { Modal } from './Modal';
 import { Pagination } from './Pagination';
+import { SearchPanel } from './SearchPanel';
 
 const DEFAULT_PAGE_SIZE = 25;
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 75, 100];
@@ -15,6 +17,10 @@ interface OrganizationPickerProps {
 }
 
 export function OrganizationPicker({ value, onChange }: OrganizationPickerProps) {
+  const { user } = useAuth();
+  const currentUserId = String(user?.id ?? 'guest');
+  const tableSettingsKey = `puls-table-settings:organization-picker:${currentUserId}`;
+
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
@@ -40,33 +46,33 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
     setDraftSelection(Object.fromEntries(value.map((item) => [item.id, item])));
   }, [modalOpen, value]);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [organizationsResponse, raionsResponse] = await Promise.all([
+        getOrganizations({
+          search: appliedSearch,
+          raionIds: selectedRaionId ? [selectedRaionId] : [],
+          skip: (page - 1) * pageSize,
+          take: pageSize
+        }),
+        getOrganizationRaions(appliedSearch)
+      ]);
+
+      setRows(organizationsResponse.items);
+      setTotalCount(organizationsResponse.totalCount);
+      setRaions(raionsResponse);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!modalOpen) {
       return;
     }
 
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [organizationsResponse, raionsResponse] = await Promise.all([
-          getOrganizations({
-            search: appliedSearch,
-            raionIds: selectedRaionId ? [selectedRaionId] : [],
-            skip: (page - 1) * pageSize,
-            take: pageSize
-          }),
-          getOrganizationRaions(appliedSearch)
-        ]);
-
-        setRows(organizationsResponse.items);
-        setTotalCount(organizationsResponse.totalCount);
-        setRaions(raionsResponse);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
+    void loadData();
   }, [appliedSearch, modalOpen, page, pageSize, selectedRaionId]);
 
   useEffect(() => {
@@ -76,9 +82,19 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
     }
   }, [page, pageSize, totalCount]);
 
+  const applySearchValue = (value: string) => {
+    const nextSearch = value.trim();
+    setAppliedSearch((current) => (current === nextSearch ? current : nextSearch));
+    setPage((current) => (current === 1 ? current : 1));
+  };
+
   const applySearch = () => {
-    setAppliedSearch(search.trim());
-    setPage(1);
+    applySearchValue(search);
+  };
+
+  const clearSearch = () => {
+    setSearch('');
+    applySearchValue('');
   };
 
   const toggleDraftItem = (item: OrganizationListItemDto) => {
@@ -192,30 +208,31 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
           </aside>
 
           <div className="organizations-main">
-            <div className="toolbar-panel">
-              <input
-                className="form-input"
-                value={search}
-                placeholder="Поиск по названию, ИНН, району или типу"
-                onChange={(event) => setSearch(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    applySearch();
-                  }
-                }}
-              />
-              <button type="button" className="primary-button toolbar-button" onClick={applySearch}>Найти</button>
-            </div>
+            <SearchPanel
+              value={search}
+              placeholder="Поиск по названию, ИНН, району или типу"
+              onChange={setSearch}
+              onSearch={applySearch}
+              onClear={clearSearch}
+              onDebouncedChange={applySearchValue}
+              onRefresh={loadData}
+              refreshSuccessMessage="Справочник организаций обновлен."
+            />
 
             <DataTable
               rows={rows}
               getRowKey={(row) => row.id}
-              emptyText={loading ? 'Загрузка...' : 'Нет данных'}
+              loading={loading}
+              emptyText="Нет данных"
+              settingsKey={tableSettingsKey}
               onRowClick={(row) => toggleDraftItem(row)}
               columns={[
                 {
                   key: 'selected',
                   title: '',
+                  width: 70,
+                  minWidth: 70,
+                  canHide: false,
                   render: (row) => (
                     <input
                       type="checkbox"
@@ -225,10 +242,10 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
                     />
                   )
                 },
-                { key: 'name', title: 'Название', render: (row) => row.name || EMPTY_VALUE },
-                { key: 'inn', title: 'ИНН', render: (row) => row.inn || EMPTY_VALUE },
-                { key: 'raion', title: 'Район', render: (row) => row.raion || EMPTY_VALUE },
-                { key: 'orgType', title: 'Тип', render: (row) => row.orgType || EMPTY_VALUE }
+                { key: 'name', title: 'Название', width: 280, minWidth: 220, render: (row) => row.name || EMPTY_VALUE },
+                { key: 'inn', title: 'ИНН', width: 150, minWidth: 130, render: (row) => row.inn || EMPTY_VALUE },
+                { key: 'raion', title: 'Район', width: 220, minWidth: 180, render: (row) => row.raion || EMPTY_VALUE },
+                { key: 'orgType', title: 'Тип', width: 220, minWidth: 180, render: (row) => row.orgType || EMPTY_VALUE }
               ]}
             />
 

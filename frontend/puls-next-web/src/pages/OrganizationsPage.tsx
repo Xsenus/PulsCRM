@@ -1,28 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   deleteOrganization,
   getOrganization,
-  getOrganizationLookups,
   getOrganizationRaions,
-  getOrganizations,
-  saveOrganization
+  getOrganizations
 } from '../app/api';
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
 import { showToast } from '../app/toast';
 import type {
-  OrganizationDetailsDto,
-  OrganizationEditorLookupsDto,
   OrganizationListItemDto,
-  OrganizationRaionDto,
-  OrganizationUpsertRequest
+  OrganizationDetailsDto,
+  OrganizationRaionDto
 } from '../app/types';
 import { DataTable } from '../components/DataTable';
 import { Modal } from '../components/Modal';
-import { OrganizationEditorModal } from '../components/OrganizationEditorModal';
 import { OrganizationsTable } from '../components/OrganizationsTable';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
+import { SearchActionIcon, SearchPanel } from '../components/SearchPanel';
 
 const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 75, 100];
@@ -37,54 +34,6 @@ interface RowContextMenuState {
   row: OrganizationListItemDto;
   x: number;
   y: number;
-}
-
-function createEmptyOrganizationRequest(): OrganizationUpsertRequest {
-  return {
-    name: '',
-    visible: true,
-    isManager: false,
-    salaryEnabled: false,
-    oneCAccountingEnabled: false,
-    oneCSalaryEnabled: false,
-    oneCHousingEnabled: false
-  };
-}
-
-function mapDetailsToRequest(details: OrganizationDetailsDto): OrganizationUpsertRequest {
-  return {
-    name: details.name,
-    smallName: details.smallName,
-    fullName: details.fullName,
-    inn: details.inn,
-    raionId: details.raionId,
-    orgTypeId: details.orgTypeId,
-    visible: details.visible,
-    isManager: details.isManager,
-    ogrn: details.ogrn,
-    kpp: details.kpp,
-    addressLegal: details.addressLegal,
-    addressActual: details.addressActual,
-    phone: details.phone,
-    site: details.site,
-    primaryEmail: details.primaryEmail,
-    directorEmail: details.directorEmail,
-    salaryEmail: details.salaryEmail,
-    oneCEmail: details.oneCEmail,
-    siteEmail: details.siteEmail,
-    comment: details.comment,
-    otherInfo: details.otherInfo,
-    salaryEnabled: details.salaryEnabled,
-    oneCAccountingEnabled: details.oneCAccountingEnabled,
-    oneCSalaryEnabled: details.oneCSalaryEnabled,
-    oneCHousingEnabled: details.oneCHousingEnabled,
-    salaryContactName: details.salaryContactName,
-    salaryContactPhone: details.salaryContactPhone,
-    oneCContactName: details.oneCContactName,
-    oneCContactPhone: details.oneCContactPhone,
-    siteContactName: details.siteContactName,
-    siteContactPhone: details.siteContactPhone
-  };
 }
 
 function toErrorMessage(error: unknown) {
@@ -127,36 +76,12 @@ function loadStoredSidebarWidth(storageKey: string) {
   return Number.isFinite(parsedValue) ? clampSidebarWidth(parsedValue) : DEFAULT_SIDEBAR_WIDTH;
 }
 
-function SearchActionIcon({ kind }: { kind: 'clear' | 'refresh' | 'search' }) {
-  if (kind === 'clear') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (kind === 'refresh') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M19 7v5h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M18.4 12a6.4 6.4 0 10-1.88 4.53L19 14.8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="11" cy="11" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M16 16l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function OrganizationsPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
   const tableSettingsKey = `puls-organizations-table:${currentUserId}`;
+  const contactsTableSettingsKey = `puls-table-settings:organization-contacts:${currentUserId}`;
   const pageSizeStorageKey = `puls-organizations-page-size:${ORGANIZATIONS_TABLE_STORAGE_ID}:${currentUserId}`;
   const legacyPageSizeStorageKey = `puls-organizations-page-size:${currentUserId}`;
   const sidebarWidthStorageKey = `puls-organizations-sidebar-width:${currentUserId}`;
@@ -167,7 +92,6 @@ export function OrganizationsPage() {
   const [raionSearch, setRaionSearch] = useState('');
   const [rows, setRows] = useState<OrganizationListItemDto[]>([]);
   const [raions, setRaions] = useState<OrganizationRaionDto[]>([]);
-  const [lookups, setLookups] = useState<OrganizationEditorLookupsDto | null>(null);
   const [selectedRowId, setSelectedRowId] = useState<number | undefined>();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey, legacyPageSizeStorageKey));
@@ -178,12 +102,6 @@ export function OrganizationsPage() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [details, setDetails] = useState<OrganizationDetailsDto | null>(null);
   const [contextMenu, setContextMenu] = useState<RowContextMenuState | null>(null);
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
-  const [editorTargetId, setEditorTargetId] = useState<number | undefined>();
-  const [editorDraft, setEditorDraft] = useState<OrganizationUpsertRequest>(createEmptyOrganizationRequest());
-  const [editorLoading, setEditorLoading] = useState(false);
-  const [editorSaving, setEditorSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<OrganizationListItemDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
@@ -222,16 +140,6 @@ export function OrganizationsPage() {
     return `${names.slice(0, 2).join(', ')} и еще ${names.length - 2}`;
   }, [raions, selectedRaionIds]);
 
-  const ensureLookups = async () => {
-    if (lookups) {
-      return lookups;
-    }
-
-    const data = await getOrganizationLookups();
-    setLookups(data);
-    return data;
-  };
-
   const loadData = async () => {
     setLoading(true);
 
@@ -253,22 +161,16 @@ export function OrganizationsPage() {
       if (organizationsResponse.items.every((item) => item.id !== selectedRowId)) {
         setSelectedRowId(organizationsResponse.items[0]?.id);
       }
-    } catch (error) {
-      showToast(toErrorMessage(error), 'error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadData();
-  }, [appliedSearch, page, pageSize, selectedRaionIdsKey]);
-
-  useEffect(() => {
-    void ensureLookups().catch(() => {
-      // Lookup loading is retried lazily when the editor opens.
+    void loadData().catch((error) => {
+      showToast(toErrorMessage(error), 'error');
     });
-  }, []);
+  }, [appliedSearch, page, pageSize, selectedRaionIdsKey]);
 
   useEffect(() => {
     setPageSize(loadStoredPageSize(pageSizeStorageKey, legacyPageSizeStorageKey));
@@ -323,15 +225,19 @@ export function OrganizationsPage() {
     };
   }, [contextMenu]);
 
+  const applySearchValue = (value: string) => {
+    const nextSearch = value.trim();
+    setAppliedSearch((current) => (current === nextSearch ? current : nextSearch));
+    setPage((current) => (current === 1 ? current : 1));
+  };
+
   const applySearch = () => {
-    setAppliedSearch(search.trim());
-    setPage(1);
+    applySearchValue(search);
   };
 
   const clearSearch = () => {
     setSearch('');
-    setAppliedSearch('');
-    setPage(1);
+    applySearchValue('');
   };
 
   const clearOrganizationFilters = () => {
@@ -366,65 +272,13 @@ export function OrganizationsPage() {
 
   const openCreateEditor = async () => {
     setContextMenu(null);
-    setEditorMode('create');
-    setEditorTargetId(undefined);
-    setEditorDraft(createEmptyOrganizationRequest());
-    setEditorLoading(true);
-    setEditorOpen(true);
-
-    try {
-      await ensureLookups();
-    } catch (error) {
-      showToast(toErrorMessage(error), 'error');
-      setEditorOpen(false);
-    } finally {
-      setEditorLoading(false);
-    }
+    navigate('/organizations/new');
   };
 
   const openEditEditor = async (row: OrganizationListItemDto) => {
     setContextMenu(null);
     setSelectedRowId(row.id);
-    setEditorMode('edit');
-    setEditorTargetId(row.id);
-    setEditorLoading(true);
-    setEditorOpen(true);
-
-    try {
-      await ensureLookups();
-      const data = await getOrganization(row.id);
-      setEditorDraft(mapDetailsToRequest(data));
-    } catch (error) {
-      showToast(toErrorMessage(error), 'error');
-      setEditorOpen(false);
-    } finally {
-      setEditorLoading(false);
-    }
-  };
-
-  const handleSaveEditor = async () => {
-    setEditorSaving(true);
-
-    try {
-      const saved = await saveOrganization(editorDraft, editorTargetId);
-      setEditorOpen(false);
-      setSelectedRowId(saved.id);
-
-      if (detailsOpen && details?.id === saved.id) {
-        setDetails(saved);
-      }
-
-      showToast(
-        editorMode === 'create' ? 'Организация создана.' : 'Изменения сохранены.',
-        editorMode === 'create' ? 'create' : 'update'
-      );
-
-      await loadData();
-    } catch (error) {
-      showToast(toErrorMessage(error), 'error');
-    } finally {
-      setEditorSaving(false);
-    }
+    navigate(`/organizations/${row.id}/edit`);
   };
 
   const handleDelete = async () => {
@@ -478,11 +332,29 @@ export function OrganizationsPage() {
     window.addEventListener('mouseup', handleMouseUp);
   };
 
+  const refreshOrganizations = async () => {
+    await loadData();
+    showToast('Список организаций обновлен.', 'success');
+  };
+
   return (
     <div className="page">
       <PageHeader title="Организации" />
 
-      <div className="panel organization-search-panel">
+      <SearchPanel
+        value={search}
+        placeholder="Поиск по названию, ИНН, району или типу"
+        onChange={setSearch}
+        onSearch={applySearch}
+        onClear={clearSearch}
+        onDebouncedChange={applySearchValue}
+        onRefresh={loadData}
+        refreshSuccessMessage="Список организаций обновлен."
+        panelClassName="organization-search-panel"
+        inputClassName="organization-search-input"
+      />
+
+      {false ? <div className="panel organization-search-panel">
         <div className="organization-search-shell">
           <input
             className="form-input organization-search-input"
@@ -528,7 +400,7 @@ export function OrganizationsPage() {
             </button>
           </div>
         </div>
-      </div>
+      </div> : null}
 
       <div
         className="organizations-layout"
@@ -650,6 +522,20 @@ export function OrganizationsPage() {
           <button type="button" className="row-context-menu-item" onClick={() => void openEditEditor(contextMenu.row)}>
             Редактировать
           </button>
+          <div className="row-context-menu-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="row-context-menu-item"
+            onClick={() => {
+              setContextMenu(null);
+              void refreshOrganizations().catch((error) => {
+                showToast(toErrorMessage(error), 'error');
+              });
+            }}
+          >
+            Обновить
+          </button>
+          <div className="row-context-menu-divider" aria-hidden="true" />
           <button
             type="button"
             className="row-context-menu-item danger"
@@ -662,18 +548,6 @@ export function OrganizationsPage() {
           </button>
         </div>
       ) : null}
-
-      <OrganizationEditorModal
-        open={editorOpen}
-        mode={editorMode}
-        value={editorDraft}
-        lookups={lookups}
-        loading={editorLoading}
-        saving={editorSaving}
-        onClose={() => setEditorOpen(false)}
-        onChange={setEditorDraft}
-        onSubmit={() => void handleSaveEditor()}
-      />
 
       <Modal
         open={!!deleteTarget}
@@ -760,14 +634,15 @@ export function OrganizationsPage() {
               <DataTable
                 rows={details.contacts}
                 getRowKey={(row) => row.id}
+                settingsKey={contactsTableSettingsKey}
                 emptyText="Нет контактов"
                 columns={[
-                  { key: 'fio', title: 'ФИО', render: (row) => row.fio || EMPTY_VALUE },
-                  { key: 'position', title: 'Должность', render: (row) => row.position || EMPTY_VALUE },
-                  { key: 'group', title: 'Группа', render: (row) => row.group || EMPTY_VALUE },
-                  { key: 'status', title: 'Статус', render: (row) => row.status || EMPTY_VALUE },
-                  { key: 'phone', title: 'Телефон', render: (row) => row.phone || EMPTY_VALUE },
-                  { key: 'email', title: 'Почта', render: (row) => row.email || EMPTY_VALUE }
+                  { key: 'fio', title: 'ФИО', width: 240, minWidth: 200, render: (row) => row.fio || EMPTY_VALUE },
+                  { key: 'position', title: 'Должность', width: 220, minWidth: 180, render: (row) => row.position || EMPTY_VALUE },
+                  { key: 'group', title: 'Группа', width: 180, minWidth: 150, render: (row) => row.group || EMPTY_VALUE },
+                  { key: 'status', title: 'Статус', width: 160, minWidth: 130, render: (row) => row.status || EMPTY_VALUE },
+                  { key: 'phone', title: 'Телефон', width: 180, minWidth: 150, render: (row) => row.phone || EMPTY_VALUE },
+                  { key: 'email', title: 'Почта', width: 220, minWidth: 180, render: (row) => row.email || EMPTY_VALUE }
                 ]}
               />
             </div>

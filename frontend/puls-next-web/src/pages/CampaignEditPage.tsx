@@ -10,6 +10,7 @@ import {
   saveCampaign,
   uploadFile
 } from '../app/api';
+import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
 import { campaignStatusOptions, dispatchStatusOptions, labelOf, recipientSourceOptions } from '../app/lookups';
 import { showToast } from '../app/toast';
@@ -121,6 +122,11 @@ function mapCampaignToState(campaign: CampaignDetailsDto): {
 }
 
 export function CampaignEditPage() {
+  const { user } = useAuth();
+  const currentUserId = String(user?.id ?? 'guest');
+  const previewTableSettingsKey = `puls-table-settings:campaign-preview:${currentUserId}`;
+  const batchesTableSettingsKey = `puls-table-settings:campaign-batches:${currentUserId}`;
+  const itemsTableSettingsKey = `puls-table-settings:campaign-items:${currentUserId}`;
   const params = useParams();
   const navigate = useNavigate();
   const id = params.id ? Number(params.id) : undefined;
@@ -459,11 +465,12 @@ export function CampaignEditPage() {
               <DataTable
                 rows={recipientPreviewData.items}
                 getRowKey={(row) => `${row.legacyOrgId}-${row.email}`}
+                settingsKey={previewTableSettingsKey}
                 columns={[
-                  { key: 'legacyOrgName', title: 'Организация', render: (row) => row.legacyOrgName || '—' },
-                  { key: 'email', title: 'Адрес', render: (row) => row.email },
-                  { key: 'displayName', title: 'Имя', render: (row) => row.displayName || '—' },
-                  { key: 'sourceKind', title: 'Источник', render: (row) => labelOf(recipientSourceOptions, row.sourceKind) }
+                  { key: 'legacyOrgName', title: 'Организация', width: 260, minWidth: 220, render: (row) => row.legacyOrgName || '—' },
+                  { key: 'email', title: 'Адрес', width: 240, minWidth: 200, render: (row) => row.email },
+                  { key: 'displayName', title: 'Имя', width: 220, minWidth: 180, render: (row) => row.displayName || '—' },
+                  { key: 'sourceKind', title: 'Источник', width: 170, minWidth: 150, render: (row) => labelOf(recipientSourceOptions, row.sourceKind) }
                 ]}
               />
             </section>
@@ -490,15 +497,16 @@ export function CampaignEditPage() {
                   <DataTable
                     rows={stats.recentBatches}
                     getRowKey={(row) => row.id}
+                    settingsKey={batchesTableSettingsKey}
                     emptyText="Нет пакетов"
                     columns={[
-                      { key: 'id', title: '#', render: (row) => row.id },
-                      { key: 'createdAtUtc', title: 'Создан', render: (row) => formatDateTime(row.createdAtUtc) || '—' },
-                      { key: 'scheduledAtUtc', title: 'Запланирован', render: (row) => formatDateTime(row.scheduledAtUtc) || '—' },
-                      { key: 'totalRecipients', title: 'Всего', render: (row) => row.totalRecipients },
-                      { key: 'sentCount', title: 'Отправлено', render: (row) => row.sentCount },
-                      { key: 'failedCount', title: 'Ошибок', render: (row) => row.failedCount },
-                      { key: 'processingCount', title: 'В обработке', render: (row) => row.processingCount }
+                      { key: 'id', title: '#', width: 80, minWidth: 70, render: (row) => row.id },
+                      { key: 'createdAtUtc', title: 'Создан', width: 170, minWidth: 150, render: (row) => formatDateTime(row.createdAtUtc) || '—' },
+                      { key: 'scheduledAtUtc', title: 'Запланирован', width: 170, minWidth: 150, render: (row) => formatDateTime(row.scheduledAtUtc) || '—' },
+                      { key: 'totalRecipients', title: 'Всего', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.totalRecipients },
+                      { key: 'sentCount', title: 'Отправлено', width: 120, minWidth: 100, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.sentCount },
+                      { key: 'failedCount', title: 'Ошибок', width: 110, minWidth: 100, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.failedCount },
+                      { key: 'processingCount', title: 'В обработке', width: 130, minWidth: 110, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.processingCount }
                     ]}
                   />
                 </div>
@@ -508,14 +516,15 @@ export function CampaignEditPage() {
                   <DataTable
                     rows={stats.recentItems}
                     getRowKey={(row) => row.id}
+                    settingsKey={itemsTableSettingsKey}
                     emptyText="Нет сообщений"
                     columns={[
-                      { key: 'recipientEmail', title: 'Адрес', render: (row) => row.recipientEmail || '—' },
-                      { key: 'legacyOrgName', title: 'Организация', render: (row) => row.legacyOrgName || '—' },
-                      { key: 'status', title: 'Статус', render: (row) => labelOf(dispatchStatusOptions, row.status) },
-                      { key: 'attemptCount', title: 'Попыток', render: (row) => row.attemptCount },
-                      { key: 'sentAtUtc', title: 'Отправлено', render: (row) => formatDateTime(row.sentAtUtc) || '—' },
-                      { key: 'errorMessage', title: 'Ошибка', render: (row) => row.errorMessage || '—' }
+                      { key: 'recipientEmail', title: 'Адрес', width: 240, minWidth: 200, render: (row) => row.recipientEmail || '—' },
+                      { key: 'legacyOrgName', title: 'Организация', width: 240, minWidth: 200, render: (row) => row.legacyOrgName || '—' },
+                      { key: 'status', title: 'Статус', width: 150, minWidth: 130, render: (row) => labelOf(dispatchStatusOptions, row.status) },
+                      { key: 'attemptCount', title: 'Попыток', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attemptCount },
+                      { key: 'sentAtUtc', title: 'Отправлено', width: 170, minWidth: 150, render: (row) => formatDateTime(row.sentAtUtc) || '—' },
+                      { key: 'errorMessage', title: 'Ошибка', width: 280, minWidth: 220, render: (row) => row.errorMessage || '—' }
                     ]}
                   />
                 </div>
