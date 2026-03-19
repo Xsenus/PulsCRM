@@ -48,7 +48,7 @@ export function CampaignsPage() {
     }
 
     await deleteCampaign(id);
-    showToast('Кампания удалена', 'success');
+    showToast('Кампания удалена', 'delete');
     await load();
   };
 

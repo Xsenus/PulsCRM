@@ -105,7 +105,13 @@ app.UseExceptionHandler(handlerApp =>
 });
 
 app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwaggerUI(options =>
+{
+    options.StylesPath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui.css");
+    options.ScriptBundlePath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui-bundle.js");
+    options.ScriptPresetsPath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui-standalone-preset.js");
+    options.IndexStream = SwaggerUiCacheBusting.CreateVersionedIndexStream;
+});
 app.UseCors("web");
 app.UseAuthentication();
 app.UseAuthorization();

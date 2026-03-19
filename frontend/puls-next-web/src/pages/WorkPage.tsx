@@ -18,7 +18,7 @@ export function WorkPage() {
   const loadLookups = async () => {
     const [employeeResponse, organizationResponse] = await Promise.all([
       getEmployees('', 0, 500),
-      getOrganizations('', 0, 500)
+      getOrganizations({ take: 500 })
     ]);
 
     setEmployees(employeeResponse.items);

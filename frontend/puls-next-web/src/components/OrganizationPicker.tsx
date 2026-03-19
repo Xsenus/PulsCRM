@@ -5,8 +5,8 @@ import { DataTable } from './DataTable';
 import { Modal } from './Modal';
 import { Pagination } from './Pagination';
 
-const DEFAULT_PAGE_SIZE = 30;
-const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const DEFAULT_PAGE_SIZE = 25;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 75, 100];
 const EMPTY_VALUE = '—';
 
 interface OrganizationPickerProps {
@@ -49,7 +49,12 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
       setLoading(true);
       try {
         const [organizationsResponse, raionsResponse] = await Promise.all([
-          getOrganizations(appliedSearch, selectedRaionId, (page - 1) * pageSize, pageSize),
+          getOrganizations({
+            search: appliedSearch,
+            raionIds: selectedRaionId ? [selectedRaionId] : [],
+            skip: (page - 1) * pageSize,
+            take: pageSize
+          }),
           getOrganizationRaions(appliedSearch)
         ]);
 

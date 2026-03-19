@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 interface PaginationProps {
   page: number;
@@ -47,6 +47,48 @@ function buildVisiblePages(page: number, totalPages: number): Array<number | 'el
   return result;
 }
 
+function NavigationIcon({ kind }: { kind: 'first' | 'previous' | 'next' | 'last' }) {
+  if (kind === 'first') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M7 5v14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M17 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  if (kind === 'previous') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  if (kind === 'next') {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M17 5v14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M7 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function Pagination({
   page,
   pageSize,
@@ -57,35 +99,131 @@ export function Pagination({
 }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.max(1, Math.min(page, totalPages));
-  const start = totalCount === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const end = totalCount === 0 ? 0 : Math.min(safePage * pageSize, totalCount);
-  const pages = buildVisiblePages(safePage, totalPages);
+  const pages = useMemo(() => buildVisiblePages(safePage, totalPages), [safePage, totalPages]);
+  const [pageSizeOpen, setPageSizeOpen] = useState(false);
+  const [pageSizeMenuDirection, setPageSizeMenuDirection] = useState<'down' | 'up'>('down');
+  const [pageSizeMenuWidth, setPageSizeMenuWidth] = useState<number | null>(null);
+  const pageSizeRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!pageSizeOpen) {
+      return;
+    }
+
+    const updateMenuPlacement = () => {
+      const picker = pageSizeRef.current;
+      if (!picker) {
+        return;
+      }
+
+      const rect = picker.getBoundingClientRect();
+      const estimatedHeight = Math.min(Math.max(pageSizeOptions.length, 1), 6) * 46 + 22;
+      const viewportPadding = 16;
+      const spaceBelow = window.innerHeight - rect.bottom - viewportPadding;
+      const spaceAbove = rect.top - viewportPadding;
+
+      setPageSizeMenuDirection(spaceBelow >= estimatedHeight || spaceBelow >= spaceAbove ? 'down' : 'up');
+      setPageSizeMenuWidth(Math.max(Math.round(rect.width), 92));
+    };
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!pageSizeRef.current?.contains(event.target as Node)) {
+        setPageSizeOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPageSizeOpen(false);
+      }
+    };
+
+    updateMenuPlacement();
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', updateMenuPlacement);
+    window.addEventListener('scroll', updateMenuPlacement, true);
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', updateMenuPlacement);
+      window.removeEventListener('scroll', updateMenuPlacement, true);
+    };
+  }, [pageSizeOpen, pageSizeOptions.length]);
 
   return (
     <div className="pagination">
       <div className="pagination-meta">
         <div className="pagination-summary">
-          {totalCount === 0 ? 'Нет записей' : `Показано ${start}-${end} из ${totalCount}`}
+          {`Всего: ${totalCount}`}
         </div>
 
         {onPageSizeChange && pageSizeOptions.length > 0 ? (
-          <label className="pagination-size">
-            <span>На странице</span>
-            <select className="form-select pagination-select" value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))}>
-              {pageSizeOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
+          <div className={`pagination-size-picker${pageSizeOpen ? ' open' : ''}`} ref={pageSizeRef}>
+            <span className="pagination-size-label">Отображать</span>
+            <button
+              type="button"
+              className={`pagination-size-trigger${pageSizeOpen ? ' open' : ''}`}
+              aria-haspopup="listbox"
+              aria-expanded={pageSizeOpen}
+              onClick={() => setPageSizeOpen((current) => !current)}
+            >
+              <span className="pagination-size-spacer" aria-hidden="true" />
+              <span className="pagination-size-value">{pageSize}</span>
+              <span className="pagination-size-icon">
+                <ChevronIcon />
+              </span>
+            </button>
+
+            {pageSizeOpen ? (
+              <div
+                className={`pagination-size-menu ${pageSizeMenuDirection}`}
+                role="listbox"
+                aria-label="Количество строк на странице"
+                style={pageSizeMenuWidth ? { minWidth: `${pageSizeMenuWidth}px` } : undefined}
+              >
+                {pageSizeOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`pagination-size-option${option === pageSize ? ' active' : ''}`}
+                    role="option"
+                    aria-selected={option === pageSize}
+                    onClick={() => {
+                      onPageSizeChange(option);
+                      setPageSizeOpen(false);
+                    }}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         ) : null}
       </div>
 
       <div className="pagination-actions">
-        <button type="button" className="secondary-button button-inline" disabled={safePage <= 1} onClick={() => onPageChange(1)}>
-          В начало
+        <button
+          type="button"
+          className="secondary-button button-inline icon-button pagination-nav-button"
+          aria-label="В начало"
+          title="В начало"
+          disabled={safePage <= 1}
+          onClick={() => onPageChange(1)}
+        >
+          <NavigationIcon kind="first" />
         </button>
-        <button type="button" className="secondary-button button-inline" disabled={safePage <= 1} onClick={() => onPageChange(safePage - 1)}>
-          Назад
+        <button
+          type="button"
+          className="secondary-button button-inline icon-button pagination-nav-button"
+          aria-label="Назад"
+          title="Назад"
+          disabled={safePage <= 1}
+          onClick={() => onPageChange(safePage - 1)}
+        >
+          <NavigationIcon kind="previous" />
         </button>
 
         <div className="pagination-pages" aria-label="Страницы">
@@ -105,14 +243,28 @@ export function Pagination({
         </div>
 
         <div className="pagination-page">
-          Страница {safePage} из {totalPages}
+          {safePage} из {totalPages}
         </div>
 
-        <button type="button" className="secondary-button button-inline" disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)}>
-          Вперед
+        <button
+          type="button"
+          className="secondary-button button-inline icon-button pagination-nav-button"
+          aria-label="Вперед"
+          title="Вперед"
+          disabled={safePage >= totalPages}
+          onClick={() => onPageChange(safePage + 1)}
+        >
+          <NavigationIcon kind="next" />
         </button>
-        <button type="button" className="secondary-button button-inline" disabled={safePage >= totalPages} onClick={() => onPageChange(totalPages)}>
-          В конец
+        <button
+          type="button"
+          className="secondary-button button-inline icon-button pagination-nav-button"
+          aria-label="В конец"
+          title="В конец"
+          disabled={safePage >= totalPages}
+          onClick={() => onPageChange(totalPages)}
+        >
+          <NavigationIcon kind="last" />
         </button>
       </div>
     </div>

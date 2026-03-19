@@ -83,7 +83,7 @@ export function TransportProfilesPage() {
     setSaving(true);
     try {
       await saveTransportProfile(model, editingId);
-      showToast('SMTP профиль сохранен', 'success');
+      showToast('SMTP профиль сохранен', editingId ? 'update' : 'create');
       setModalOpen(false);
       setEditingId(undefined);
       setModel(emptyModel);
@@ -107,7 +107,7 @@ export function TransportProfilesPage() {
 
     try {
       await deleteTransportProfile(id);
-      showToast('Профиль удален', 'success');
+      showToast('Профиль удален', 'delete');
       if (editingId === id) {
         setModalOpen(false);
         setEditingId(undefined);

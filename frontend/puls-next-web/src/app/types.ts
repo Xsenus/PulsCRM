@@ -66,6 +66,50 @@ export interface OrganizationRaionDto {
   count: number;
 }
 
+export interface OrganizationLookupItemDto {
+  id: number;
+  name: string;
+}
+
+export interface OrganizationEditorLookupsDto {
+  raions: OrganizationLookupItemDto[];
+  orgTypes: OrganizationLookupItemDto[];
+}
+
+export interface OrganizationUpsertRequest {
+  name: string;
+  smallName?: string;
+  fullName?: string;
+  inn?: string;
+  raionId?: number;
+  orgTypeId?: number;
+  visible: boolean;
+  isManager: boolean;
+  ogrn?: string;
+  kpp?: string;
+  addressLegal?: string;
+  addressActual?: string;
+  phone?: string;
+  site?: string;
+  primaryEmail?: string;
+  directorEmail?: string;
+  salaryEmail?: string;
+  oneCEmail?: string;
+  siteEmail?: string;
+  comment?: string;
+  otherInfo?: string;
+  salaryEnabled: boolean;
+  oneCAccountingEnabled: boolean;
+  oneCSalaryEnabled: boolean;
+  oneCHousingEnabled: boolean;
+  salaryContactName?: string;
+  salaryContactPhone?: string;
+  oneCContactName?: string;
+  oneCContactPhone?: string;
+  siteContactName?: string;
+  siteContactPhone?: string;
+}
+
 export interface OrganizationListItemDto {
   id: number;
   name: string;
@@ -74,6 +118,7 @@ export interface OrganizationListItemDto {
   inn?: string;
   raionId?: number;
   raion?: string;
+  orgTypeId?: number;
   orgType?: string;
   visible: boolean;
   isManager: boolean;

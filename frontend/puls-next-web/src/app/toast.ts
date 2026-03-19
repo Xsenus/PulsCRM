@@ -1,4 +1,4 @@
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+export type ToastType = 'create' | 'update' | 'delete' | 'success' | 'error' | 'warning' | 'info';
 
 export interface ToastMessage {
   id: number;

@@ -9,8 +9,10 @@ import type {
   CampaignUpsertRequest,
   DashboardDto,
   EmployeeListItemDto,
+  OrganizationEditorLookupsDto,
   OrganizationDetailsDto,
   OrganizationListItemDto,
+  OrganizationUpsertRequest,
   OrganizationRaionDto,
   PagedResult,
   ScheduleOccurrenceDto,
@@ -132,10 +134,20 @@ export async function getEmployees(search = '', skip = 0, take = 200): Promise<P
   }
 }
 
-export async function getOrganizations(search = '', raionId?: number, skip = 0, take = 50): Promise<PagedResult<OrganizationListItemDto>> {
+export async function getOrganizations(params: {
+  search?: string;
+  raionIds?: number[];
+  skip?: number;
+  take?: number;
+} = {}): Promise<PagedResult<OrganizationListItemDto>> {
   try {
     const { data } = await api.get<PagedResult<OrganizationListItemDto>>('/api/organizations', {
-      params: { search, raionId, skip, take }
+      params: {
+        search: params.search ?? '',
+        raionIds: params.raionIds && params.raionIds.length > 0 ? params.raionIds.join(',') : undefined,
+        skip: params.skip ?? 0,
+        take: params.take ?? 50
+      }
     });
     return data;
   } catch (error) {
@@ -158,6 +170,34 @@ export async function getOrganization(id: number): Promise<OrganizationDetailsDt
   try {
     const { data } = await api.get<OrganizationDetailsDto>(`/api/organizations/${id}`);
     return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function getOrganizationLookups(): Promise<OrganizationEditorLookupsDto> {
+  try {
+    const { data } = await api.get<OrganizationEditorLookupsDto>('/api/organizations/lookups');
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function saveOrganization(request: OrganizationUpsertRequest, id?: number): Promise<OrganizationDetailsDto> {
+  try {
+    const { data } = id
+      ? await api.put<OrganizationDetailsDto>(`/api/organizations/${id}`, request)
+      : await api.post<OrganizationDetailsDto>('/api/organizations', request);
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function deleteOrganization(id: number): Promise<void> {
+  try {
+    await api.delete(`/api/organizations/${id}`);
   } catch (error) {
     unwrapError(error);
   }

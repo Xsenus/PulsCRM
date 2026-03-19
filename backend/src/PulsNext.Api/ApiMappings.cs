@@ -88,12 +88,14 @@ public static class ApiMappings
         group.MapGet(string.Empty, async Task<Ok<PagedResult<OrganizationListItemDto>>> (
             string? search,
             int? raionId,
+            string? raionIds,
             int? skip,
             int? take,
             IOrganizationService organizationService,
             CancellationToken cancellationToken) =>
         {
-            var result = await organizationService.GetAsync(search, raionId, skip ?? 0, take ?? 100, cancellationToken);
+            var normalizedRaionIds = ParseRaionIds(raionIds, raionId);
+            var result = await organizationService.GetAsync(search, normalizedRaionIds, skip ?? 0, take ?? 100, cancellationToken);
             return TypedResults.Ok(result);
         });
 
@@ -106,10 +108,33 @@ public static class ApiMappings
             return TypedResults.Ok(result);
         });
 
+        group.MapGet("/lookups", async Task<Ok<OrganizationEditorLookupsDto>> (
+            IOrganizationService organizationService,
+            CancellationToken cancellationToken) =>
+        {
+            return TypedResults.Ok(await organizationService.GetLookupsAsync(cancellationToken));
+        });
+
         group.MapGet("/{id:int}", async Task<Results<Ok<OrganizationDetailsDto>, NotFound>> (int id, IOrganizationService organizationService, CancellationToken cancellationToken) =>
         {
             var result = await organizationService.GetByIdAsync(id, cancellationToken);
             return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        });
+
+        group.MapPost(string.Empty, async Task<Ok<OrganizationDetailsDto>> (OrganizationUpsertRequest request, IOrganizationService organizationService, CancellationToken cancellationToken) =>
+        {
+            return TypedResults.Ok(await organizationService.UpsertAsync(null, request, cancellationToken));
+        });
+
+        group.MapPut("/{id:int}", async Task<Ok<OrganizationDetailsDto>> (int id, OrganizationUpsertRequest request, IOrganizationService organizationService, CancellationToken cancellationToken) =>
+        {
+            return TypedResults.Ok(await organizationService.UpsertAsync(id, request, cancellationToken));
+        });
+
+        group.MapDelete("/{id:int}", async Task<NoContent> (int id, IOrganizationService organizationService, CancellationToken cancellationToken) =>
+        {
+            await organizationService.DeleteAsync(id, cancellationToken);
+            return TypedResults.NoContent();
         });
     }
 
@@ -274,5 +299,19 @@ public static class ApiMappings
         {
             return TypedResults.Ok(await statisticsService.GetCampaignStatisticsAsync(id, cancellationToken));
         });
+    }
+
+    private static IReadOnlyCollection<int> ParseRaionIds(string? raionIds, int? raionId)
+    {
+        if (!string.IsNullOrWhiteSpace(raionIds))
+        {
+            return raionIds.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(value => int.TryParse(value, out var parsed) ? parsed : 0)
+                .Where(value => value != 0)
+                .Distinct()
+                .ToArray();
+        }
+
+        return raionId is > 0 ? [raionId.Value] : [];
     }
 }

@@ -191,7 +191,7 @@ export function CampaignEditPage() {
       setModel(mapped.model);
       setAttachments(mapped.attachments);
       setSelectedOrganizations((current) => current.length > 0 ? current : mapped.selectedOrganizations);
-      showToast('Кампания сохранена', 'success');
+      showToast('Кампания сохранена', id ? 'update' : 'create');
 
       if (!id) {
         navigate(`/campaigns/${saved.id}`, { replace: true });

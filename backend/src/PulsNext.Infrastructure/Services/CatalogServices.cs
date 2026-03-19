@@ -136,17 +136,23 @@ public sealed class EmployeeService(LegacyUnitOfWork legacyUnitOfWork) : IEmploy
 
 public interface IOrganizationService
 {
-    Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, int? raionId, int skip, int take, CancellationToken cancellationToken);
+    Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, IReadOnlyCollection<int> raionIds, int skip, int take, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<OrganizationRaionDto>> GetRaionsAsync(string? search, CancellationToken cancellationToken);
+    Task<OrganizationEditorLookupsDto> GetLookupsAsync(CancellationToken cancellationToken);
     Task<OrganizationDetailsDto?> GetByIdAsync(int id, CancellationToken cancellationToken);
+    Task<OrganizationDetailsDto> UpsertAsync(int? id, OrganizationUpsertRequest request, CancellationToken cancellationToken);
+    Task DeleteAsync(int id, CancellationToken cancellationToken);
 }
 
-public sealed class OrganizationService(LegacyUnitOfWork legacyUnitOfWork) : IOrganizationService
+public sealed class OrganizationService(
+    LegacyUnitOfWork legacyUnitOfWork,
+    MailingUnitOfWork mailingUnitOfWork,
+    ICurrentUserAccessor currentUserAccessor) : IOrganizationService
 {
-    public Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, int? raionId, int skip, int take, CancellationToken cancellationToken)
+    public Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, IReadOnlyCollection<int> raionIds, int skip, int take, CancellationToken cancellationToken)
     {
         var term = TextHelper.NullIfWhiteSpace(search);
-        var query = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, raionId);
+        var query = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, NormalizeRaionIds(raionIds));
 
         var totalCount = query.Count();
         var itemsPage = query.OrderBy(x => x.Name).ThenBy(x => x.Oid)
@@ -165,16 +171,12 @@ public sealed class OrganizationService(LegacyUnitOfWork legacyUnitOfWork) : IOr
     public Task<IReadOnlyCollection<OrganizationRaionDto>> GetRaionsAsync(string? search, CancellationToken cancellationToken)
     {
         var term = TextHelper.NullIfWhiteSpace(search);
-        var organizations = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, null)
-            .Select(x => new
+        var items = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, [])
+            .GroupBy(x => new
             {
                 Id = x.Raion == null ? null : (int?)x.Raion.Oid,
                 Name = x.Raion != null && x.Raion.Name != null ? x.Raion.Name : "Без района"
             })
-            .ToList();
-
-        var items = organizations
-            .GroupBy(x => new { x.Id, x.Name })
             .Select(g => new OrganizationRaionDto
             {
                 Id = g.Key.Id,
@@ -185,6 +187,38 @@ public sealed class OrganizationService(LegacyUnitOfWork legacyUnitOfWork) : IOr
             .ToArray();
 
         return Task.FromResult<IReadOnlyCollection<OrganizationRaionDto>>(items);
+    }
+
+    public Task<OrganizationEditorLookupsDto> GetLookupsAsync(CancellationToken cancellationToken)
+    {
+        var raions = new XPQuery<LegacyRaion>(legacyUnitOfWork)
+            .ToList()
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name))
+            .OrderBy(x => x.Name ?? string.Empty)
+            .Select(x => new OrganizationLookupItemDto
+            {
+                Id = x.Oid,
+                Name = x.Name ?? string.Empty
+            })
+            .ToArray();
+
+        var orgTypes = new XPQuery<LegacyOrgType>(legacyUnitOfWork)
+            .ToList()
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name) || !string.IsNullOrWhiteSpace(x.FullName))
+            .OrderBy(x => x.FullName ?? x.Name ?? string.Empty)
+            .ThenBy(x => x.Name ?? string.Empty)
+            .Select(x => new OrganizationLookupItemDto
+            {
+                Id = x.Oid,
+                Name = x.FullName ?? x.Name ?? string.Empty
+            })
+            .ToArray();
+
+        return Task.FromResult(new OrganizationEditorLookupsDto
+        {
+            Raions = raions,
+            OrgTypes = orgTypes
+        });
     }
 
     public Task<OrganizationDetailsDto?> GetByIdAsync(int id, CancellationToken cancellationToken)
@@ -199,11 +233,88 @@ public sealed class OrganizationService(LegacyUnitOfWork legacyUnitOfWork) : IOr
         return Task.FromResult<OrganizationDetailsDto?>(MappingHelper.ToOrganizationDetailsDto(organization, openWorkCounts.GetValueOrDefault(organization.Oid)));
     }
 
-    private IQueryable<LegacyOrg> ApplyOrganizationFilters(IQueryable<LegacyOrg> query, string? term, int? raionId)
+    public Task<OrganizationDetailsDto> UpsertAsync(int? id, OrganizationUpsertRequest request, CancellationToken cancellationToken)
     {
-        if (raionId is > 0)
+        ArgumentNullException.ThrowIfNull(request);
+        ValidationHelper.Guard(!string.IsNullOrWhiteSpace(request.Name), "Введите название организации.");
+        ValidateOptionalEmail(request.PrimaryEmail, "основной email");
+        ValidateOptionalEmail(request.DirectorEmail, "email руководителя");
+        ValidateOptionalEmail(request.SalaryEmail, "email зарплаты");
+        ValidateOptionalEmail(request.OneCEmail, "email 1C");
+        ValidateOptionalEmail(request.SiteEmail, "email сайта");
+
+        var now = DateTime.UtcNow;
+        var currentUser = currentUserAccessor.GetLegacyUserId() is int currentUserId && currentUserId > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyUser>(currentUserId)
+            : null;
+
+        var organization = id is > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyOrg>(id.Value) ?? throw new KeyNotFoundException($"Организация #{id} не найдена.")
+            : new LegacyOrg(legacyUnitOfWork)
+            {
+                Date_create = now,
+                User_create = currentUser,
+                FlVisible = true
+            };
+
+        ApplyOrganizationChanges(organization, request, now, currentUser);
+
+        legacyUnitOfWork.CommitChanges();
+
+        var openWorkCounts = BuildOpenWorkCounts([organization.Oid]);
+        return Task.FromResult(MappingHelper.ToOrganizationDetailsDto(organization, openWorkCounts.GetValueOrDefault(organization.Oid)));
+    }
+
+    public Task DeleteAsync(int id, CancellationToken cancellationToken)
+    {
+        var organization = legacyUnitOfWork.GetObjectByKey<LegacyOrg>(id)
+            ?? throw new KeyNotFoundException($"Организация #{id} не найдена.");
+
+        var hasContacts = organization.Contacts.Count > 0;
+        if (hasContacts)
         {
-            query = query.Where(x => x.Raion != null && x.Raion.Oid == raionId.Value);
+            throw new ValidationException("Нельзя удалить организацию, у которой есть связанные контакты.");
+        }
+
+        var hasJobs = new XPQuery<LegacyJob>(legacyUnitOfWork).ToList().Any(x => x.Org != null && x.Org.Oid == id);
+        if (hasJobs)
+        {
+            throw new ValidationException("Нельзя удалить организацию, у которой есть связанные задачи.");
+        }
+
+        var usedByCampaigns = new XPQuery<MailCampaignTargetOrganization>(mailingUnitOfWork).ToList().Any(x => x.LegacyOrgId == id);
+        if (usedByCampaigns)
+        {
+            throw new ValidationException("Нельзя удалить организацию, которая используется в кампаниях.");
+        }
+
+        organization.OrgInfo?.Delete();
+        organization.OrgInfoOther?.Delete();
+        organization.Delete();
+        legacyUnitOfWork.CommitChanges();
+        return Task.CompletedTask;
+    }
+
+    private IQueryable<LegacyOrg> ApplyOrganizationFilters(IQueryable<LegacyOrg> query, string? term, IReadOnlyCollection<int> raionIds)
+    {
+        if (raionIds.Count > 0)
+        {
+            var normalizedIds = raionIds.Distinct().ToArray();
+            var includeWithoutRaion = normalizedIds.Contains(-1);
+            var positiveIds = normalizedIds.Where(x => x > 0).ToArray();
+
+            if (includeWithoutRaion && positiveIds.Length > 0)
+            {
+                query = query.Where(x => x.Raion == null || positiveIds.Contains(x.Raion.Oid));
+            }
+            else if (includeWithoutRaion)
+            {
+                query = query.Where(x => x.Raion == null);
+            }
+            else
+            {
+                query = query.Where(x => x.Raion != null && positiveIds.Contains(x.Raion.Oid));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(term))
@@ -218,6 +329,74 @@ public sealed class OrganizationService(LegacyUnitOfWork legacyUnitOfWork) : IOr
         }
 
         return query;
+    }
+
+    private void ApplyOrganizationChanges(LegacyOrg organization, OrganizationUpsertRequest request, DateTime now, LegacyUser? currentUser)
+    {
+        EnsureOrganizationInfoSections(organization);
+
+        organization.Name = request.Name.Trim();
+        organization.SmallName = TextHelper.NullIfWhiteSpace(request.SmallName);
+        organization.FullName = TextHelper.NullIfWhiteSpace(request.FullName);
+        organization.INN = TextHelper.NullIfWhiteSpace(request.Inn);
+        organization.Raion = request.RaionId is > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyRaion>(request.RaionId.Value) ?? throw new KeyNotFoundException($"Район #{request.RaionId} не найден.")
+            : null;
+        organization.OrgType = request.OrgTypeId is > 0
+            ? legacyUnitOfWork.GetObjectByKey<LegacyOrgType>(request.OrgTypeId.Value) ?? throw new KeyNotFoundException($"Тип организации #{request.OrgTypeId} не найден.")
+            : null;
+        organization.FlVisible = request.Visible;
+        organization.FlManager = request.IsManager;
+        organization.Date_update = now;
+        organization.User_update = currentUser;
+        organization.Date_update_admin = now;
+        organization.User_update_admin = currentUser;
+
+        organization.OrgInfo!.Comment = TextHelper.NullIfWhiteSpace(request.Comment);
+        organization.OrgInfo.OtherInfo = TextHelper.NullIfWhiteSpace(request.OtherInfo);
+        organization.OrgInfo.KPP = TextHelper.NullIfWhiteSpace(request.Kpp);
+        organization.OrgInfo.AddressU = TextHelper.NullIfWhiteSpace(request.AddressLegal);
+        organization.OrgInfo.AddressF = TextHelper.NullIfWhiteSpace(request.AddressActual);
+        organization.OrgInfo.Phone = TextHelper.NullIfWhiteSpace(request.Phone);
+        organization.OrgInfo.Email = TextHelper.NullIfWhiteSpace(request.PrimaryEmail);
+        organization.OrgInfo.Site = TextHelper.NullIfWhiteSpace(request.Site);
+        organization.OrgInfo.Org = organization;
+
+        organization.OrgInfoOther!.OGRN = TextHelper.NullIfWhiteSpace(request.Ogrn);
+        organization.OrgInfoOther.RukEmail = TextHelper.NullIfWhiteSpace(request.DirectorEmail);
+        organization.OrgInfoOther.ZpEmail = TextHelper.NullIfWhiteSpace(request.SalaryEmail);
+        organization.OrgInfoOther.F1cEmail = TextHelper.NullIfWhiteSpace(request.OneCEmail);
+        organization.OrgInfoOther.SiteEmail = TextHelper.NullIfWhiteSpace(request.SiteEmail);
+        organization.OrgInfoOther.ZpWorking = request.SalaryEnabled;
+        organization.OrgInfoOther.F1cWorkingB = request.OneCAccountingEnabled;
+        organization.OrgInfoOther.F1cWorkingZ = request.OneCSalaryEnabled;
+        organization.OrgInfoOther.F1cWorkingJKH = request.OneCHousingEnabled;
+        organization.OrgInfoOther.ZpFIO = TextHelper.NullIfWhiteSpace(request.SalaryContactName);
+        organization.OrgInfoOther.ZpPhone = TextHelper.NullIfWhiteSpace(request.SalaryContactPhone);
+        organization.OrgInfoOther.F1cFIO = TextHelper.NullIfWhiteSpace(request.OneCContactName);
+        organization.OrgInfoOther.F1cPhone = TextHelper.NullIfWhiteSpace(request.OneCContactPhone);
+        organization.OrgInfoOther.SiteFIO = TextHelper.NullIfWhiteSpace(request.SiteContactName);
+        organization.OrgInfoOther.SitePhone = TextHelper.NullIfWhiteSpace(request.SiteContactPhone);
+        organization.OrgInfoOther.Org = organization;
+    }
+
+    private void EnsureOrganizationInfoSections(LegacyOrg organization)
+    {
+        if (organization.OrgInfo is null)
+        {
+            organization.OrgInfo = new LegacyOrgInfo(legacyUnitOfWork)
+            {
+                Org = organization
+            };
+        }
+
+        if (organization.OrgInfoOther is null)
+        {
+            organization.OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+            {
+                Org = organization
+            };
+        }
     }
 
     private Dictionary<int, int> BuildOpenWorkCounts(int[] organizationIds)
@@ -236,10 +415,18 @@ public sealed class OrganizationService(LegacyUnitOfWork legacyUnitOfWork) : IOr
             .ToDictionary(g => g.Key, g => g.Count());
     }
 
+    private static IReadOnlyCollection<int> NormalizeRaionIds(IReadOnlyCollection<int> raionIds)
+        => raionIds.Where(x => x != 0).Distinct().ToArray();
+
     private static int NormalizeTake(int take) => take <= 0 ? 100 : Math.Min(take, 500);
 
     private static bool Contains(string? source, string term)
         => !string.IsNullOrWhiteSpace(source) && source.Contains(term, StringComparison.OrdinalIgnoreCase);
+
+    private static void ValidateOptionalEmail(string? value, string label)
+    {
+        ValidationHelper.Guard(string.IsNullOrWhiteSpace(value) || EmailHelper.IsValid(value), $"Введите корректный {label}.");
+    }
 }
 
 public interface IWorkService

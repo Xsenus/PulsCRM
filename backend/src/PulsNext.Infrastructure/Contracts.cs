@@ -66,6 +66,53 @@ public sealed class OrganizationRaionDto
     public int Count { get; set; }
 }
 
+public sealed class OrganizationLookupItemDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class OrganizationEditorLookupsDto
+{
+    public IReadOnlyCollection<OrganizationLookupItemDto> Raions { get; set; } = Array.Empty<OrganizationLookupItemDto>();
+    public IReadOnlyCollection<OrganizationLookupItemDto> OrgTypes { get; set; } = Array.Empty<OrganizationLookupItemDto>();
+}
+
+public sealed class OrganizationUpsertRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string? SmallName { get; set; }
+    public string? FullName { get; set; }
+    public string? Inn { get; set; }
+    public int? RaionId { get; set; }
+    public int? OrgTypeId { get; set; }
+    public bool Visible { get; set; } = true;
+    public bool IsManager { get; set; }
+    public string? Ogrn { get; set; }
+    public string? Kpp { get; set; }
+    public string? AddressLegal { get; set; }
+    public string? AddressActual { get; set; }
+    public string? Phone { get; set; }
+    public string? Site { get; set; }
+    public string? PrimaryEmail { get; set; }
+    public string? DirectorEmail { get; set; }
+    public string? SalaryEmail { get; set; }
+    public string? OneCEmail { get; set; }
+    public string? SiteEmail { get; set; }
+    public string? Comment { get; set; }
+    public string? OtherInfo { get; set; }
+    public bool SalaryEnabled { get; set; }
+    public bool OneCAccountingEnabled { get; set; }
+    public bool OneCSalaryEnabled { get; set; }
+    public bool OneCHousingEnabled { get; set; }
+    public string? SalaryContactName { get; set; }
+    public string? SalaryContactPhone { get; set; }
+    public string? OneCContactName { get; set; }
+    public string? OneCContactPhone { get; set; }
+    public string? SiteContactName { get; set; }
+    public string? SiteContactPhone { get; set; }
+}
+
 public class OrganizationListItemDto
 {
     public int Id { get; set; }
@@ -75,6 +122,7 @@ public class OrganizationListItemDto
     public string? Inn { get; set; }
     public int? RaionId { get; set; }
     public string? Raion { get; set; }
+    public int? OrgTypeId { get; set; }
     public string? OrgType { get; set; }
     public bool Visible { get; set; }
     public bool IsManager { get; set; }
