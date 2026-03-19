@@ -2,14 +2,30 @@ using PulsNext.Domain.Mailing;
 
 namespace PulsNext.Infrastructure;
 
+/// <summary>
+/// Универсальная страница результата с элементами выборки и общим количеством записей.
+/// </summary>
 public sealed record PagedResult<T>(IReadOnlyCollection<T> Items, int TotalCount);
 
+/// <summary>
+/// Данные для входа пользователя по логину и паролю.
+/// </summary>
 public sealed class LoginRequest
 {
+    /// <summary>
+    /// Логин пользователя в системе.
+    /// </summary>
     public string Login { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Пароль пользователя в открытом виде для проверки при входе.
+    /// </summary>
     public string Password { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Профиль текущего авторизованного пользователя.
+/// </summary>
 public sealed class CurrentUserDto
 {
     public int Id { get; set; }
@@ -23,6 +39,9 @@ public sealed class CurrentUserDto
     public string? AvatarContentType { get; set; }
 }
 
+/// <summary>
+/// Краткая информация о пользователе, доступная на форме входа.
+/// </summary>
 public sealed class LoginUserOptionDto
 {
     public int Id { get; set; }
@@ -31,6 +50,9 @@ public sealed class LoginUserOptionDto
     public string? UserGroup { get; set; }
 }
 
+/// <summary>
+/// Результат успешной аутентификации.
+/// </summary>
 public sealed class AuthResponse
 {
     public string AccessToken { get; set; } = string.Empty;
@@ -38,6 +60,9 @@ public sealed class AuthResponse
     public CurrentUserDto User { get; set; } = new();
 }
 
+/// <summary>
+/// Краткая строка сотрудника для списков и таблиц.
+/// </summary>
 public class EmployeeListItemDto
 {
     public int Id { get; set; }
@@ -49,12 +74,18 @@ public class EmployeeListItemDto
     public bool IsDismissed { get; set; }
 }
 
+/// <summary>
+/// Универсальный элемент справочника сотрудников.
+/// </summary>
 public sealed class EmployeeLookupItemDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Набор справочников для формы редактирования сотрудника.
+/// </summary>
 public sealed class EmployeeEditorLookupsDto
 {
     public IReadOnlyCollection<EmployeeLookupItemDto> Groups { get; set; } = Array.Empty<EmployeeLookupItemDto>();
@@ -65,6 +96,9 @@ public sealed class EmployeeEditorLookupsDto
     public int? DefaultPrivacyGroupId { get; set; }
 }
 
+/// <summary>
+/// Данные для создания или обновления карточки сотрудника.
+/// </summary>
 public sealed class EmployeeUpsertRequest
 {
     public string Login { get; set; } = string.Empty;
@@ -92,6 +126,9 @@ public sealed class EmployeeUpsertRequest
     public string? PhotoContentType { get; set; }
 }
 
+/// <summary>
+/// Полная карточка сотрудника.
+/// </summary>
 public sealed class EmployeeDetailsDto : EmployeeListItemDto
 {
     public int? UserGroupId { get; set; }
@@ -116,6 +153,9 @@ public sealed class EmployeeDetailsDto : EmployeeListItemDto
     public string? PhotoContentType { get; set; }
 }
 
+/// <summary>
+/// Контакт внутри карточки организации.
+/// </summary>
 public sealed class OrganizationContactDto
 {
     public int Id { get; set; }
@@ -128,6 +168,9 @@ public sealed class OrganizationContactDto
     public string? Comment { get; set; }
 }
 
+/// <summary>
+/// Район организации с количеством найденных карточек.
+/// </summary>
 public sealed class OrganizationRaionDto
 {
     public int? Id { get; set; }
@@ -135,18 +178,27 @@ public sealed class OrganizationRaionDto
     public int Count { get; set; }
 }
 
+/// <summary>
+/// Универсальный элемент справочника организаций.
+/// </summary>
 public sealed class OrganizationLookupItemDto
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Набор справочников для формы редактирования организации.
+/// </summary>
 public sealed class OrganizationEditorLookupsDto
 {
     public IReadOnlyCollection<OrganizationLookupItemDto> Raions { get; set; } = Array.Empty<OrganizationLookupItemDto>();
     public IReadOnlyCollection<OrganizationLookupItemDto> OrgTypes { get; set; } = Array.Empty<OrganizationLookupItemDto>();
 }
 
+/// <summary>
+/// Данные для создания или обновления карточки организации.
+/// </summary>
 public sealed class OrganizationUpsertRequest
 {
     public string Name { get; set; } = string.Empty;
@@ -182,6 +234,9 @@ public sealed class OrganizationUpsertRequest
     public string? SiteContactPhone { get; set; }
 }
 
+/// <summary>
+/// Краткая строка организации для списков и выбора получателей.
+/// </summary>
 public class OrganizationListItemDto
 {
     public int Id { get; set; }
@@ -201,6 +256,9 @@ public class OrganizationListItemDto
     public int OpenWorkItems { get; set; }
 }
 
+/// <summary>
+/// Полная карточка организации со служебной историей изменений и контактами.
+/// </summary>
 public sealed class OrganizationDetailsDto : OrganizationListItemDto
 {
     public string? Ogrn { get; set; }
@@ -235,6 +293,9 @@ public sealed class OrganizationDetailsDto : OrganizationListItemDto
     public IReadOnlyCollection<OrganizationContactDto> Contacts { get; set; } = Array.Empty<OrganizationContactDto>();
 }
 
+/// <summary>
+/// Рабочая задача или поручение из legacy-части системы.
+/// </summary>
 public sealed class WorkItemDto
 {
     public int Id { get; set; }
@@ -255,6 +316,9 @@ public sealed class WorkItemDto
     public bool IsCompleted { get; set; }
 }
 
+/// <summary>
+/// Сводные показатели для главной панели.
+/// </summary>
 public sealed class DashboardDto
 {
     public int Employees { get; set; }
@@ -265,6 +329,9 @@ public sealed class DashboardDto
     public int FailedLast24Hours { get; set; }
 }
 
+/// <summary>
+/// Настройки SMTP-профиля, используемого для отправки писем.
+/// </summary>
 public sealed class TransportProfileDto
 {
     public int Id { get; set; }
@@ -284,11 +351,29 @@ public sealed class TransportProfileDto
     public DateTime UpdatedAtUtc { get; set; }
 }
 
+/// <summary>
+/// Данные для создания или обновления SMTP-профиля.
+/// </summary>
 public sealed class TransportProfileUpsertRequest
 {
+    /// <summary>
+    /// Название профиля, отображаемое в интерфейсе.
+    /// </summary>
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SMTP-хост или IP-адрес сервера.
+    /// </summary>
     public string Host { get; set; } = string.Empty;
+
+    /// <summary>
+    /// SMTP-порт сервера.
+    /// </summary>
     public int Port { get; set; } = 587;
+
+    /// <summary>
+    /// Нужно ли устанавливать TLS/SSL-соединение.
+    /// </summary>
     public bool UseSsl { get; set; } = true;
     public string? Username { get; set; }
     public string? Password { get; set; }
@@ -301,12 +386,18 @@ public sealed class TransportProfileUpsertRequest
     public bool IsEnabled { get; set; } = true;
 }
 
+/// <summary>
+/// Результат тестового подключения транспортного профиля.
+/// </summary>
 public sealed class TransportProfileTestResultDto
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Внутренняя команда на сохранение файла в хранилище.
+/// </summary>
 public sealed class FileUploadCommand
 {
     public required Stream Content { get; init; }
@@ -315,6 +406,9 @@ public sealed class FileUploadCommand
     public bool IsPublic { get; init; }
 }
 
+/// <summary>
+/// Метаданные сохраненного файла.
+/// </summary>
 public sealed class StoredFileDto
 {
     public int Id { get; set; }
@@ -329,6 +423,9 @@ public sealed class StoredFileDto
     public int UploadedByLegacyUserId { get; set; }
 }
 
+/// <summary>
+/// Описание вложения, которое нужно привязать к кампании.
+/// </summary>
 public sealed class CampaignAttachmentRequest
 {
     public int StoredFileId { get; set; }
@@ -338,6 +435,9 @@ public sealed class CampaignAttachmentRequest
     public int SortOrder { get; set; }
 }
 
+/// <summary>
+/// Вложение, уже сохраненное в кампании.
+/// </summary>
 public sealed class CampaignAttachmentDto
 {
     public int Id { get; set; }
@@ -348,6 +448,9 @@ public sealed class CampaignAttachmentDto
     public StoredFileDto StoredFile { get; set; } = new();
 }
 
+/// <summary>
+/// Организация, включенная в целевую аудиторию кампании.
+/// </summary>
 public sealed class CampaignTargetOrganizationDto
 {
     public int Id { get; set; }
@@ -356,6 +459,9 @@ public sealed class CampaignTargetOrganizationDto
     public string? LegacyRaionName { get; set; }
 }
 
+/// <summary>
+/// Краткая строка кампании рассылки для списка.
+/// </summary>
 public sealed class CampaignListItemDto
 {
     public int Id { get; set; }
@@ -373,6 +479,9 @@ public sealed class CampaignListItemDto
     public DateTime UpdatedAtUtc { get; set; }
 }
 
+/// <summary>
+/// Данные для создания или обновления кампании рассылки.
+/// </summary>
 public sealed class CampaignUpsertRequest
 {
     public string Name { get; set; } = string.Empty;
@@ -402,6 +511,9 @@ public sealed class CampaignUpsertRequest
     public IReadOnlyCollection<CampaignAttachmentRequest> Attachments { get; set; } = Array.Empty<CampaignAttachmentRequest>();
 }
 
+/// <summary>
+/// Полная карточка кампании рассылки.
+/// </summary>
 public sealed class CampaignDetailsDto
 {
     public int Id { get; set; }
@@ -439,36 +551,84 @@ public sealed class CampaignDetailsDto
     public DateTime UpdatedAtUtc { get; set; }
 }
 
+/// <summary>
+/// Запрос на смену статуса кампании.
+/// </summary>
 public sealed class CampaignStatusChangeRequest
 {
+    /// <summary>
+    /// Новый статус кампании.
+    /// </summary>
     public CampaignStatus Status { get; set; }
 }
 
+/// <summary>
+/// Параметры ручного запуска кампании.
+/// </summary>
 public sealed class CampaignManualRunRequest
 {
+    /// <summary>
+    /// Плановое время запуска в UTC. Если не задано, используется текущее время.
+    /// </summary>
     public DateTime? ScheduledAtUtc { get; set; }
+
+    /// <summary>
+    /// Комментарий оператора к ручному запуску.
+    /// </summary>
     public string? Comment { get; set; }
 }
 
+/// <summary>
+/// Параметры расчета будущих запусков кампании без фактической отправки.
+/// </summary>
 public sealed class SchedulePreviewRequest
 {
+    /// <summary>
+    /// Тип расписания, который нужно рассчитать.
+    /// </summary>
     public ScheduleKind ScheduleKind { get; set; } = ScheduleKind.OneTime;
+
+    /// <summary>
+    /// Cron-выражение для режима <c>Cron</c>.
+    /// </summary>
     public string? CronExpression { get; set; }
+
+    /// <summary>
+    /// Идентификатор часового пояса, в котором интерпретируется расписание.
+    /// </summary>
     public string? TimeZoneId { get; set; } = "Europe/Amsterdam";
+
+    /// <summary>
+    /// Начало действия расписания в UTC.
+    /// </summary>
     public DateTime? StartAtUtc { get; set; }
+
+    /// <summary>
+    /// Конец действия расписания в UTC.
+    /// </summary>
     public DateTime? EndAtUtc { get; set; }
     public int IntervalMinutes { get; set; } = 2;
     public int RandomIntervalMinMinutes { get; set; } = 1;
     public int RandomIntervalMaxMinutes { get; set; } = 5;
+
+    /// <summary>
+    /// Количество будущих запусков, которое нужно вернуть в ответе.
+    /// </summary>
     public int Count { get; set; } = 10;
 }
 
+/// <summary>
+/// Одна рассчитанная точка запуска кампании.
+/// </summary>
 public sealed class ScheduleOccurrenceDto
 {
     public DateTime Utc { get; set; }
     public DateTime Local { get; set; }
 }
 
+/// <summary>
+/// Один получатель в предпросмотре аудитории кампании.
+/// </summary>
 public sealed class CampaignRecipientPreviewItemDto
 {
     public int LegacyOrgId { get; set; }
@@ -478,6 +638,9 @@ public sealed class CampaignRecipientPreviewItemDto
     public RecipientSourceKind SourceKind { get; set; }
 }
 
+/// <summary>
+/// Результат предпросмотра получателей кампании.
+/// </summary>
 public sealed class CampaignRecipientPreviewDto
 {
     public int OrganizationCount { get; set; }
@@ -485,6 +648,9 @@ public sealed class CampaignRecipientPreviewDto
     public IReadOnlyCollection<CampaignRecipientPreviewItemDto> Items { get; set; } = Array.Empty<CampaignRecipientPreviewItemDto>();
 }
 
+/// <summary>
+/// Партия отправки, созданная при запуске кампании.
+/// </summary>
 public sealed class DispatchBatchDto
 {
     public int Id { get; set; }
@@ -502,6 +668,9 @@ public sealed class DispatchBatchDto
     public string? CorrelationId { get; set; }
 }
 
+/// <summary>
+/// Отдельная запись очереди отправки по одному получателю.
+/// </summary>
 public sealed class DispatchItemDto
 {
     public int Id { get; set; }
@@ -522,6 +691,9 @@ public sealed class DispatchItemDto
     public string? MessageId { get; set; }
 }
 
+/// <summary>
+/// Статистика отправки по кампании с последними партиями и элементами очереди.
+/// </summary>
 public sealed class CampaignStatisticsDto
 {
     public int CampaignId { get; set; }
@@ -538,6 +710,9 @@ public sealed class CampaignStatisticsDto
     public IReadOnlyCollection<DispatchItemDto> RecentItems { get; set; } = Array.Empty<DispatchItemDto>();
 }
 
+/// <summary>
+/// Результат единичной отправки письма через транспорт.
+/// </summary>
 public sealed class MailSendResult
 {
     public bool Success { get; set; }
@@ -546,6 +721,9 @@ public sealed class MailSendResult
     public string? MessageId { get; set; }
 }
 
+/// <summary>
+/// Набор правил выбора получателей кампании.
+/// </summary>
 public sealed class CampaignRecipientSelection
 {
     public IReadOnlyCollection<int> TargetOrganizationIds { get; set; } = Array.Empty<int>();
@@ -558,6 +736,9 @@ public sealed class CampaignRecipientSelection
     public string? ManualRecipientsCsv { get; set; }
 }
 
+/// <summary>
+/// Получатель, вычисленный после применения правил выбора аудитории.
+/// </summary>
 public sealed class ResolvedRecipient
 {
     public int LegacyOrgId { get; set; }

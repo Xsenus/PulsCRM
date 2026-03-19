@@ -4,6 +4,9 @@ using DisplayName = System.ComponentModel.DisplayNameAttribute;
 
 namespace PulsNext.Domain.Mailing;
 
+/// <summary>
+/// Список XPO-сущностей модуля рассылок, которые должны быть зарегистрированы в хранилище.
+/// </summary>
 public static class MailingPersistentTypes
 {
     public static readonly Type[] All =
@@ -18,54 +21,174 @@ public static class MailingPersistentTypes
     };
 }
 
+/// <summary>
+/// Текущее состояние кампании рассылки.
+/// </summary>
 public enum CampaignStatus
 {
+    /// <summary>
+    /// Кампания создана, но еще не запускается.
+    /// </summary>
     Draft = 0,
+
+    /// <summary>
+    /// Кампания активна и может выполняться по расписанию.
+    /// </summary>
     Active = 1,
+
+    /// <summary>
+    /// Кампания временно приостановлена.
+    /// </summary>
     Paused = 2,
+
+    /// <summary>
+    /// Кампания завершена и больше не должна запускаться.
+    /// </summary>
     Completed = 3,
+
+    /// <summary>
+    /// Кампания убрана в архив.
+    /// </summary>
     Archived = 4
 }
 
+/// <summary>
+/// Тип расписания, по которому запускается кампания.
+/// </summary>
 public enum ScheduleKind
 {
+    /// <summary>
+    /// Однократный запуск.
+    /// </summary>
     OneTime = 0,
+
+    /// <summary>
+    /// Запуск через фиксированный интервал.
+    /// </summary>
     FixedInterval = 1,
+
+    /// <summary>
+    /// Запуск через случайный интервал в заданных границах.
+    /// </summary>
     RandomInterval = 2,
+
+    /// <summary>
+    /// Запуск по cron-выражению.
+    /// </summary>
     Cron = 3
 }
 
+/// <summary>
+/// Тип вложения, привязанного к кампании.
+/// </summary>
 public enum AttachmentKind
 {
+    /// <summary>
+    /// Обычный файл-вложение.
+    /// </summary>
     File = 0,
+
+    /// <summary>
+    /// Встроенное изображение для HTML-письма.
+    /// </summary>
     InlineImage = 1
 }
 
+/// <summary>
+/// Состояние отдельной записи в очереди отправки.
+/// </summary>
 public enum DispatchStatus
 {
+    /// <summary>
+    /// Запись поставлена в очередь.
+    /// </summary>
     Queued = 0,
+
+    /// <summary>
+    /// Отправка выполняется прямо сейчас.
+    /// </summary>
     Processing = 1,
+
+    /// <summary>
+    /// Письмо успешно отправлено.
+    /// </summary>
     Sent = 2,
+
+    /// <summary>
+    /// Отправка завершилась ошибкой.
+    /// </summary>
     Failed = 3,
+
+    /// <summary>
+    /// Отправка была отменена.
+    /// </summary>
     Cancelled = 4,
+
+    /// <summary>
+    /// Отправка отложена до следующей попытки.
+    /// </summary>
     Deferred = 5
 }
 
+/// <summary>
+/// Причина создания партии отправки.
+/// </summary>
 public enum DispatchTriggerKind
 {
+    /// <summary>
+    /// Партия создана планировщиком по расписанию.
+    /// </summary>
     Scheduled = 0,
+
+    /// <summary>
+    /// Партия создана вручную оператором.
+    /// </summary>
     Manual = 1,
+
+    /// <summary>
+    /// Партия создана при повторной попытке отправки.
+    /// </summary>
     Retry = 2
 }
 
+/// <summary>
+/// Источник, из которого был получен адрес получателя.
+/// </summary>
 public enum RecipientSourceKind
 {
+    /// <summary>
+    /// Адрес указан вручную.
+    /// </summary>
     Manual = 0,
+
+    /// <summary>
+    /// Основной email организации.
+    /// </summary>
     OrgPrimary = 1,
+
+    /// <summary>
+    /// Email контактного лица организации.
+    /// </summary>
     Contact = 2,
+
+    /// <summary>
+    /// Почта для зарплатного обмена.
+    /// </summary>
     Salary = 3,
+
+    /// <summary>
+    /// Почта для обмена с 1С.
+    /// </summary>
     OneC = 4,
+
+    /// <summary>
+    /// Почта, связанная с сайтом организации.
+    /// </summary>
     Site = 5,
+
+    /// <summary>
+    /// Почта руководителя организации.
+    /// </summary>
     Director = 6
 }
 

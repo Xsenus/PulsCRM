@@ -4,18 +4,21 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using PulsNext.Api;
+using PulsNext.Api.Models;
+using PulsNext.Domain.Mailing;
 using PulsNext.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddPulsNextInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
-builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddControllers();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Puls Next Mailing API",
-        Version = "v1"
+        Version = "v1",
+        Description = "HTTP API для управления пользователями, организациями, задачами и почтовыми рассылками Puls CRM."
     });
 
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -25,18 +28,24 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Введите JWT токен в формате: Bearer {token}"
+        Description = "Укажите JWT-токен в формате: Bearer {token}"
     });
 
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
+
+    foreach (var xmlPath in GetSwaggerXmlDocumentationPaths())
+    {
+        options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+    }
 });
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = builder.Configuration.GetSection(StorageOptions.SectionName).GetValue<long>(nameof(StorageOptions.MaxFileSizeBytes), 25 * 1024 * 1024);
+    options.MultipartBodyLengthLimit = builder.Configuration.GetSection(StorageOptions.SectionName)
+        .GetValue<long>(nameof(StorageOptions.MaxFileSizeBytes), 25 * 1024 * 1024);
 });
 
 builder.Services.AddCors(options =>
@@ -97,9 +106,9 @@ app.UseExceptionHandler(handlerApp =>
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
 
-        await context.Response.WriteAsJsonAsync(new
+        await context.Response.WriteAsJsonAsync(new ApiErrorResponse
         {
-            message = error?.Message ?? "Unexpected server error."
+            Message = error?.Message ?? "Непредвиденная ошибка сервера."
         });
     });
 });
@@ -116,12 +125,21 @@ app.UseCors("web");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/health", () => Results.Ok(new
-{
-    status = "ok",
-    utc = DateTime.UtcNow
-}));
-
-app.MapPulsNextApi();
+app.MapControllers();
 
 app.Run();
+
+static IEnumerable<string> GetSwaggerXmlDocumentationPaths()
+{
+    var assemblies = new[]
+    {
+        typeof(Program).Assembly,
+        typeof(LoginRequest).Assembly,
+        typeof(CampaignStatus).Assembly
+    };
+
+    return assemblies
+        .Select(assembly => Path.Combine(AppContext.BaseDirectory, $"{assembly.GetName().Name}.xml"))
+        .Where(File.Exists)
+        .Distinct(StringComparer.OrdinalIgnoreCase);
+}
