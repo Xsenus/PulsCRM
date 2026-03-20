@@ -3,8 +3,10 @@ using System.Net;
 using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
+using DevExpress.Xpo;
 using PulsNext.Domain.Legacy;
 using PulsNext.Domain.Mailing;
+using PulsPlusSpace;
 
 namespace PulsNext.Infrastructure.Internal;
 
@@ -311,9 +313,397 @@ internal static class MappingHelper
         };
     }
 
+    private const int SiteTaskVariant = 2;
+    private const int OneCAccountingTaskVariant = 8;
+
+    private static string? GetDisplayName(LegacyUser? user)
+        => user?.FullName ?? user?.Name;
+
+    private static string? GetDisplayName(LegacySprEnumeration? item)
+        => item?.Name ?? item?.FullName;
+
+    private static OrganizationTaskSummaryDto ToTaskSummaryDto(LegacyTask task)
+    {
+        return new OrganizationTaskSummaryDto
+        {
+            Id = task.Oid,
+            Name = task.Name,
+            FullName = task.FullName,
+            TaskVariant = task.TaskVariant
+        };
+    }
+
+    private static OrganizationInfoTaskDto ToProgramInfoDto(LegacyInfoTask task)
+    {
+        return new OrganizationInfoTaskDto
+        {
+            Id = task.Oid,
+            Variant = task.CategoryInfoTask?.CategoryInfoTaskVariant ?? -1,
+            Name = task.CategoryInfoTask?.Name,
+            FullName = task.CategoryInfoTask?.FullName,
+            Places = task.KolPlace,
+            Comment = task.Comment,
+            OrganizationCreatorId = task.OrgCreator?.Oid,
+            OrganizationCreatorName = GetDisplayName(task.OrgCreator),
+            UpdatedById = task.User_update?.Oid,
+            UpdatedByName = GetDisplayName(task.User_update),
+            UpdatedAtUtc = DateTimeHelper.NullIfMin(task.Date_update)
+        };
+    }
+
+    private static (int? TaskId, string? TaskName, int? TaskVariant) GetEventTaskInfo(set_OrgEventInfo? info)
+    {
+        LegacyTask? task = info switch
+        {
+            set_OrgEventInfo_Licenz license => license.Task,
+            set_OrgEventInfo_Zvonok call => call.Task,
+            set_OrgEventInfo_RingJur ringJur => ringJur.Task,
+            set_OrgEventInfo_Oplata payment => payment.Task,
+            set_OrgEventInfo_Note note => note.Task,
+            _ => null
+        };
+
+        return (task?.Oid, task?.Name ?? task?.FullName, task?.TaskVariant);
+    }
+
+    private static bool? GetEventCompleted(set_OrgEventInfo? info)
+    {
+        return info switch
+        {
+            set_OrgEventInfo_Licenz license => license.Completed,
+            set_OrgEventInfo_Journal journal => journal.Completed,
+            set_OrgEventInfo_Coming coming => coming.Completed,
+            set_OrgEventInfo_Turnout turnout => turnout.Completed,
+            set_OrgEventInfo_RingJur ringJur => ringJur.Completed,
+            set_OrgEventInfo_Oplata payment => payment.Completed,
+            _ => null
+        };
+    }
+
+    private static OrganizationEventDto ToOrganizationEventDto(LegacyOrgEvent orgEvent)
+    {
+        var info = orgEvent.OrgEventInfo;
+        var licenseInfo = info as set_OrgEventInfo_Licenz;
+        var taskInfo = GetEventTaskInfo(info);
+
+        return new OrganizationEventDto
+        {
+            Id = orgEvent.Oid,
+            CategoryId = orgEvent.CategoryOrgEvent?.Oid,
+            CategoryName = orgEvent.CategoryOrgEvent?.Name,
+            CategoryFullName = orgEvent.CategoryOrgEvent?.FullName,
+            CategoryVariant = orgEvent.CategoryOrgEvent?.CategoryOrgEventVariant,
+            UserName = GetDisplayName(orgEvent.User),
+            Name = orgEvent.Name,
+            FullName = orgEvent.FullName,
+            Comment = orgEvent.Comment,
+            EventDateUtc = DateTimeHelper.NullIfMin(orgEvent.DateEvent),
+            CreatedAtUtc = DateTimeHelper.NullIfMin(orgEvent.Date_create),
+            UpdatedAtUtc = DateTimeHelper.NullIfMin(orgEvent.Date_update),
+            DateFromUtc = info is null ? null : DateTimeHelper.NullIfMin(info.DateFrom),
+            DateToUtc = info is null ? null : DateTimeHelper.NullIfMin(info.DateTo),
+            IsInProcess = info?.FlProcess ?? false,
+            IsCompleted = GetEventCompleted(info),
+            TaskId = taskInfo.TaskId,
+            TaskName = taskInfo.TaskName,
+            TaskVariant = taskInfo.TaskVariant,
+            LicenseKey = licenseInfo?.LicKey,
+            LicenseAmount = licenseInfo is null ? null : licenseInfo.LicSumma,
+            LicenseAmountComment = licenseInfo?.LicSummaComment
+        };
+    }
+
+    private static OrganizationParusLicenseDto ToParusLicenseDto(LegacyZPParusLicenseInfo license)
+    {
+        return new OrganizationParusLicenseDto
+        {
+            Id = license.Oid,
+            CreatedAtUtc = DateTimeHelper.NullIfMin(license.DateCreate),
+            Payer = license.Payer,
+            MnemoOrg = license.MnemoOrg,
+            RegNumberClient = license.RegNumberClient,
+            RegNumberAbonement = license.RegNumberAbonement,
+            DateSinceUtc = DateTimeHelper.NullIfMin(license.DateSince),
+            DateToUtc = DateTimeHelper.NullIfMin(license.DateTo),
+            Nomenclature = license.Nomenclature,
+            Modification = license.Modification,
+            Number = license.Number,
+            Inn = license.INN
+        };
+    }
+
+    private static OrganizationParusOrderDto ToParusOrderDto(LegacyZPParusOrder order)
+    {
+        return new OrganizationParusOrderDto
+        {
+            Id = order.Oid,
+            CreatedAtUtc = DateTimeHelper.NullIfMin(order.DateCreate),
+            TypeOf = order.TypeOf,
+            Number = order.Number,
+            DateUtc = DateTimeHelper.NullIfMin(order.Date),
+            MnemoOrg = order.MnemoOrg,
+            MnemoName = order.MnemoName,
+            RegNumberClient = order.RegNumberClient,
+            Payer = order.Payer,
+            State = order.State,
+            TypeOfShipment = order.TypeOfShipment,
+            Discount = order.Discount,
+            Summa = order.Summa,
+            InvoiceDateUtc = DateTimeHelper.NullIfMin(order.InvoiceDate),
+            InvoiceNumber = order.InvoiceNumber,
+            CustomerAmount = order.CustomerAmount
+        };
+    }
+
+    private static OrganizationContractDto ToOrganizationContractDto(LegacyDogovor contract)
+    {
+        return new OrganizationContractDto
+        {
+            Id = contract.Oid,
+            ExecutorName = GetDisplayName(contract.PulsOrg),
+            FileTypeName = contract.FileType?.Name,
+            DateUtc = DateTimeHelper.NullIfMin(contract.Date),
+            DateFromUtc = DateTimeHelper.NullIfMin(contract.DateFrom),
+            DateToUtc = DateTimeHelper.NullIfMin(contract.DateTo),
+            Number = contract.Number,
+            FileName = contract.FileName,
+            Name = contract.Name,
+            Comment = contract.Comment,
+            DocumentTransport = GetDisplayName(contract.DocumentTransport),
+            DocumentState = GetDisplayName(contract.DocumentState),
+            Summa = contract.Summa,
+            CreatedAtUtc = DateTimeHelper.NullIfMin(contract.Date_create),
+            UpdatedAtUtc = DateTimeHelper.NullIfMin(contract.Date_update),
+            CreatedByName = contract.User_create?.FullName ?? contract.User_create?.Name,
+            UpdatedByName = contract.User_update?.FullName ?? contract.User_update?.Name,
+            OneCDateUtc = DateTimeHelper.NullIfMin(contract.C1Date),
+            OneCTransferState = contract.FlTo1C,
+            PurchaseNumber = contract.NumKontrakt,
+            IsProlongation = contract.FlProlongation,
+            IsParus10Tornado = contract.FlParus10Tornado,
+            IsOneCHourSupport = contract.Fl1CHourSopr,
+            HasItsDiscount = contract.FlLgotITS,
+            LawNumber = contract.NumFZ
+        };
+    }
+
+    private static OrganizationAttachmentDto ToOrganizationAttachmentDto(LegacyAttachDocument attachment)
+    {
+        return new OrganizationAttachmentDto
+        {
+            Id = attachment.Oid,
+            PrivacyGroupName = attachment.PrivacyGroup?.FullName ?? attachment.PrivacyGroup?.Name,
+            ExecutorName = GetDisplayName(attachment.PulsOrg),
+            FileTypeName = attachment.FileType?.Name,
+            AttachDocumentTypeName = attachment.AttachDocumentType?.FullName ?? attachment.AttachDocumentType?.Name,
+            DateUtc = DateTimeHelper.NullIfMin(attachment.Date),
+            DateFromUtc = DateTimeHelper.NullIfMin(attachment.DateFrom),
+            DateToUtc = DateTimeHelper.NullIfMin(attachment.DateTo),
+            Number = attachment.Number,
+            FileName = attachment.FileName,
+            Name = attachment.Name,
+            Comment = attachment.Comment,
+            DocumentTransport = GetDisplayName(attachment.DocumentTransport),
+            DocumentState = GetDisplayName(attachment.DocumentState),
+            Summa = attachment.Summa,
+            IsCompleted = attachment.FlCompleted,
+            CreatedAtUtc = DateTimeHelper.NullIfMin(attachment.Date_create),
+            UpdatedAtUtc = DateTimeHelper.NullIfMin(attachment.Date_update),
+            CreatedByName = attachment.User_create?.FullName ?? attachment.User_create?.Name,
+            UpdatedByName = attachment.User_update?.FullName ?? attachment.User_update?.Name
+        };
+    }
+
+    private static OrganizationRealizationDto ToOrganizationRealizationDto(LegacyOrgRealizDocs realization)
+    {
+        return new OrganizationRealizationDto
+        {
+            Id = realization.Oid,
+            Number = realization.Number,
+            DateUtc = DateTimeHelper.NullIfMin(realization.Date),
+            Summa = realization.Sumdoc,
+            IsDone = realization.FlDone,
+            EdoStatus = realization.EDOStatus,
+            StatusName = realization.RealizDocStatus?.Name,
+            ContractCode = realization.OrgDogovorPersonal?.s_base2,
+            ContractName = realization.OrgDogovorPersonal?.Name
+        };
+    }
+
+    private static OrganizationOneCSnapshotDto CreateOneCSnapshotDto(
+        string key,
+        string title,
+        string? code,
+        string? raion,
+        string? name,
+        string? fullName,
+        string? inn,
+        string? phone,
+        string? otherInfo,
+        string? comment,
+        string? addressLegal,
+        string? addressActual)
+    {
+        return new OrganizationOneCSnapshotDto
+        {
+            Key = key,
+            Title = title,
+            Code = code,
+            Raion = raion,
+            Name = name,
+            FullName = fullName,
+            Inn = inn,
+            Phone = phone,
+            OtherInfo = otherInfo,
+            Comment = comment,
+            AddressLegal = addressLegal,
+            AddressActual = addressActual
+        };
+    }
+
+    private static bool HasOneCSnapshotData(OrganizationOneCSnapshotDto snapshot)
+    {
+        return !string.IsNullOrWhiteSpace(snapshot.Code)
+            || !string.IsNullOrWhiteSpace(snapshot.Raion)
+            || !string.IsNullOrWhiteSpace(snapshot.Name)
+            || !string.IsNullOrWhiteSpace(snapshot.FullName)
+            || !string.IsNullOrWhiteSpace(snapshot.Inn)
+            || !string.IsNullOrWhiteSpace(snapshot.Phone)
+            || !string.IsNullOrWhiteSpace(snapshot.OtherInfo)
+            || !string.IsNullOrWhiteSpace(snapshot.Comment)
+            || !string.IsNullOrWhiteSpace(snapshot.AddressLegal)
+            || !string.IsNullOrWhiteSpace(snapshot.AddressActual);
+    }
+
+    private static OrganizationOneCSnapshotDto[] BuildOneCSnapshots(LegacyOrgInfo1C? info)
+    {
+        if (info is null)
+        {
+            return [];
+        }
+
+        var snapshots = new[]
+        {
+            CreateOneCSnapshotDto("pp", "1С ПП", info.s_1cCode, info.s_1cRaion, info.s_1cName, info.s_1cFullName, info.s_1cINN, info.s_1cPhone, info.s_1cOtherInfo, info.s_1cComment, info.s_1cAddressU, info.s_1cAddressF),
+            CreateOneCSnapshotDto("pc", "1С ПЦ", info.s_1cCode_PC, info.s_1cRaion_PC, info.s_1cName_PC, info.s_1cFullName_PC, info.s_1cINN_PC, info.s_1cPhone_PC, info.s_1cOtherInfo_PC, info.s_1cComment_PC, info.s_1cAddressU_PC, info.s_1cAddressF_PC),
+            CreateOneCSnapshotDto("pg", "1С ПГ", info.s_1cCode_PG, info.s_1cRaion_PG, info.s_1cName_PG, info.s_1cFullName_PG, info.s_1cINN_PG, info.s_1cPhone_PG, info.s_1cOtherInfo_PG, info.s_1cComment_PG, info.s_1cAddressU_PG, info.s_1cAddressF_PG),
+            CreateOneCSnapshotDto("pc2", "ПЦ2", info.s_1cCode_PC2, info.s_1cRaion_PC2, info.s_1cName_PC2, info.s_1cFullName_PC2, info.s_1cINN_PC2, info.s_1cPhone_PC2, info.s_1cOtherInfo_PC2, info.s_1cComment_PC2, info.s_1cAddressU_PC2, info.s_1cAddressF_PC2)
+        };
+
+        return snapshots.Where(HasOneCSnapshotData).ToArray();
+    }
+
+    private static set_OrgEventInfo_Licenz? FindLatestLicenseInfo(LegacyOrg org, int taskVariant)
+    {
+        return org.OrgEvents
+            .Cast<LegacyOrgEvent>()
+            .Select(item => item.OrgEventInfo as set_OrgEventInfo_Licenz)
+            .Where(item => item is not null && item.Task?.TaskVariant == taskVariant)
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item!.DateFrom) ?? DateTime.MinValue)
+            .ThenByDescending(item => item!.Oid)
+            .FirstOrDefault();
+    }
+
+    private static string? ResolveLicenseKeyName(set_OrgEventInfo_Licenz? license)
+    {
+        if (license is null || string.IsNullOrWhiteSpace(license.LicKey))
+        {
+            return null;
+        }
+
+        if (!int.TryParse(license.LicKey, out var id))
+        {
+            return license.LicKey;
+        }
+
+        var item = license.Session.GetObjectByKey<LegacySprEnumeration>(id);
+        return GetDisplayName(item) ?? license.LicKey;
+    }
+
+    private static string? ResolveSalaryLicenseNumber(LegacyOrg org)
+    {
+        static string? Normalize(string? value)
+            => string.IsNullOrWhiteSpace(value) ? null : value.Replace("-", string.Empty);
+
+        var ownLicense = org.ParusLicenseInfo
+            .Cast<LegacyZPParusLicenseInfo>()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.DateTo) ?? DateTime.MinValue)
+            .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.RegNumberAbonement));
+        var ownNumber = Normalize(ownLicense?.RegNumberClient);
+        if (!string.IsNullOrWhiteSpace(ownNumber))
+        {
+            return ownNumber;
+        }
+
+        var otherOrgLicense = org.OrgInfoOther?.OrgParusLicense?.ParusLicenseInfo
+            .Cast<LegacyZPParusLicenseInfo>()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.DateTo) ?? DateTime.MinValue)
+            .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.RegNumberAbonement));
+        var sharedNumber = Normalize(otherOrgLicense?.RegNumberClient);
+        if (!string.IsNullOrWhiteSpace(sharedNumber))
+        {
+            return sharedNumber;
+        }
+
+        if (!string.IsNullOrWhiteSpace(org.OrgInfoOther?.OrgParusLicense?.OrgInfoOther?.ParusLicenseNumber))
+        {
+            return org.OrgInfoOther.OrgParusLicense.OrgInfoOther.ParusLicenseNumber;
+        }
+
+        return org.OrgInfoOther?.ParusLicenseNumber;
+    }
+
     public static OrganizationDetailsDto ToOrganizationDetailsDto(LegacyOrg org, int openWorkItems)
     {
         var emails = EmailHelper.CollectOrganizationEmails(org);
+        var orgInfo = org.OrgInfo;
+        var other = org.OrgInfoOther;
+        var oneCSnapshots = BuildOneCSnapshots(org.OrgInfo1C);
+        var programInfos = org.InfoTasks.Cast<LegacyInfoTask>()
+            .OrderBy(item => item.CategoryInfoTask?.CategoryInfoTaskVariant ?? int.MaxValue)
+            .ThenBy(item => item.CategoryInfoTask?.Name ?? string.Empty)
+            .Select(ToProgramInfoDto)
+            .ToArray();
+        var events = org.OrgEvents.Cast<LegacyOrgEvent>()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.DateEvent) ?? DateTimeHelper.NullIfMin(item.Date_create) ?? DateTime.MinValue)
+            .ThenByDescending(item => item.Oid)
+            .Select(ToOrganizationEventDto)
+            .ToArray();
+        var parusLicenses = org.ParusLicenseInfo.Cast<LegacyZPParusLicenseInfo>()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.DateSince) ?? DateTime.MinValue)
+            .ThenByDescending(item => DateTimeHelper.NullIfMin(item.DateTo) ?? DateTime.MinValue)
+            .Select(ToParusLicenseDto)
+            .ToArray();
+        var parusOrders = org.ZPParusOrder.Cast<LegacyZPParusOrder>()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.Date) ?? DateTime.MinValue)
+            .ThenByDescending(item => item.Oid)
+            .Select(ToParusOrderDto)
+            .ToArray();
+        var contracts = new XPQuery<LegacyDogovor>(org.Session)
+            .Where(item => item.Org != null && item.Org.Oid == org.Oid)
+            .ToList()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.Date) ?? DateTime.MinValue)
+            .ThenByDescending(item => DateTimeHelper.NullIfMin(item.DateFrom) ?? DateTime.MinValue)
+            .ThenByDescending(item => item.Oid)
+            .Select(ToOrganizationContractDto)
+            .ToArray();
+        var attachments = new XPQuery<LegacyAttachDocument>(org.Session)
+            .Where(item => item.Org != null && item.Org.Oid == org.Oid)
+            .ToList()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.Date) ?? DateTime.MinValue)
+            .ThenByDescending(item => DateTimeHelper.NullIfMin(item.DateFrom) ?? DateTime.MinValue)
+            .ThenByDescending(item => item.Oid)
+            .Select(ToOrganizationAttachmentDto)
+            .ToArray();
+        var realizations = new XPQuery<LegacyOrgRealizDocs>(org.Session)
+            .Where(item => item.Org != null && item.Org.Oid == org.Oid)
+            .ToList()
+            .OrderByDescending(item => DateTimeHelper.NullIfMin(item.Date) ?? DateTime.MinValue)
+            .ThenByDescending(item => item.Oid)
+            .Select(ToOrganizationRealizationDto)
+            .ToArray();
+        var oneCLicense = FindLatestLicenseInfo(org, OneCAccountingTaskVariant);
+        var siteLicense = FindLatestLicenseInfo(org, SiteTaskVariant);
 
         return new OrganizationDetailsDto
         {
@@ -332,36 +722,127 @@ internal static class MappingHelper
             EmailCount = emails.Count,
             ContactCount = org.Contacts.Count,
             OpenWorkItems = openWorkItems,
-            Ogrn = org.OrgInfoOther?.OGRN,
-            Kpp = org.OrgInfo?.KPP,
-            AddressLegal = org.OrgInfo?.AddressU,
-            AddressActual = org.OrgInfo?.AddressF,
-            Phone = org.OrgInfo?.Phone,
-            Site = org.OrgInfo?.Site,
-            PrimaryEmail = org.OrgInfo?.Email,
-            DirectorEmail = org.OrgInfoOther?.RukEmail,
-            SalaryEmail = org.OrgInfoOther?.ZpEmail,
-            OneCEmail = org.OrgInfoOther?.F1cEmail,
-            SiteEmail = org.OrgInfoOther?.SiteEmail,
-            Comment = org.OrgInfo?.Comment,
-            OtherInfo = org.OrgInfo?.OtherInfo,
-            SalaryEnabled = org.OrgInfoOther?.ZpWorking ?? false,
-            OneCAccountingEnabled = org.OrgInfoOther?.F1cWorkingB ?? false,
-            OneCSalaryEnabled = org.OrgInfoOther?.F1cWorkingZ ?? false,
-            OneCHousingEnabled = org.OrgInfoOther?.F1cWorkingJKH ?? false,
-            SalaryContactName = org.OrgInfoOther?.ZpFIO,
-            SalaryContactPhone = org.OrgInfoOther?.ZpPhone,
-            OneCContactName = org.OrgInfoOther?.F1cFIO,
-            OneCContactPhone = org.OrgInfoOther?.F1cPhone,
-            SiteContactName = org.OrgInfoOther?.SiteFIO,
-            SiteContactPhone = org.OrgInfoOther?.SitePhone,
+            Ogrn = other?.OGRN,
+            Okpo = other?.OKPO,
+            Okved = other?.OKVED,
+            Kpp = orgInfo?.KPP,
+            PfrNumber = other?.PFR,
+            FssNumber = other?.FSS,
+            BankName = other?.Bank?.Name,
+            BankBik = other?.Bank?.BIK,
+            BankCity = other?.Bank?.Gorod,
+            BankCorrespondentAccount = other?.Bank?.KSch,
+            BankAccount = other?.RSch,
+            PersonalAccount = other?.LSch,
+            FlagName = org.WhatToDo?.FullName ?? org.WhatToDo?.Name,
+            StatusName = org.OrgVariant?.FullName ?? org.OrgVariant?.Name,
+            AddressLegal = orgInfo?.AddressU,
+            AddressActual = orgInfo?.AddressF,
+            Phone = orgInfo?.Phone,
+            Site = orgInfo?.Site,
+            DebtAmount = orgInfo?.SummaDolga ?? 0,
+            DebtActualAmount = orgInfo?.SummaDolgaActual ?? 0,
+            DebtMinus6Amount = orgInfo?.SummaDolgaMinus6 ?? 0,
+            PrimaryEmail = orgInfo?.Email,
+            DirectorEmail = other?.RukEmail,
+            SalaryEmail = other?.ZpEmail,
+            OneCEmail = other?.F1cEmail,
+            SiteEmail = other?.SiteEmail,
+            DirectorFullName = other?.RukFIO,
+            DirectorShortName = other?.RukFIO_sokr,
+            DirectorGenitiveName = other?.RukFIO_rod,
+            DirectorPosition = other?.RukDolgnost,
+            DirectorPositionGenitive = other?.RukDolgnost_rod,
+            DirectorPhone = other?.RukPhone,
+            DirectorSnils = other?.RukComment,
+            AuthorityDocument = other?.Osnovanie_rod,
+            Comment = orgInfo?.Comment,
+            OtherInfo = orgInfo?.OtherInfo,
+            AdditionalComment = other?.DopComment,
+            TechnicsComment = other?.TechnicsComment,
+            ProcurementComment = other?.ZakupkiComment,
+            EcpComment = other?.ECPComment,
+            EcpContractComment = other?.ECPCommentDog,
+            InternetSpeed = GetDisplayName(other?.InternetSpeed),
+            Edo = GetDisplayName(other?.EDO),
+            PfrAgreementNumber = other?.PFRSoglNum,
+            PfrAgreementDateUtc = other is null ? null : DateTimeHelper.NullIfMin(other.PFRSoglDate),
+            SalaryEnabled = other?.ZpWorking ?? false,
+            OneCAccountingEnabled = other?.F1cWorkingB ?? false,
+            OneCSalaryEnabled = other?.F1cWorkingZ ?? false,
+            OneCHousingEnabled = other?.F1cWorkingJKH ?? false,
+            SalaryContactName = other?.ZpFIO,
+            SalaryContactPhone = other?.ZpPhone,
+            SalaryLabel = other?.ZpFIO,
+            SalaryLicenseNumber = ResolveSalaryLicenseNumber(org),
+            SalaryManualLicenseNumber = other?.ParusLicenseNumber,
+            SalaryLicenseComposition = other?.ZpLicSostav,
+            SalaryDatabaseCount = other?.ZpNumOfBases ?? 0,
+            SalaryOrganizationCount = other?.CountOrganizationsInDataBases ?? 0,
+            SalaryExtraWorkplaces = other?.ZpNumDopPlaces ?? 0,
+            SalaryComment = other?.ZpComment,
+            SalaryLeadName = GetDisplayName(other?.ZpUser),
+            SalaryWorkBeginUtc = other is null ? null : DateTimeHelper.NullIfMin(other.ZpDateWorkBegin),
+            SalaryWorkEndUtc = other is null ? null : DateTimeHelper.NullIfMin(other.ZpDateWorkEnd),
+            SalaryPlatform = GetDisplayName(other?.ZpPlatform),
+            SalaryConfiguration = GetDisplayName(other?.ZpConfig),
+            SalaryRating = GetDisplayName(other?.ZpRating),
+            SalaryLicenseOrganizationId = other?.OrgParusLicense?.Oid,
+            SalaryLicenseOrganizationName = other?.OrgParusLicense?.Name,
+            SalaryLicenseFileName = other?.ParusLicenseFileName,
+            OneCContactName = other?.F1cFIO,
+            OneCContactPhone = other?.F1cPhone,
+            OneCComment = other?.F1cComment,
+            OneCSalaryComment = other?.F1cCommentZ,
+            OneCAccountingChanges = other?.F1cDorabotkiB,
+            OneCSalaryChanges = other?.F1cDorabotkiZ,
+            OneCLeadAccountingName = GetDisplayName(other?.F1cUserB),
+            OneCLeadSalaryName = GetDisplayName(other?.F1cUserZ),
+            OneCBaseContract = other?.F1cBaseDogovor ?? false,
+            OneCRegNumberAccounting = other?.F1CRegNumB,
+            OneCRegNumberSalary = other?.F1CRegNumZ,
+            OneCPlatformAccounting = GetDisplayName(other?.PlatformB),
+            OneCPlatformSalary = GetDisplayName(other?.PlatformZ),
+            OneCConfigurationAccounting = GetDisplayName(other?.ConfigB),
+            OneCConfigurationSalary = GetDisplayName(other?.ConfigZ),
+            OneCContractVariant = GetDisplayName(other?.F1CVarDog),
+            OneCItsVariant = ResolveLicenseKeyName(oneCLicense) ?? GetDisplayName(other?.ITSVariant),
+            OneCItsLicenseNumber = oneCLicense?.OrgEvent?.Name ?? other?.F1CLicNum,
+            OneCItsComment = oneCLicense?.OrgEvent?.FullName ?? other?.F1cCommentITS,
+            OneCItsComposition = oneCLicense?.OrgEvent?.Comment ?? other?.F1cLicSostav,
+            OneCItsAmount = oneCLicense is null ? null : oneCLicense.LicSumma,
+            OneCItsAmountComment = oneCLicense?.LicSummaComment,
+            OneCItsDateFromUtc = oneCLicense is not null ? DateTimeHelper.NullIfMin(oneCLicense.DateFrom) : (other is null ? null : DateTimeHelper.NullIfMin(other.F1CLicDateFrom)),
+            OneCItsDateToUtc = oneCLicense is not null ? DateTimeHelper.NullIfMin(oneCLicense.DateTo) : (other is null ? null : DateTimeHelper.NullIfMin(other.F1CLicDateTo)),
+            OneCItsCompleted = oneCLicense?.Completed ?? false,
+            SiteContactName = other?.SiteFIO,
+            SiteContactPhone = other?.SitePhone,
+            SiteAlias = other?.SiteAlias,
+            SiteReadyAtUtc = other is null ? null : DateTimeHelper.NullIfMin(other.SiteDateDone),
+            SiteState = other?.SiteState,
+            SiteBaseId = other?.SiteIdBase,
+            SiteComment = other?.SiteComment,
+            SiteOnSupport = other?.SiteSoprov ?? false,
+            SiteTemplate = other?.SiteTemplate,
+            SiteLicenseDateFromUtc = siteLicense is null ? null : DateTimeHelper.NullIfMin(siteLicense.DateFrom),
+            SiteLicenseDateToUtc = siteLicense is null ? null : DateTimeHelper.NullIfMin(siteLicense.DateTo),
+            SiteLicenseCompleted = siteLicense?.Completed ?? false,
             CreatedByName = org.User_create?.FullName ?? org.User_create?.Name,
             UpdatedByName = org.User_update?.FullName ?? org.User_update?.Name,
             UpdatedAdminByName = org.User_update_admin?.FullName ?? org.User_update_admin?.Name,
             CreatedAtUtc = DateTimeHelper.NullIfMin(org.Date_create),
             UpdatedAtUtc = DateTimeHelper.NullIfMin(org.Date_update),
             UpdatedAdminAtUtc = DateTimeHelper.NullIfMin(org.Date_update_admin),
-            Contacts = org.Contacts.Cast<LegacyContact>().OrderBy(x => x.FIO ?? string.Empty).Select(ToContactDto).ToArray()
+            Contacts = org.Contacts.Cast<LegacyContact>().OrderBy(x => x.FIO ?? string.Empty).Select(ToContactDto).ToArray(),
+            Tasks = org.Tasks.Cast<LegacyTask>().OrderBy(x => x.TaskVariant).ThenBy(x => x.Name ?? x.FullName ?? string.Empty).Select(ToTaskSummaryDto).ToArray(),
+            OneCSnapshots = oneCSnapshots,
+            ProgramInfos = programInfos,
+            Events = events,
+            Contracts = contracts,
+            Attachments = attachments,
+            Realizations = realizations,
+            ParusLicenses = parusLicenses,
+            ParusOrders = parusOrders
         };
     }
 

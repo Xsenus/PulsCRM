@@ -171,6 +171,173 @@ public sealed class OrganizationContactDto
 /// <summary>
 /// Район организации с количеством найденных карточек.
 /// </summary>
+public sealed class OrganizationTaskSummaryDto
+{
+    public int Id { get; set; }
+    public string? Name { get; set; }
+    public string? FullName { get; set; }
+    public int TaskVariant { get; set; }
+}
+
+public sealed class OrganizationOneCSnapshotDto
+{
+    public string Key { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Code { get; set; }
+    public string? Raion { get; set; }
+    public string? Name { get; set; }
+    public string? FullName { get; set; }
+    public string? Inn { get; set; }
+    public string? Phone { get; set; }
+    public string? OtherInfo { get; set; }
+    public string? Comment { get; set; }
+    public string? AddressLegal { get; set; }
+    public string? AddressActual { get; set; }
+}
+
+public sealed class OrganizationInfoTaskDto
+{
+    public int Id { get; set; }
+    public int Variant { get; set; }
+    public string? Name { get; set; }
+    public string? FullName { get; set; }
+    public int Places { get; set; }
+    public string? Comment { get; set; }
+    public int? OrganizationCreatorId { get; set; }
+    public string? OrganizationCreatorName { get; set; }
+    public int? UpdatedById { get; set; }
+    public string? UpdatedByName { get; set; }
+    public DateTime? UpdatedAtUtc { get; set; }
+}
+
+public sealed class OrganizationEventDto
+{
+    public int Id { get; set; }
+    public int? CategoryId { get; set; }
+    public string? CategoryName { get; set; }
+    public string? CategoryFullName { get; set; }
+    public int? CategoryVariant { get; set; }
+    public string? UserName { get; set; }
+    public string? Name { get; set; }
+    public string? FullName { get; set; }
+    public string? Comment { get; set; }
+    public DateTime? EventDateUtc { get; set; }
+    public DateTime? CreatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; set; }
+    public DateTime? DateFromUtc { get; set; }
+    public DateTime? DateToUtc { get; set; }
+    public bool IsInProcess { get; set; }
+    public bool? IsCompleted { get; set; }
+    public int? TaskId { get; set; }
+    public string? TaskName { get; set; }
+    public int? TaskVariant { get; set; }
+    public string? LicenseKey { get; set; }
+    public double? LicenseAmount { get; set; }
+    public string? LicenseAmountComment { get; set; }
+}
+
+public sealed class OrganizationParusLicenseDto
+{
+    public int Id { get; set; }
+    public DateTime? CreatedAtUtc { get; set; }
+    public string? Payer { get; set; }
+    public string? MnemoOrg { get; set; }
+    public string? RegNumberClient { get; set; }
+    public string? RegNumberAbonement { get; set; }
+    public DateTime? DateSinceUtc { get; set; }
+    public DateTime? DateToUtc { get; set; }
+    public string? Nomenclature { get; set; }
+    public string? Modification { get; set; }
+    public string? Number { get; set; }
+    public string? Inn { get; set; }
+}
+
+public sealed class OrganizationParusOrderDto
+{
+    public int Id { get; set; }
+    public DateTime? CreatedAtUtc { get; set; }
+    public string? TypeOf { get; set; }
+    public string? Number { get; set; }
+    public DateTime? DateUtc { get; set; }
+    public string? MnemoOrg { get; set; }
+    public string? MnemoName { get; set; }
+    public string? RegNumberClient { get; set; }
+    public string? Payer { get; set; }
+    public string? State { get; set; }
+    public string? TypeOfShipment { get; set; }
+    public decimal Discount { get; set; }
+    public decimal Summa { get; set; }
+    public DateTime? InvoiceDateUtc { get; set; }
+    public string? InvoiceNumber { get; set; }
+    public decimal CustomerAmount { get; set; }
+}
+
+public sealed class OrganizationContractDto
+{
+    public int Id { get; set; }
+    public string? ExecutorName { get; set; }
+    public string? FileTypeName { get; set; }
+    public DateTime? DateUtc { get; set; }
+    public DateTime? DateFromUtc { get; set; }
+    public DateTime? DateToUtc { get; set; }
+    public string? Number { get; set; }
+    public string? FileName { get; set; }
+    public string? Name { get; set; }
+    public string? Comment { get; set; }
+    public string? DocumentTransport { get; set; }
+    public string? DocumentState { get; set; }
+    public double? Summa { get; set; }
+    public DateTime? CreatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; set; }
+    public string? CreatedByName { get; set; }
+    public string? UpdatedByName { get; set; }
+    public DateTime? OneCDateUtc { get; set; }
+    public int OneCTransferState { get; set; }
+    public string? PurchaseNumber { get; set; }
+    public bool IsProlongation { get; set; }
+    public bool IsParus10Tornado { get; set; }
+    public bool IsOneCHourSupport { get; set; }
+    public bool HasItsDiscount { get; set; }
+    public int LawNumber { get; set; }
+}
+
+public sealed class OrganizationAttachmentDto
+{
+    public int Id { get; set; }
+    public string? PrivacyGroupName { get; set; }
+    public string? ExecutorName { get; set; }
+    public string? FileTypeName { get; set; }
+    public string? AttachDocumentTypeName { get; set; }
+    public DateTime? DateUtc { get; set; }
+    public DateTime? DateFromUtc { get; set; }
+    public DateTime? DateToUtc { get; set; }
+    public string? Number { get; set; }
+    public string? FileName { get; set; }
+    public string? Name { get; set; }
+    public string? Comment { get; set; }
+    public string? DocumentTransport { get; set; }
+    public string? DocumentState { get; set; }
+    public double? Summa { get; set; }
+    public bool IsCompleted { get; set; }
+    public DateTime? CreatedAtUtc { get; set; }
+    public DateTime? UpdatedAtUtc { get; set; }
+    public string? CreatedByName { get; set; }
+    public string? UpdatedByName { get; set; }
+}
+
+public sealed class OrganizationRealizationDto
+{
+    public int Id { get; set; }
+    public string? Number { get; set; }
+    public DateTime? DateUtc { get; set; }
+    public double? Summa { get; set; }
+    public bool IsDone { get; set; }
+    public string? EdoStatus { get; set; }
+    public string? StatusName { get; set; }
+    public string? ContractCode { get; set; }
+    public string? ContractName { get; set; }
+}
+
 public sealed class OrganizationRaionDto
 {
     public int? Id { get; set; }
@@ -262,28 +429,110 @@ public class OrganizationListItemDto
 public sealed class OrganizationDetailsDto : OrganizationListItemDto
 {
     public string? Ogrn { get; set; }
+    public string? Okpo { get; set; }
+    public string? Okved { get; set; }
     public string? Kpp { get; set; }
+    public string? PfrNumber { get; set; }
+    public string? FssNumber { get; set; }
+    public string? BankName { get; set; }
+    public string? BankBik { get; set; }
+    public string? BankCity { get; set; }
+    public string? BankCorrespondentAccount { get; set; }
+    public string? BankAccount { get; set; }
+    public string? PersonalAccount { get; set; }
+    public string? FlagName { get; set; }
+    public string? StatusName { get; set; }
     public string? AddressLegal { get; set; }
     public string? AddressActual { get; set; }
     public string? Phone { get; set; }
     public string? Site { get; set; }
+    public double DebtAmount { get; set; }
+    public double DebtActualAmount { get; set; }
+    public double DebtMinus6Amount { get; set; }
     public string? PrimaryEmail { get; set; }
     public string? DirectorEmail { get; set; }
     public string? SalaryEmail { get; set; }
     public string? OneCEmail { get; set; }
     public string? SiteEmail { get; set; }
+    public string? DirectorFullName { get; set; }
+    public string? DirectorShortName { get; set; }
+    public string? DirectorGenitiveName { get; set; }
+    public string? DirectorPosition { get; set; }
+    public string? DirectorPositionGenitive { get; set; }
+    public string? DirectorPhone { get; set; }
+    public string? DirectorSnils { get; set; }
+    public string? AuthorityDocument { get; set; }
     public string? Comment { get; set; }
     public string? OtherInfo { get; set; }
+    public string? AdditionalComment { get; set; }
+    public string? TechnicsComment { get; set; }
+    public string? ProcurementComment { get; set; }
+    public string? EcpComment { get; set; }
+    public string? EcpContractComment { get; set; }
+    public string? InternetSpeed { get; set; }
+    public string? Edo { get; set; }
+    public string? PfrAgreementNumber { get; set; }
+    public DateTime? PfrAgreementDateUtc { get; set; }
     public bool SalaryEnabled { get; set; }
     public bool OneCAccountingEnabled { get; set; }
     public bool OneCSalaryEnabled { get; set; }
     public bool OneCHousingEnabled { get; set; }
     public string? SalaryContactName { get; set; }
     public string? SalaryContactPhone { get; set; }
+    public string? SalaryLabel { get; set; }
+    public string? SalaryLicenseNumber { get; set; }
+    public string? SalaryManualLicenseNumber { get; set; }
+    public string? SalaryLicenseComposition { get; set; }
+    public int SalaryDatabaseCount { get; set; }
+    public int SalaryOrganizationCount { get; set; }
+    public int SalaryExtraWorkplaces { get; set; }
+    public string? SalaryComment { get; set; }
+    public string? SalaryLeadName { get; set; }
+    public DateTime? SalaryWorkBeginUtc { get; set; }
+    public DateTime? SalaryWorkEndUtc { get; set; }
+    public string? SalaryPlatform { get; set; }
+    public string? SalaryConfiguration { get; set; }
+    public string? SalaryRating { get; set; }
+    public int? SalaryLicenseOrganizationId { get; set; }
+    public string? SalaryLicenseOrganizationName { get; set; }
+    public string? SalaryLicenseFileName { get; set; }
     public string? OneCContactName { get; set; }
     public string? OneCContactPhone { get; set; }
+    public string? OneCComment { get; set; }
+    public string? OneCSalaryComment { get; set; }
+    public string? OneCAccountingChanges { get; set; }
+    public string? OneCSalaryChanges { get; set; }
+    public string? OneCLeadAccountingName { get; set; }
+    public string? OneCLeadSalaryName { get; set; }
+    public bool OneCBaseContract { get; set; }
+    public string? OneCRegNumberAccounting { get; set; }
+    public string? OneCRegNumberSalary { get; set; }
+    public string? OneCPlatformAccounting { get; set; }
+    public string? OneCPlatformSalary { get; set; }
+    public string? OneCConfigurationAccounting { get; set; }
+    public string? OneCConfigurationSalary { get; set; }
+    public string? OneCContractVariant { get; set; }
+    public string? OneCItsVariant { get; set; }
+    public string? OneCItsLicenseNumber { get; set; }
+    public string? OneCItsComment { get; set; }
+    public string? OneCItsComposition { get; set; }
+    public double? OneCItsAmount { get; set; }
+    public string? OneCItsAmountComment { get; set; }
+    public DateTime? OneCItsDateFromUtc { get; set; }
+    public DateTime? OneCItsDateToUtc { get; set; }
+    public bool OneCItsCompleted { get; set; }
     public string? SiteContactName { get; set; }
     public string? SiteContactPhone { get; set; }
+    public string? SiteAlias { get; set; }
+    public DateTime? SiteReadyAtUtc { get; set; }
+    public string? SiteState { get; set; }
+    public int? SiteBaseId { get; set; }
+    public string? SiteComment { get; set; }
+    public bool SiteOnSupport { get; set; }
+    public string? SiteTemplate { get; set; }
+    public DateTime? SiteLicenseDateFromUtc { get; set; }
+    public DateTime? SiteLicenseDateToUtc { get; set; }
+    public bool SiteLicenseCompleted { get; set; }
     public string? CreatedByName { get; set; }
     public string? UpdatedByName { get; set; }
     public string? UpdatedAdminByName { get; set; }
@@ -291,6 +540,15 @@ public sealed class OrganizationDetailsDto : OrganizationListItemDto
     public DateTime? UpdatedAtUtc { get; set; }
     public DateTime? UpdatedAdminAtUtc { get; set; }
     public IReadOnlyCollection<OrganizationContactDto> Contacts { get; set; } = Array.Empty<OrganizationContactDto>();
+    public IReadOnlyCollection<OrganizationTaskSummaryDto> Tasks { get; set; } = Array.Empty<OrganizationTaskSummaryDto>();
+    public IReadOnlyCollection<OrganizationOneCSnapshotDto> OneCSnapshots { get; set; } = Array.Empty<OrganizationOneCSnapshotDto>();
+    public IReadOnlyCollection<OrganizationInfoTaskDto> ProgramInfos { get; set; } = Array.Empty<OrganizationInfoTaskDto>();
+    public IReadOnlyCollection<OrganizationEventDto> Events { get; set; } = Array.Empty<OrganizationEventDto>();
+    public IReadOnlyCollection<OrganizationContractDto> Contracts { get; set; } = Array.Empty<OrganizationContractDto>();
+    public IReadOnlyCollection<OrganizationAttachmentDto> Attachments { get; set; } = Array.Empty<OrganizationAttachmentDto>();
+    public IReadOnlyCollection<OrganizationRealizationDto> Realizations { get; set; } = Array.Empty<OrganizationRealizationDto>();
+    public IReadOnlyCollection<OrganizationParusLicenseDto> ParusLicenses { get; set; } = Array.Empty<OrganizationParusLicenseDto>();
+    public IReadOnlyCollection<OrganizationParusOrderDto> ParusOrders { get; set; } = Array.Empty<OrganizationParusOrderDto>();
 }
 
 /// <summary>

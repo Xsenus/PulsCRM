@@ -18,12 +18,38 @@ public static class LegacyPersistentTypes
         typeof(LegacyTask),
         typeof(LegacyRaion),
         typeof(LegacyOrgType),
+        typeof(LegacyOrgVariant),
+        typeof(LegacyWhatToDo),
         typeof(LegacyOrg),
         typeof(LegacyOrgInfo),
+        typeof(LegacyOrgInfo1C),
         typeof(LegacyOrgInfoOther),
+        typeof(LegacyCategoryInfoTask),
+        typeof(LegacyInfoTask),
+        typeof(LegacyCategoryOrgEvent),
+        typeof(LegacyOrgEvent),
+        typeof(PulsPlusSpace.set_OrgEventInfo),
+        typeof(PulsPlusSpace.set_OrgEventInfo_Zvonok),
+        typeof(PulsPlusSpace.set_OrgEventInfo_Journal),
+        typeof(PulsPlusSpace.set_OrgEventInfo_Coming),
+        typeof(PulsPlusSpace.set_OrgEventInfo_Turnout),
+        typeof(PulsPlusSpace.set_OrgEventInfo_Licenz),
+        typeof(PulsPlusSpace.set_OrgEventInfo_RingJur),
+        typeof(PulsPlusSpace.set_OrgEventInfo_Oplata),
+        typeof(PulsPlusSpace.set_OrgEventInfo_Note),
+        typeof(LegacyZPParusLicenseInfo),
+        typeof(LegacyZPParusOrder),
+        typeof(LegacyFileType),
+        typeof(LegacyAttachDocumentType),
+        typeof(LegacyAttachDocument),
+        typeof(LegacyOrgDocumentStatus),
+        typeof(LegacyOrgDogovorPersonal),
+        typeof(LegacyOrgRealizDocs),
+        typeof(LegacyDogovor),
         typeof(LegacyContact),
         typeof(LegacyJob),
-        typeof(LegacySprEnumeration)
+        typeof(LegacySprEnumeration),
+        typeof(LegacySprBank)
     };
 }
 
@@ -448,6 +474,9 @@ public class LegacyTask(Session session) : XPObject(session)
         set => SetPropertyValue(nameof(TaskVariant), ref _taskVariant, value);
     }
 
+    [Association("Org-Task")]
+    public XPCollection<LegacyOrg> Orgs => GetCollection<LegacyOrg>(nameof(Orgs));
+
     [Association("User-Task")]
     public XPCollection<LegacyUser> Users => GetCollection<LegacyUser>(nameof(Users));
 
@@ -500,6 +529,68 @@ public class LegacyOrgType(Session session) : XPObject(session)
     public override string ToString() => FullName ?? Name ?? $"OrgType#{Oid}";
 }
 
+[Persistent("set_OrgVariant")]
+public class LegacyOrgVariant(Session session) : XPObject(session)
+{
+    private string? _name;
+    private string? _fullName;
+
+    public LegacyOrgVariant() : this(Session.DefaultSession) { }
+
+    public string? Name
+    {
+        get => _name;
+        set => SetPropertyValue(nameof(Name), ref _name, value);
+    }
+
+    public string? FullName
+    {
+        get => _fullName;
+        set => SetPropertyValue(nameof(FullName), ref _fullName, value);
+    }
+
+    public override string ToString() => FullName ?? Name ?? $"OrgVariant#{Oid}";
+}
+
+[Persistent("set_WhatToDo")]
+public class LegacyWhatToDo(Session session) : XPObject(session)
+{
+    private string? _name;
+    private string? _fullName;
+    private bool _enabled;
+    private bool _default;
+
+    public LegacyWhatToDo() : this(Session.DefaultSession) { }
+
+    public string? Name
+    {
+        get => _name;
+        set => SetPropertyValue(nameof(Name), ref _name, value);
+    }
+
+    public string? FullName
+    {
+        get => _fullName;
+        set => SetPropertyValue(nameof(FullName), ref _fullName, value);
+    }
+
+    [Persistent("fl_enable")]
+    public bool FlEnable
+    {
+        get => _enabled;
+        set => SetPropertyValue(nameof(FlEnable), ref _enabled, value);
+    }
+
+    [Persistent("fl_def")]
+    public bool FlDefault
+    {
+        get => _default;
+        set => SetPropertyValue(nameof(FlDefault), ref _default, value);
+    }
+
+    public override string ToString() => FullName ?? Name ?? $"WhatToDo#{Oid}";
+}
+
 [Persistent("set_Org")]
 public class LegacyOrg(Session session) : XPObject(session)
 {
@@ -518,12 +609,15 @@ public class LegacyOrg(Session session) : XPObject(session)
     private LegacyUser? _userUpdateAdmin;
     private DateTime _dateUpdateAdmin;
     private LegacyOrgInfo? _orgInfo;
+    private LegacyOrgInfo1C? _orgInfo1C;
     private LegacyOrgInfoOther? _orgInfoOther;
     private bool _flSelect;
     private bool _flVisible;
     private bool _flManager;
     private LegacyRaion? _raion;
     private LegacyOrgType? _orgType;
+    private LegacyOrgVariant? _orgVariant;
+    private LegacyWhatToDo? _whatToDo;
 
     public LegacyOrg() : this(Session.DefaultSession) { }
 
@@ -625,6 +719,12 @@ public class LegacyOrg(Session session) : XPObject(session)
         set => SetPropertyValue(nameof(OrgInfo), ref _orgInfo, value);
     }
 
+    public LegacyOrgInfo1C? OrgInfo1C
+    {
+        get => _orgInfo1C;
+        set => SetPropertyValue(nameof(OrgInfo1C), ref _orgInfo1C, value);
+    }
+
     public LegacyOrgInfoOther? OrgInfoOther
     {
         get => _orgInfoOther;
@@ -663,8 +763,38 @@ public class LegacyOrg(Session session) : XPObject(session)
         set => SetPropertyValue(nameof(OrgType), ref _orgType, value);
     }
 
+    public LegacyOrgVariant? OrgVariant
+    {
+        get => _orgVariant;
+        set => SetPropertyValue(nameof(OrgVariant), ref _orgVariant, value);
+    }
+
+    public LegacyWhatToDo? WhatToDo
+    {
+        get => _whatToDo;
+        set => SetPropertyValue(nameof(WhatToDo), ref _whatToDo, value);
+    }
+
+    [Association("Org-Task")]
+    public XPCollection<LegacyTask> Tasks => GetCollection<LegacyTask>(nameof(Tasks));
+
     [Association("Org-Contact")]
     public XPCollection<LegacyContact> Contacts => GetCollection<LegacyContact>(nameof(Contacts));
+
+    [Association("Org-InfoTask")]
+    public XPCollection<LegacyInfoTask> InfoTasks => GetCollection<LegacyInfoTask>(nameof(InfoTasks));
+
+    [Association("Org-OrgEvent")]
+    public XPCollection<LegacyOrgEvent> OrgEvents => GetCollection<LegacyOrgEvent>(nameof(OrgEvents));
+
+    [Association("Org-ZPParusLicenseInfo")]
+    public XPCollection<LegacyZPParusLicenseInfo> ParusLicenseInfo => GetCollection<LegacyZPParusLicenseInfo>(nameof(ParusLicenseInfo));
+
+    [Association("Org-ZPParusOrder")]
+    public XPCollection<LegacyZPParusOrder> ZPParusOrder => GetCollection<LegacyZPParusOrder>(nameof(ZPParusOrder));
+
+    [Association("Org-Dogovor")]
+    public XPCollection<LegacyDogovor> Dogovors => GetCollection<LegacyDogovor>(nameof(Dogovors));
 
     public override string ToString() => Name ?? FullName ?? $"Org#{Oid}";
 }
@@ -762,6 +892,110 @@ public class LegacyOrgInfo(Session session) : XPObject(session)
         get => _org;
         set => SetPropertyValue(nameof(Org), ref _org, value);
     }
+}
+
+[Persistent("set_OrgInfo1C")]
+public class LegacyOrgInfo1C(Session session) : XPObject(session)
+{
+    public LegacyOrgInfo1C() : this(Session.DefaultSession) { }
+
+    public string? s_1cCode;
+    public string? s_1cRaion;
+
+    [Size(254)]
+    public string? s_1cName;
+
+    [Size(500)]
+    public string? s_1cFullName;
+
+    public string? s_1cINN;
+    public string? s_1cPhone;
+
+    [Size(2000)]
+    public string? s_1cOtherInfo;
+
+    [Size(1000)]
+    public string? s_1cComment;
+
+    [Size(254)]
+    public string? s_1cAddressU;
+
+    [Size(254)]
+    public string? s_1cAddressF;
+
+    public string? s_1cCode_PC;
+    public string? s_1cRaion_PC;
+
+    [Size(254)]
+    public string? s_1cName_PC;
+
+    [Size(500)]
+    public string? s_1cFullName_PC;
+
+    public string? s_1cINN_PC;
+    public string? s_1cPhone_PC;
+
+    [Size(2000)]
+    public string? s_1cOtherInfo_PC;
+
+    [Size(1000)]
+    public string? s_1cComment_PC;
+
+    [Size(254)]
+    public string? s_1cAddressU_PC;
+
+    [Size(254)]
+    public string? s_1cAddressF_PC;
+
+    public string? s_1cCode_PG;
+    public string? s_1cRaion_PG;
+
+    [Size(254)]
+    public string? s_1cName_PG;
+
+    [Size(500)]
+    public string? s_1cFullName_PG;
+
+    public string? s_1cINN_PG;
+    public string? s_1cPhone_PG;
+
+    [Size(2000)]
+    public string? s_1cOtherInfo_PG;
+
+    [Size(1000)]
+    public string? s_1cComment_PG;
+
+    [Size(254)]
+    public string? s_1cAddressU_PG;
+
+    [Size(254)]
+    public string? s_1cAddressF_PG;
+
+    public string? s_1cCode_PC2;
+    public string? s_1cRaion_PC2;
+
+    [Size(254)]
+    public string? s_1cName_PC2;
+
+    [Size(500)]
+    public string? s_1cFullName_PC2;
+
+    public string? s_1cINN_PC2;
+    public string? s_1cPhone_PC2;
+
+    [Size(2000)]
+    public string? s_1cOtherInfo_PC2;
+
+    [Size(1000)]
+    public string? s_1cComment_PC2;
+
+    [Size(254)]
+    public string? s_1cAddressU_PC2;
+
+    [Size(254)]
+    public string? s_1cAddressF_PC2;
+
+    public LegacyOrg? Org;
 }
 
 [Persistent("set_OrgInfoOther")]
@@ -880,6 +1114,108 @@ public class LegacyOrgInfoOther(Session session) : XPObject(session)
         set => SetPropertyValue(nameof(SiteFIO), ref _siteFio, value);
     }
 
+    public string? OKPO;
+    public string? OKVED;
+    public string? PFR;
+    public string? FSS;
+    public LegacySprBank? Bank;
+    public string? RSch;
+    public string? LSch;
+
+    [Size(2000)]
+    public string? ECPComment;
+
+    [Size(2000)]
+    public string? ECPCommentDog;
+
+    public string? PFRSoglNum;
+    public DateTime PFRSoglDate;
+    public string? RukFIO;
+    public string? RukFIO_sokr;
+    public string? RukFIO_rod;
+    public string? RukDolgnost;
+    public string? RukDolgnost_rod;
+    public string? RukPhone;
+    public string? RukComment;
+    public string? Osnovanie_rod;
+
+    [Size(2000)]
+    public string? DopComment;
+
+    [Size(2000)]
+    public string? TechnicsComment;
+
+    [Size(2000)]
+    public string? ZakupkiComment;
+
+    public LegacySprEnumeration? InternetSpeed;
+    public LegacySprEnumeration? EDO;
+
+    [Persistent("ZpLicNum")]
+    public string? ParusLicenseNumber;
+
+    public LegacyOrg? OrgParusLicense;
+    public string? ParusLicenseFileName;
+    public byte[]? ParusLicenseFileData;
+    public string? ZpLicSostav;
+    public int ZpNumOfBases;
+    public int CountOrganizationsInDataBases;
+    public int ZpNumDopPlaces;
+
+    [Size(2000)]
+    public string? ZpComment;
+
+    public LegacyUser? ZpUser;
+    public DateTime ZpDateWorkBegin;
+    public DateTime ZpDateWorkEnd;
+    public LegacySprEnumeration? ZpPlatform;
+    public LegacySprEnumeration? ZpConfig;
+    public LegacySprEnumeration? ZpRating;
+
+    [Size(500)]
+    public string? F1cComment;
+
+    [Size(500)]
+    public string? F1cCommentZ;
+
+    [Size(500)]
+    public string? F1cDorabotkiB;
+
+    [Size(500)]
+    public string? F1cDorabotkiZ;
+
+    public LegacyUser? F1cUserB;
+    public LegacyUser? F1cUserZ;
+    public bool F1cBaseDogovor;
+    public string? F1CRegNumB;
+    public string? F1CRegNumZ;
+    public LegacySprEnumeration? PlatformB;
+    public LegacySprEnumeration? PlatformZ;
+    public LegacySprEnumeration? ConfigB;
+    public LegacySprEnumeration? ConfigZ;
+    public LegacySprEnumeration? F1CVarDog;
+    public DateTime F1CLicDateFrom;
+    public DateTime F1CLicDateTo;
+    public string? F1CLicNum;
+    public LegacySprEnumeration? ITSVariant;
+
+    [Size(500)]
+    public string? F1cCommentITS;
+
+    [Size(254)]
+    public string? F1cLicSostav;
+
+    public string? SiteAlias;
+    public DateTime SiteDateDone;
+    public string? SiteState;
+    public int SiteIdBase;
+
+    [Size(2000)]
+    public string? SiteComment;
+
+    public bool SiteSoprov;
+    public string? SiteTemplate;
+
     public LegacyOrg? Org
     {
         get => _org;
@@ -982,6 +1318,311 @@ public class LegacyContact(Session session) : XPObject(session)
     public override string ToString() => FIO ?? Email ?? $"Contact#{Oid}";
 }
 
+[Persistent("set_CategoryInfoTask")]
+public class LegacyCategoryInfoTask(Session session) : XPObject(session)
+{
+    public LegacyCategoryInfoTask() : this(Session.DefaultSession) { }
+
+    public int Index;
+    public int ImageIndex;
+    public string? Name;
+    public string? FullName;
+    public int CategoryInfoTaskVariant;
+
+    public override string ToString() => Name ?? FullName ?? $"CategoryInfoTask#{Oid}";
+}
+
+[Persistent("set_InfoTask")]
+public class LegacyInfoTask(Session session) : XPObject(session)
+{
+    public LegacyInfoTask() : this(Session.DefaultSession) { }
+
+    public LegacyCategoryInfoTask? CategoryInfoTask;
+    public int KolPlace;
+
+    [Size(1000)]
+    public string? Comment;
+
+    public LegacyUser? User_update;
+    public DateTime Date_update;
+    public LegacySprEnumeration? OrgCreator;
+
+    [Association("Org-InfoTask")]
+    public LegacyOrg? Org;
+
+    public override string ToString() => CategoryInfoTask?.Name ?? $"InfoTask#{Oid}";
+}
+
+[Persistent("set_CategoryOrgEvent")]
+public class LegacyCategoryOrgEvent(Session session) : XPObject(session)
+{
+    public LegacyCategoryOrgEvent() : this(Session.DefaultSession) { }
+
+    [Persistent("g_id")]
+    public string? GId;
+
+    public int Index;
+    public int ImageIndex;
+    public string? Name;
+
+    [Size(254)]
+    public string? FullName;
+
+    public int CategoryOrgEventVariant;
+
+    public override string ToString() => Name ?? FullName ?? $"CategoryOrgEvent#{Oid}";
+}
+
+[Persistent("set_OrgEvent")]
+public class LegacyOrgEvent(Session session) : XPObject(session)
+{
+    public LegacyOrgEvent() : this(Session.DefaultSession) { }
+
+    [Persistent("g_id")]
+    public string? GId;
+
+    public int Index;
+    public int ImageIndex;
+    public string? Name;
+
+    [Size(254)]
+    public string? FullName;
+
+    [Size(2000)]
+    public string? Comment;
+
+    public DateTime Date_create;
+    public DateTime Date_update;
+    public DateTime DateEvent;
+    public LegacyCategoryOrgEvent? CategoryOrgEvent;
+    public PulsPlusSpace.set_OrgEventInfo? OrgEventInfo;
+
+    [Association("Org-OrgEvent")]
+    public LegacyOrg? Org;
+
+    public LegacyUser? User;
+
+    public override string ToString() => Name ?? FullName ?? $"OrgEvent#{Oid}";
+}
+
+[Persistent("set_ZPParusOrder")]
+public class LegacyZPParusOrder(Session session) : XPObject(session)
+{
+    public LegacyZPParusOrder() : this(Session.DefaultSession) { }
+
+    [Persistent("g_id")]
+    public string? GId;
+
+    public DateTime DateCreate;
+    public string? TypeOf;
+    public string? Number;
+    public DateTime Date;
+    public string? MnemoOrg;
+
+    [Size(254)]
+    public string? MnemoName;
+
+    public string? RegNumberClient;
+    public string? Payer;
+    public string? State;
+    public string? TypeOfShipment;
+    public decimal Discount;
+    public decimal Summa;
+    public DateTime InvoiceDate;
+    public string? InvoiceNumber;
+    public decimal CustomerAmount;
+
+    [Association("Org-ZPParusOrder")]
+    public LegacyOrg? Org;
+}
+
+[Persistent("set_ZPParusLicenseInfo")]
+public class LegacyZPParusLicenseInfo(Session session) : XPObject(session)
+{
+    public LegacyZPParusLicenseInfo() : this(Session.DefaultSession) { }
+
+    public DateTime DateCreate { get; set; }
+    public string? Payer { get; set; }
+    public string? MnemoOrg { get; set; }
+    public string? RegNumberClient { get; set; }
+    public string? RegNumberAbonement { get; set; }
+    public DateTime DateSince { get; set; }
+    public DateTime DateTo { get; set; }
+    public string? Nomenclature { get; set; }
+
+    [Size(254)]
+    public string? Modification { get; set; }
+
+    public string? Number { get; set; }
+    public string? INN { get; set; }
+
+    [Association("Org-ZPParusLicenseInfo")]
+    public LegacyOrg? Org { get; set; }
+
+    public override string ToString() => $"{Modification} - {Number}";
+}
+
+[Persistent("set_FileType")]
+public class LegacyFileType(Session session) : XPObject(session)
+{
+    public LegacyFileType() : this(Session.DefaultSession) { }
+
+    public int ImageIndex;
+    public string? Extension;
+    public string? Name;
+
+    public override string ToString() => Name ?? $"FileType#{Oid}";
+}
+
+[Persistent("set_AttachDocumentType")]
+public class LegacyAttachDocumentType(Session session) : XPObject(session)
+{
+    public LegacyAttachDocumentType() : this(Session.DefaultSession) { }
+
+    public int Index;
+    public int ImageIndex;
+    public string? Name;
+
+    [Size(254)]
+    public string? FullName;
+
+    public bool fl_def;
+    public int AttachDocumentTypeVariant;
+
+    public override string ToString() => FullName ?? Name ?? $"AttachDocumentType#{Oid}";
+}
+
+[Persistent("set_AttachDocument")]
+public class LegacyAttachDocument(Session session) : XPObject(session)
+{
+    public LegacyAttachDocument() : this(Session.DefaultSession) { }
+
+    public string? Name;
+    public LegacyUser? User_create;
+    public LegacyUser? User_update;
+    public DateTime Date_create;
+    public DateTime Date_update;
+    public string? Number;
+    public DateTime Date;
+    public double Summa;
+
+    [Size(254)]
+    public string? Path;
+
+    public string? FileName;
+    public DateTime DateFrom;
+    public DateTime DateTo;
+    public LegacyAttachDocumentType? AttachDocumentType;
+    public LegacyFileType? FileType;
+    public LegacyPrivacyGroup? PrivacyGroup;
+    public LegacySprEnumeration? DocumentTransport;
+    public LegacySprEnumeration? DocumentState;
+    public LegacySprEnumeration? PulsOrg;
+    public bool FlCompleted;
+
+    [Size(500)]
+    public string? Comment;
+
+    public LegacyOrg? Org;
+
+    public override string ToString() => Name ?? Number ?? $"AttachDocument#{Oid}";
+}
+
+[Persistent("set_OrgDocumentStatus")]
+public class LegacyOrgDocumentStatus(Session session) : XPObject(session)
+{
+    public LegacyOrgDocumentStatus() : this(Session.DefaultSession) { }
+
+    public string? Kod;
+    public string? Name;
+
+    [Size(2)]
+    public string? s_base2;
+
+    public override string ToString() => Name ?? $"OrgDocumentStatus#{Oid}";
+}
+
+[Persistent("set_OrgDogovorPersonal")]
+public class LegacyOrgDogovorPersonal(Session session) : XPObject(session)
+{
+    public LegacyOrgDogovorPersonal() : this(Session.DefaultSession) { }
+
+    public string? Kod;
+    public string? Name;
+
+    [Size(2)]
+    public string? s_base2;
+
+    public LegacyOrg? Org;
+    public LegacyOrgDocumentStatus? DogovorStatus;
+
+    public override string ToString() => Name ?? $"OrgDogovorPersonal#{Oid}";
+}
+
+[Persistent("set_OrgRealizDocs")]
+public class LegacyOrgRealizDocs(Session session) : XPObject(session)
+{
+    public LegacyOrgRealizDocs() : this(Session.DefaultSession) { }
+
+    public string? Number;
+    public DateTime Date;
+    public double Sumdoc;
+    public bool FlDone;
+    public string? EDOStatus;
+    public LegacyOrg? Org;
+    public LegacyOrgDocumentStatus? RealizDocStatus;
+    public LegacyOrgDogovorPersonal? OrgDogovorPersonal;
+
+    public override string ToString() => Number ?? $"OrgRealizDocs#{Oid}";
+}
+
+[Persistent("set_Dogovor")]
+public class LegacyDogovor(Session session) : XPObject(session)
+{
+    public LegacyDogovor() : this(Session.DefaultSession) { }
+
+    public string? Kod1C;
+    public string? Name;
+    public LegacyUser? User_create;
+    public LegacyUser? User_update;
+    public DateTime Date_create;
+    public DateTime Date_update;
+    public string? Number;
+    public DateTime Date;
+    public DateTime C1Date;
+    public double Summa;
+    public string? FileName;
+
+    [Size(254)]
+    public string? Path;
+
+    public DateTime DateFrom;
+    public DateTime DateTo;
+    public LegacyFileType? FileType;
+    public LegacySprEnumeration? DocumentTransport;
+    public LegacySprEnumeration? DocumentState;
+    public LegacySprEnumeration? PulsOrg;
+
+    [Size(500)]
+    public string? Comment;
+
+    [Association("Org-Dogovor")]
+    public LegacyOrg? Org;
+
+    public int FlTo1C;
+    public string? NumKontrakt;
+    public bool FlProlongation;
+
+    [Persistent("FlParus10Tornадо")]
+    public bool FlParus10Tornado;
+
+    public bool Fl1CHourSopr;
+    public bool FlLgotITS;
+    public int NumFZ;
+
+    public override string ToString() => Name ?? Number ?? $"Dogovor#{Oid}";
+}
+
 [Persistent("set_SprEnumeration")]
 public class LegacySprEnumeration(Session session) : XPObject(session)
 {
@@ -1032,6 +1673,28 @@ public class LegacySprEnumeration(Session session) : XPObject(session)
     }
 
     public override string ToString() => Name ?? FullName ?? $"Spr#{Oid}";
+}
+
+[Persistent("set_SprBank")]
+public class LegacySprBank(Session session) : XPObject(session)
+{
+    public LegacySprBank() : this(Session.DefaultSession) { }
+
+    [Persistent("g_id")]
+    public string? GId;
+
+    public string? BIK;
+    public string? Gorod;
+    public string? OKPO;
+    public string? KSch;
+
+    [Size(254)]
+    public string? Name;
+
+    [Persistent("fl_def")]
+    public bool FlDefault;
+
+    public override string ToString() => Name ?? BIK ?? $"Bank#{Oid}";
 }
 
 [Persistent("set_Job")]
