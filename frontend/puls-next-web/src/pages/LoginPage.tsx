@@ -5,6 +5,7 @@ import { getLoginUsers } from '../app/api';
 import { formatDateTime } from '../app/format';
 import { loadLastLoginProfile } from '../app/lastLoginProfile';
 import type { LoginUserOptionDto } from '../app/types';
+import { AppLoader, LoadingButtonLabel } from '../components/AppLoader';
 
 const LOGIN_USERS_TAKE = 50;
 const LOGIN_USERS_VISIBLE_LIMIT = 8;
@@ -387,9 +388,17 @@ export function LoginPage() {
 
                 {isUserDropdownOpen ? (
                   <div className="login-dropdown" id="login-user-listbox" role="listbox">
-                    {usersLoading && users.length === 0 ? <div className="login-dropdown-state">Загрузка пользователей...</div> : null}
+                    {usersLoading && users.length === 0 ? (
+                      <div className="login-dropdown-state">
+                        <AppLoader variant="inline" label="Собираем список пользователей" />
+                      </div>
+                    ) : null}
                     {!usersLoading && usersError && users.length === 0 ? <div className="login-dropdown-state login-dropdown-state-error">{usersError}</div> : null}
-                    {!usersLoading && !usersError && usersSearchLoading && visibleUsers.length === 0 ? <div className="login-dropdown-state">Ищем пользователей...</div> : null}
+                    {!usersLoading && !usersError && usersSearchLoading && visibleUsers.length === 0 ? (
+                      <div className="login-dropdown-state">
+                        <AppLoader variant="inline" label="Ищем пользователей" />
+                      </div>
+                    ) : null}
                     {!usersLoading && !usersError && !usersSearchLoading && visibleUsers.length === 0 ? <div className="login-dropdown-state">Ничего не найдено.</div> : null}
                     {visibleUsers.length > 0 ? (
                       <div className="login-user-list">
@@ -442,7 +451,7 @@ export function LoginPage() {
             </div>
 
             <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? 'Входим...' : 'Войти'}
+              {loading ? <LoadingButtonLabel label="Входим" /> : 'Войти'}
             </button>
 
             {lastLoginProfile ? (

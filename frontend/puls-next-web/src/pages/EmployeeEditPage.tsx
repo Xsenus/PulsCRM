@@ -4,6 +4,7 @@ import { getEmployee, getEmployeeLookups, saveEmployee } from '../app/api';
 import { useAuth } from '../app/AuthContext';
 import { showToast } from '../app/toast';
 import type { EmployeeDetailsDto, EmployeeEditorLookupsDto, EmployeeUpsertRequest } from '../app/types';
+import { AppLoader, LoadingButtonLabel } from '../components/AppLoader';
 import { EmployeeEditorForm } from '../components/EmployeeEditorForm';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
@@ -256,7 +257,7 @@ export function EmployeeEditPage() {
           <>
             {canEdit ? (
               <button type="button" className="primary-button button-inline" onClick={requestSave} disabled={pageDisabled}>
-                {saving ? 'Сохранение...' : 'Сохранить'}
+                {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Сохранить'}
               </button>
             ) : null}
           </>
@@ -271,7 +272,11 @@ export function EmployeeEditPage() {
         ) : null}
 
         {loading || authLoading ? (
-          <div className="empty-state">Загрузка формы...</div>
+          <AppLoader
+            variant="panel"
+            label="Подготавливаем форму сотрудника"
+            description="Загружаем карточку, группы, правила и параметры доступа."
+          />
         ) : (
           <EmployeeEditorForm
             value={draft}
@@ -299,7 +304,7 @@ export function EmployeeEditPage() {
         actions={(
           <>
             <button type="button" className="primary-button" onClick={() => void confirmSave()} disabled={saving}>
-              {saving ? 'Сохранение...' : 'Подтвердить'}
+              {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Подтвердить'}
             </button>
             <button type="button" className="secondary-button" onClick={() => setSaveConfirmOpen(false)} disabled={saving}>
               Отмена

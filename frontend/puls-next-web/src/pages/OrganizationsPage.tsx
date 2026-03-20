@@ -2,19 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   deleteOrganization,
-  getOrganization,
   getOrganizationRaions,
   getOrganizations
 } from '../app/api';
 import { useAuth } from '../app/AuthContext';
-import { formatDateTime } from '../app/format';
 import { showToast } from '../app/toast';
 import type {
   OrganizationListItemDto,
-  OrganizationDetailsDto,
   OrganizationRaionDto
 } from '../app/types';
-import { DataTable } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { OrganizationsTable } from '../components/OrganizationsTable';
 import { PageHeader } from '../components/PageHeader';
@@ -23,7 +19,6 @@ import { SearchActionIcon, SearchPanel } from '../components/SearchPanel';
 
 const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 75, 100];
-const EMPTY_VALUE = '—';
 const WITHOUT_RAION_ID = -1;
 const DEFAULT_SIDEBAR_WIDTH = 360;
 const MIN_SIDEBAR_WIDTH = 320;
@@ -81,7 +76,6 @@ export function OrganizationsPage() {
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
   const tableSettingsKey = `puls-organizations-table:${currentUserId}`;
-  const contactsTableSettingsKey = `puls-table-settings:organization-contacts:${currentUserId}`;
   const pageSizeStorageKey = `puls-organizations-page-size:${ORGANIZATIONS_TABLE_STORAGE_ID}:${currentUserId}`;
   const legacyPageSizeStorageKey = `puls-organizations-page-size:${currentUserId}`;
   const sidebarWidthStorageKey = `puls-organizations-sidebar-width:${currentUserId}`;
@@ -98,9 +92,6 @@ export function OrganizationsPage() {
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [details, setDetails] = useState<OrganizationDetailsDto | null>(null);
   const [contextMenu, setContextMenu] = useState<RowContextMenuState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<OrganizationListItemDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -255,21 +246,6 @@ export function OrganizationsPage() {
     setPage(1);
   };
 
-  const openDetails = async (id: number) => {
-    setDetailsOpen(true);
-    setDetailsLoading(true);
-
-    try {
-      const data = await getOrganization(id);
-      setDetails(data);
-    } catch (error) {
-      showToast(toErrorMessage(error), 'error');
-      setDetailsOpen(false);
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
-
   const openCreateEditor = async () => {
     setContextMenu(null);
     navigate('/organizations/new');
@@ -294,11 +270,6 @@ export function OrganizationsPage() {
 
       if (selectedRowId === deleteTarget.id) {
         setSelectedRowId(undefined);
-      }
-
-      if (details?.id === deleteTarget.id) {
-        setDetails(null);
-        setDetailsOpen(false);
       }
 
       setDeleteTarget(null);
@@ -485,7 +456,7 @@ export function OrganizationsPage() {
               </button>
             )}
             onRowClick={(row) => setSelectedRowId(row.id)}
-            onRowDoubleClick={(row) => void openDetails(row.id)}
+            onRowDoubleClick={(row) => void openEditEditor(row)}
             onRowContextMenu={(row, event) => {
               setSelectedRowId(row.id);
               setContextMenu({
@@ -571,84 +542,6 @@ export function OrganizationsPage() {
         </div>
       </Modal>
 
-      <Modal
-        open={detailsOpen}
-        title={details?.name || 'Карточка организации'}
-        onClose={() => setDetailsOpen(false)}
-        maxWidth={1120}
-      >
-        {detailsLoading ? <div className="empty-state">Загрузка карточки...</div> : null}
-
-        {!detailsLoading && details ? (
-          <div className="organization-details">
-            <div className="detail-grid">
-              <div className="detail-card"><strong>Полное название</strong><span>{details.fullName || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Краткое название</strong><span>{details.smallName || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>ИНН / КПП</strong><span>{details.inn || EMPTY_VALUE} / {details.kpp || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>ОГРН</strong><span>{details.ogrn || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Район</strong><span>{details.raion || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Тип</strong><span>{details.orgType || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Телефон</strong><span>{details.phone || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Сайт</strong><span>{details.site || EMPTY_VALUE}</span></div>
-              <div className="detail-card detail-card-wide"><strong>Юридический адрес</strong><span>{details.addressLegal || EMPTY_VALUE}</span></div>
-              <div className="detail-card detail-card-wide"><strong>Фактический адрес</strong><span>{details.addressActual || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Основной адрес</strong><span>{details.primaryEmail || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Адрес руководителя</strong><span>{details.directorEmail || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Адрес зарплаты</strong><span>{details.salaryEmail || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Адрес 1C</strong><span>{details.oneCEmail || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Адрес сайта</strong><span>{details.siteEmail || EMPTY_VALUE}</span></div>
-              <div className="detail-card">
-                <strong>Статус записи</strong>
-                <span>{[details.visible ? 'Видима' : 'Скрыта', details.isManager ? 'Управленческая' : null].filter(Boolean).join(' • ') || EMPTY_VALUE}</span>
-              </div>
-              <div className="detail-card">
-                <strong>Контакт по зарплате</strong>
-                <span>{[details.salaryContactName, details.salaryContactPhone].filter(Boolean).join(' • ') || EMPTY_VALUE}</span>
-              </div>
-              <div className="detail-card">
-                <strong>Контакт по 1C</strong>
-                <span>{[details.oneCContactName, details.oneCContactPhone].filter(Boolean).join(' • ') || EMPTY_VALUE}</span>
-              </div>
-              <div className="detail-card">
-                <strong>Контакт по сайту</strong>
-                <span>{[details.siteContactName, details.siteContactPhone].filter(Boolean).join(' • ') || EMPTY_VALUE}</span>
-              </div>
-              <div className="detail-card">
-                <strong>Интеграции</strong>
-                <span>{[
-                  details.salaryEnabled ? 'Зарплата' : null,
-                  details.oneCAccountingEnabled ? '1C бухгалтерия' : null,
-                  details.oneCSalaryEnabled ? '1C зарплата' : null,
-                  details.oneCHousingEnabled ? '1C ЖКХ' : null
-                ].filter(Boolean).join(' • ') || EMPTY_VALUE}</span>
-              </div>
-              <div className="detail-card detail-card-wide"><strong>Комментарий</strong><span>{details.comment || EMPTY_VALUE}</span></div>
-              <div className="detail-card detail-card-wide"><strong>Дополнительно</strong><span>{details.otherInfo || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Создано</strong><span>{[formatDateTime(details.createdAtUtc), details.createdByName].filter(Boolean).join(' • ') || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Обновлено</strong><span>{[formatDateTime(details.updatedAtUtc), details.updatedByName].filter(Boolean).join(' • ') || EMPTY_VALUE}</span></div>
-              <div className="detail-card"><strong>Адм. обновление</strong><span>{[formatDateTime(details.updatedAdminAtUtc), details.updatedAdminByName].filter(Boolean).join(' • ') || EMPTY_VALUE}</span></div>
-            </div>
-
-            <div className="panel-subsection">
-              <h4>Контакты</h4>
-              <DataTable
-                rows={details.contacts}
-                getRowKey={(row) => row.id}
-                settingsKey={contactsTableSettingsKey}
-                emptyText="Нет контактов"
-                columns={[
-                  { key: 'fio', title: 'ФИО', width: 240, minWidth: 200, render: (row) => row.fio || EMPTY_VALUE },
-                  { key: 'position', title: 'Должность', width: 220, minWidth: 180, render: (row) => row.position || EMPTY_VALUE },
-                  { key: 'group', title: 'Группа', width: 180, minWidth: 150, render: (row) => row.group || EMPTY_VALUE },
-                  { key: 'status', title: 'Статус', width: 160, minWidth: 130, render: (row) => row.status || EMPTY_VALUE },
-                  { key: 'phone', title: 'Телефон', width: 180, minWidth: 150, render: (row) => row.phone || EMPTY_VALUE },
-                  { key: 'email', title: 'Почта', width: 220, minWidth: 180, render: (row) => row.email || EMPTY_VALUE }
-                ]}
-              />
-            </div>
-          </div>
-        ) : null}
-      </Modal>
     </div>
   );
 }

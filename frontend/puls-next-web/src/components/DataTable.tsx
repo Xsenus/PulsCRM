@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { showToast } from '../app/toast';
+import { AppLoader } from './AppLoader';
 import { Modal } from './Modal';
 
 export interface DataTableColumn<T> {
@@ -530,7 +531,7 @@ export function DataTable<T>({
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={Math.max(visibleColumns.length, 1)}>
-                  <div className="table-empty">{loading ? 'Загрузка...' : emptyText}</div>
+                  <div className="table-empty">{loading ? null : emptyText}</div>
                 </td>
               </tr>
             ) : rows.map((row) => {
@@ -560,6 +561,12 @@ export function DataTable<T>({
             })}
           </tbody>
         </table>
+
+        {loading ? (
+          <div className="table-loading-overlay">
+            <AppLoader variant="inline" label={rows.length > 0 ? 'Обновляем таблицу' : 'Загружаем таблицу'} />
+          </div>
+        ) : null}
       </div>
 
       <Modal

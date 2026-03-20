@@ -5,6 +5,7 @@ import { formatDateTime } from '../app/format';
 import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type { TransportProfileDto, TransportProfileUpsertRequest } from '../app/types';
+import { LoadingButtonLabel } from '../components/AppLoader';
 import { DataTable } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
@@ -325,7 +326,7 @@ export function TransportProfilesPage() {
             ) : null}
             <button type="button" className="secondary-button" onClick={() => setModalOpen(false)}>Закрыть</button>
             <button type="button" className="primary-button action-button" disabled={saving} onClick={() => void save()}>
-              {saving ? 'Сохраняем...' : 'Сохранить'}
+              {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Сохранить'}
             </button>
           </>
         )}

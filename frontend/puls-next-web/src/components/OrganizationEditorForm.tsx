@@ -1,9 +1,12 @@
 import React from 'react';
 import type { OrganizationEditorLookupsDto, OrganizationUpsertRequest } from '../app/types';
 
+export type OrganizationEditorSection = 'main' | 'contacts' | 'programs';
+
 interface OrganizationEditorFormProps {
   value: OrganizationUpsertRequest;
   lookups: OrganizationEditorLookupsDto | null;
+  section: OrganizationEditorSection;
   disabled?: boolean;
   onChange: (next: OrganizationUpsertRequest) => void;
 }
@@ -18,16 +21,16 @@ function updateValue(
   };
 }
 
-export function OrganizationEditorForm({
-  value,
-  lookups,
-  disabled = false,
-  onChange
-}: OrganizationEditorFormProps) {
+function renderMainSection(
+  value: OrganizationUpsertRequest,
+  lookups: OrganizationEditorLookupsDto | null,
+  disabled: boolean,
+  onChange: (next: OrganizationUpsertRequest) => void
+) {
   return (
-    <div className="organization-editor">
+    <>
       <div className="panel-subsection">
-        <h4>Основное</h4>
+        <h4>Основные реквизиты</h4>
         <div className="form-grid">
           <div className="field">
             <label htmlFor="org-name">Название</label>
@@ -150,13 +153,50 @@ export function OrganizationEditorForm({
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { isManager: event.target.checked }))}
             />
-            <span>Управленческая организация</span>
+            <span>Для менеджера</span>
           </label>
         </div>
       </div>
 
       <div className="panel-subsection">
-        <h4>Контакты и адреса</h4>
+        <h4>Примечания</h4>
+        <div className="form-grid">
+          <div className="field field-wide">
+            <label htmlFor="org-comment">Комментарий</label>
+            <textarea
+              id="org-comment"
+              className="form-textarea"
+              value={value.comment ?? ''}
+              disabled={disabled}
+              onChange={(event) => onChange(updateValue(value, { comment: event.target.value || undefined }))}
+            />
+          </div>
+
+          <div className="field field-wide">
+            <label htmlFor="org-other-info">Дополнительно</label>
+            <textarea
+              id="org-other-info"
+              className="form-textarea"
+              value={value.otherInfo ?? ''}
+              disabled={disabled}
+              onChange={(event) => onChange(updateValue(value, { otherInfo: event.target.value || undefined }))}
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function renderContactsSection(
+  value: OrganizationUpsertRequest,
+  disabled: boolean,
+  onChange: (next: OrganizationUpsertRequest) => void
+) {
+  return (
+    <>
+      <div className="panel-subsection">
+        <h4>Контактные данные</h4>
         <div className="form-grid">
           <div className="field">
             <label htmlFor="org-phone">Телефон</label>
@@ -234,7 +274,12 @@ export function OrganizationEditorForm({
               onChange={(event) => onChange(updateValue(value, { siteEmail: event.target.value || undefined }))}
             />
           </div>
+        </div>
+      </div>
 
+      <div className="panel-subsection">
+        <h4>Адреса</h4>
+        <div className="form-grid">
           <div className="field field-wide">
             <label htmlFor="org-address-legal">Юридический адрес</label>
             <input
@@ -258,9 +303,19 @@ export function OrganizationEditorForm({
           </div>
         </div>
       </div>
+    </>
+  );
+}
 
+function renderProgramsSection(
+  value: OrganizationUpsertRequest,
+  disabled: boolean,
+  onChange: (next: OrganizationUpsertRequest) => void
+) {
+  return (
+    <>
       <div className="panel-subsection">
-        <h4>Интеграции</h4>
+        <h4>Продукты и сопровождение</h4>
         <div className="checkbox-grid organization-editor-flags">
           <label className="checkbox-option">
             <input
@@ -302,7 +357,10 @@ export function OrganizationEditorForm({
             <span>1C ЖКХ</span>
           </label>
         </div>
+      </div>
 
+      <div className="panel-subsection">
+        <h4>Ответственные контакты</h4>
         <div className="form-grid">
           <div className="field">
             <label htmlFor="salary-contact-name">Контакт по зарплате</label>
@@ -371,33 +429,22 @@ export function OrganizationEditorForm({
           </div>
         </div>
       </div>
+    </>
+  );
+}
 
-      <div className="panel-subsection">
-        <h4>Примечания</h4>
-        <div className="form-grid">
-          <div className="field field-wide">
-            <label htmlFor="org-comment">Комментарий</label>
-            <textarea
-              id="org-comment"
-              className="form-textarea"
-              value={value.comment ?? ''}
-              disabled={disabled}
-              onChange={(event) => onChange(updateValue(value, { comment: event.target.value || undefined }))}
-            />
-          </div>
-
-          <div className="field field-wide">
-            <label htmlFor="org-other-info">Дополнительно</label>
-            <textarea
-              id="org-other-info"
-              className="form-textarea"
-              value={value.otherInfo ?? ''}
-              disabled={disabled}
-              onChange={(event) => onChange(updateValue(value, { otherInfo: event.target.value || undefined }))}
-            />
-          </div>
-        </div>
-      </div>
+export function OrganizationEditorForm({
+  value,
+  lookups,
+  section,
+  disabled = false,
+  onChange
+}: OrganizationEditorFormProps) {
+  return (
+    <div className="organization-editor">
+      {section === 'main' ? renderMainSection(value, lookups, disabled, onChange) : null}
+      {section === 'contacts' ? renderContactsSection(value, disabled, onChange) : null}
+      {section === 'programs' ? renderProgramsSection(value, disabled, onChange) : null}
     </div>
   );
 }

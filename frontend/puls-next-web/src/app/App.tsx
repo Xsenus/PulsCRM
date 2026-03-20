@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { AppLoader } from '../components/AppLoader';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { ToastViewport } from '../components/ToastViewport';
 import { LoginPage } from '../pages/LoginPage';
@@ -17,7 +18,7 @@ const TransportProfilesPage = lazy(() => import('../pages/TransportProfilesPage'
 function ShellLayout() {
   return (
     <ProtectedRoute>
-      <Suspense fallback={<div className="page page-center">Загрузка...</div>}>
+      <Suspense fallback={<AppLoader variant="page" label="Собираем рабочее пространство" description="Подгружаем модули интерфейса." />}>
         <AppShell>
           <Outlet />
         </AppShell>

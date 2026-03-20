@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getDashboard } from '../app/api';
 import type { DashboardDto } from '../app/types';
+import { AppLoader } from '../components/AppLoader';
 import { PageHeader } from '../components/PageHeader';
 import { SearchActionIcon } from '../components/SearchPanel';
 import { StatsCards } from '../components/StatsCards';
@@ -40,7 +41,11 @@ export function DashboardPage() {
         )}
       />
 
-      {loading && !dashboard ? <div className="panel">Загрузка...</div> : null}
+      {loading && !dashboard ? (
+        <section className="panel">
+          <AppLoader variant="panel" label="Собираем сводку" description="Подгружаем показатели по сотрудникам, организациям и очереди." />
+        </section>
+      ) : null}
 
       {dashboard ? (
         <>

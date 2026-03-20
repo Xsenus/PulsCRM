@@ -125,6 +125,164 @@ export interface OrganizationContactDto {
   comment?: string;
 }
 
+export interface OrganizationTaskSummaryDto {
+  id: number;
+  name?: string;
+  fullName?: string;
+  taskVariant: number;
+}
+
+export interface OrganizationOneCSnapshotDto {
+  key: string;
+  title: string;
+  code?: string;
+  raion?: string;
+  name?: string;
+  fullName?: string;
+  inn?: string;
+  phone?: string;
+  otherInfo?: string;
+  comment?: string;
+  addressLegal?: string;
+  addressActual?: string;
+}
+
+export interface OrganizationInfoTaskDto {
+  id: number;
+  variant: number;
+  name?: string;
+  fullName?: string;
+  places: number;
+  comment?: string;
+  organizationCreatorId?: number;
+  organizationCreatorName?: string;
+  updatedById?: number;
+  updatedByName?: string;
+  updatedAtUtc?: string;
+}
+
+export interface OrganizationEventDto {
+  id: number;
+  categoryId?: number;
+  categoryName?: string;
+  categoryFullName?: string;
+  categoryVariant?: number;
+  userName?: string;
+  name?: string;
+  fullName?: string;
+  comment?: string;
+  eventDateUtc?: string;
+  createdAtUtc?: string;
+  updatedAtUtc?: string;
+  dateFromUtc?: string;
+  dateToUtc?: string;
+  isInProcess: boolean;
+  isCompleted?: boolean;
+  taskId?: number;
+  taskName?: string;
+  taskVariant?: number;
+  licenseKey?: string;
+  licenseAmount?: number;
+  licenseAmountComment?: string;
+}
+
+export interface OrganizationParusLicenseDto {
+  id: number;
+  createdAtUtc?: string;
+  payer?: string;
+  mnemoOrg?: string;
+  regNumberClient?: string;
+  regNumberAbonement?: string;
+  dateSinceUtc?: string;
+  dateToUtc?: string;
+  nomenclature?: string;
+  modification?: string;
+  number?: string;
+  inn?: string;
+}
+
+export interface OrganizationParusOrderDto {
+  id: number;
+  createdAtUtc?: string;
+  typeOf?: string;
+  number?: string;
+  dateUtc?: string;
+  mnemoOrg?: string;
+  mnemoName?: string;
+  regNumberClient?: string;
+  payer?: string;
+  state?: string;
+  typeOfShipment?: string;
+  discount: number;
+  summa: number;
+  invoiceDateUtc?: string;
+  invoiceNumber?: string;
+  customerAmount: number;
+}
+
+export interface OrganizationContractDto {
+  id: number;
+  executorName?: string;
+  fileTypeName?: string;
+  dateUtc?: string;
+  dateFromUtc?: string;
+  dateToUtc?: string;
+  number?: string;
+  fileName?: string;
+  name?: string;
+  comment?: string;
+  documentTransport?: string;
+  documentState?: string;
+  summa?: number;
+  createdAtUtc?: string;
+  updatedAtUtc?: string;
+  createdByName?: string;
+  updatedByName?: string;
+  oneCDateUtc?: string;
+  oneCTransferState: number;
+  purchaseNumber?: string;
+  isProlongation: boolean;
+  isParus10Tornado: boolean;
+  isOneCHourSupport: boolean;
+  hasItsDiscount: boolean;
+  lawNumber: number;
+}
+
+export interface OrganizationAttachmentDto {
+  id: number;
+  privacyGroupName?: string;
+  executorName?: string;
+  fileTypeName?: string;
+  attachDocumentTypeName?: string;
+  dateUtc?: string;
+  dateFromUtc?: string;
+  dateToUtc?: string;
+  number?: string;
+  fileName?: string;
+  name?: string;
+  comment?: string;
+  documentTransport?: string;
+  documentState?: string;
+  summa?: number;
+  isCompleted: boolean;
+  createdAtUtc?: string;
+  updatedAtUtc?: string;
+  createdByName?: string;
+  updatedByName?: string;
+}
+
+export interface OrganizationRealizationDto {
+  id: number;
+  number?: string;
+  dateUtc?: string;
+  summa?: number;
+  isDone: boolean;
+  edoStatus?: string;
+  statusName?: string;
+  contractCode?: string;
+  contractName?: string;
+}
+
 export interface OrganizationRaionDto {
   id?: number;
   name: string;
@@ -195,28 +353,110 @@ export interface OrganizationListItemDto {
 
 export interface OrganizationDetailsDto extends OrganizationListItemDto {
   ogrn?: string;
+  okpo?: string;
+  okved?: string;
   kpp?: string;
+  pfrNumber?: string;
+  fssNumber?: string;
+  bankName?: string;
+  bankBik?: string;
+  bankCity?: string;
+  bankCorrespondentAccount?: string;
+  bankAccount?: string;
+  personalAccount?: string;
+  flagName?: string;
+  statusName?: string;
   addressLegal?: string;
   addressActual?: string;
   phone?: string;
   site?: string;
+  debtAmount: number;
+  debtActualAmount: number;
+  debtMinus6Amount: number;
   primaryEmail?: string;
   directorEmail?: string;
   salaryEmail?: string;
   oneCEmail?: string;
   siteEmail?: string;
+  directorFullName?: string;
+  directorShortName?: string;
+  directorGenitiveName?: string;
+  directorPosition?: string;
+  directorPositionGenitive?: string;
+  directorPhone?: string;
+  directorSnils?: string;
+  authorityDocument?: string;
   comment?: string;
   otherInfo?: string;
+  additionalComment?: string;
+  technicsComment?: string;
+  procurementComment?: string;
+  ecpComment?: string;
+  ecpContractComment?: string;
+  internetSpeed?: string;
+  edo?: string;
+  pfrAgreementNumber?: string;
+  pfrAgreementDateUtc?: string;
   salaryEnabled: boolean;
   oneCAccountingEnabled: boolean;
   oneCSalaryEnabled: boolean;
   oneCHousingEnabled: boolean;
   salaryContactName?: string;
   salaryContactPhone?: string;
+  salaryLabel?: string;
+  salaryLicenseNumber?: string;
+  salaryManualLicenseNumber?: string;
+  salaryLicenseComposition?: string;
+  salaryDatabaseCount: number;
+  salaryOrganizationCount: number;
+  salaryExtraWorkplaces: number;
+  salaryComment?: string;
+  salaryLeadName?: string;
+  salaryWorkBeginUtc?: string;
+  salaryWorkEndUtc?: string;
+  salaryPlatform?: string;
+  salaryConfiguration?: string;
+  salaryRating?: string;
+  salaryLicenseOrganizationId?: number;
+  salaryLicenseOrganizationName?: string;
+  salaryLicenseFileName?: string;
   oneCContactName?: string;
   oneCContactPhone?: string;
+  oneCComment?: string;
+  oneCSalaryComment?: string;
+  oneCAccountingChanges?: string;
+  oneCSalaryChanges?: string;
+  oneCLeadAccountingName?: string;
+  oneCLeadSalaryName?: string;
+  oneCBaseContract: boolean;
+  oneCRegNumberAccounting?: string;
+  oneCRegNumberSalary?: string;
+  oneCPlatformAccounting?: string;
+  oneCPlatformSalary?: string;
+  oneCConfigurationAccounting?: string;
+  oneCConfigurationSalary?: string;
+  oneCContractVariant?: string;
+  oneCItsVariant?: string;
+  oneCItsLicenseNumber?: string;
+  oneCItsComment?: string;
+  oneCItsComposition?: string;
+  oneCItsAmount?: number;
+  oneCItsAmountComment?: string;
+  oneCItsDateFromUtc?: string;
+  oneCItsDateToUtc?: string;
+  oneCItsCompleted: boolean;
   siteContactName?: string;
   siteContactPhone?: string;
+  siteAlias?: string;
+  siteReadyAtUtc?: string;
+  siteState?: string;
+  siteBaseId?: number;
+  siteComment?: string;
+  siteOnSupport: boolean;
+  siteTemplate?: string;
+  siteLicenseDateFromUtc?: string;
+  siteLicenseDateToUtc?: string;
+  siteLicenseCompleted: boolean;
   createdByName?: string;
   updatedByName?: string;
   updatedAdminByName?: string;
@@ -224,6 +464,15 @@ export interface OrganizationDetailsDto extends OrganizationListItemDto {
   updatedAtUtc?: string;
   updatedAdminAtUtc?: string;
   contacts: OrganizationContactDto[];
+  tasks: OrganizationTaskSummaryDto[];
+  oneCSnapshots: OrganizationOneCSnapshotDto[];
+  programInfos: OrganizationInfoTaskDto[];
+  events: OrganizationEventDto[];
+  contracts: OrganizationContractDto[];
+  attachments: OrganizationAttachmentDto[];
+  realizations: OrganizationRealizationDto[];
+  parusLicenses: OrganizationParusLicenseDto[];
+  parusOrders: OrganizationParusOrderDto[];
 }
 
 export interface WorkItemDto {

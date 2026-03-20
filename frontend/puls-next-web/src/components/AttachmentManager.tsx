@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { formatFileSize } from '../app/format';
 import { attachmentKindOptions } from '../app/lookups';
 import type { StoredFileDto } from '../app/types';
+import { LoadingButtonLabel } from './AppLoader';
 
 export interface EditableAttachment {
   storedFile: StoredFileDto;
@@ -53,7 +54,7 @@ export function AttachmentManager({ attachments, onChange, onUploadFiles }: Atta
           disabled={uploading}
           onClick={() => fileInputRef.current?.click()}
         >
-          {uploading ? 'Загрузка...' : 'Добавить файлы'}
+          {uploading ? <LoadingButtonLabel label="Загружаем" /> : 'Добавить файлы'}
         </button>
       </div>
 

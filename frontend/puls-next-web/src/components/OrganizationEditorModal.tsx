@@ -1,5 +1,6 @@
 import React from 'react';
 import type { OrganizationEditorLookupsDto, OrganizationUpsertRequest } from '../app/types';
+import { AppLoader, LoadingButtonLabel } from './AppLoader';
 import { Modal } from './Modal';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 
@@ -40,17 +41,24 @@ export function OrganizationEditorModal({
             Отмена
           </button>
           <button type="button" className="primary-button action-button" onClick={onSubmit} disabled={disabled}>
-            {saving ? 'Сохранение...' : 'Сохранить'}
+            {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Сохранить'}
           </button>
         </>
       )}
     >
-      {loading ? <div className="empty-state">Загрузка формы...</div> : null}
+      {loading ? (
+        <AppLoader
+          variant="panel"
+          label="Подготавливаем форму организации"
+          description="Загружаем карточку и справочники для редактирования."
+        />
+      ) : null}
 
       {!loading ? (
         <OrganizationEditorForm
           value={value}
           lookups={lookups}
+          section="main"
           disabled={disabled}
           onChange={onChange}
         />

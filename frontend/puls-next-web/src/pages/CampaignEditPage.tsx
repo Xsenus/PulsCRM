@@ -23,6 +23,7 @@ import type {
   StoredFileDto,
   TransportProfileDto
 } from '../app/types';
+import { AppLoader, LoadingButtonLabel } from '../components/AppLoader';
 import { AttachmentManager, type EditableAttachment } from '../components/AttachmentManager';
 import { DataTable } from '../components/DataTable';
 import { OrganizationPicker } from '../components/OrganizationPicker';
@@ -284,13 +285,21 @@ export function CampaignEditPage() {
               Запустить сейчас
             </button>
             <button type="button" className="primary-button action-button" disabled={saving} onClick={() => void save()}>
-              {saving ? 'Сохраняем...' : 'Сохранить'}
+              {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Сохранить'}
             </button>
           </>
         )}
       />
 
-      {loading ? <div className="panel">Загрузка...</div> : null}
+      {loading ? (
+        <section className="panel">
+          <AppLoader
+            variant="panel"
+            label="Собираем кампанию"
+            description="Подтягиваем шаблон, настройки отправки и целевые организации."
+          />
+        </section>
+      ) : null}
 
       {!loading ? (
         <>
