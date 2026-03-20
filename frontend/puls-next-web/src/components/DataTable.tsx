@@ -273,6 +273,14 @@ export function DataTable<T>({
     [resolvedColumnMap, settings.columns]
   );
 
+  const tableMinWidth = useMemo(
+    () => Math.max(
+      configurable ? 920 : 640,
+      visibleColumns.reduce((total, column) => total + column.width, 0)
+    ),
+    [configurable, visibleColumns]
+  );
+
   const visibleDraftColumnCount = useMemo(
     () => draftSettings.columns.filter((column) => column.visible).length,
     [draftSettings.columns]
@@ -474,7 +482,7 @@ export function DataTable<T>({
       ) : null}
 
       <div className={shellClassName}>
-        <table className={resolvedTableClassName}>
+        <table className={resolvedTableClassName} style={{ minWidth: `${tableMinWidth}px` }}>
           {visibleColumns.length > 0 ? (
             <colgroup>
               {visibleColumns.map((column) => (

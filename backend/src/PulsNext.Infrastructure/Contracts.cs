@@ -69,8 +69,21 @@ public class EmployeeListItemDto
     public string Login { get; set; } = string.Empty;
     public string? FullName { get; set; }
     public string? UserGroup { get; set; }
+    public string? RuleName { get; set; }
+    public string? PrivacyGroupName { get; set; }
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? PhoneWorkRedirect { get; set; }
+    public string? Site { get; set; }
+    public string? Address { get; set; }
+    public string? Position { get; set; }
+    public string? Icq { get; set; }
+    public string? Skype { get; set; }
+    public string? Comment { get; set; }
+    public string? S1cCode { get; set; }
+    public DateTime? BirthDay { get; set; }
+    public bool IsRoot { get; set; }
+    public bool IsMale { get; set; }
     public bool IsDismissed { get; set; }
 }
 
@@ -133,20 +146,7 @@ public sealed class EmployeeDetailsDto : EmployeeListItemDto
 {
     public int? UserGroupId { get; set; }
     public int? RuleId { get; set; }
-    public string? RuleName { get; set; }
     public int? PrivacyGroupId { get; set; }
-    public string? PrivacyGroupName { get; set; }
-    public bool IsRoot { get; set; }
-    public bool IsMale { get; set; }
-    public string? PhoneWorkRedirect { get; set; }
-    public string? Site { get; set; }
-    public string? Address { get; set; }
-    public string? Position { get; set; }
-    public string? Icq { get; set; }
-    public string? Skype { get; set; }
-    public string? Comment { get; set; }
-    public string? S1cCode { get; set; }
-    public DateTime? BirthDay { get; set; }
     public string? AvatarBase64 { get; set; }
     public string? AvatarContentType { get; set; }
     public string? PhotoBase64 { get; set; }

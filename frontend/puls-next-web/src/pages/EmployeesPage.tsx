@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteEmployee, getEmployees } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { formatDate } from '../app/format';
 import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type { EmployeeListItemDto } from '../app/types';
-import { DataTable } from '../components/DataTable';
+import { DataTable, type DataTableColumn } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
@@ -23,6 +24,37 @@ interface RowContextMenuState {
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Неизвестная ошибка';
 }
+
+function formatBoolean(value: boolean) {
+  return value ? 'Да' : 'Нет';
+}
+
+function formatGender(value: boolean) {
+  return value ? 'Мужчина' : 'Женщина';
+}
+
+const employeeColumns: Array<DataTableColumn<EmployeeListItemDto>> = [
+  { key: 'id', title: 'ID', width: 96, minWidth: 80, visible: false, render: (row) => row.id },
+  { key: 'login', title: 'Логин', width: 180, minWidth: 150, render: (row) => row.login },
+  { key: 'fullName', title: 'ФИО', width: 260, minWidth: 220, render: (row) => row.fullName || EMPTY_VALUE },
+  { key: 'userGroup', title: 'Группа', width: 180, minWidth: 150, render: (row) => row.userGroup || EMPTY_VALUE },
+  { key: 'ruleName', title: 'Набор правил', width: 220, minWidth: 180, visible: false, render: (row) => row.ruleName || EMPTY_VALUE },
+  { key: 'privacyGroupName', title: 'Приватность', width: 220, minWidth: 180, visible: false, render: (row) => row.privacyGroupName || EMPTY_VALUE },
+  { key: 'position', title: 'Должность', width: 220, minWidth: 180, visible: false, render: (row) => row.position || EMPTY_VALUE },
+  { key: 'email', title: 'Почта', width: 240, minWidth: 210, render: (row) => row.email || EMPTY_VALUE },
+  { key: 'phone', title: 'Телефон', width: 180, minWidth: 150, render: (row) => row.phone || EMPTY_VALUE },
+  { key: 'phoneWorkRedirect', title: 'Внутр. №', width: 130, minWidth: 110, visible: false, render: (row) => row.phoneWorkRedirect || EMPTY_VALUE },
+  { key: 'site', title: 'Сайт', width: 220, minWidth: 180, visible: false, render: (row) => row.site || EMPTY_VALUE },
+  { key: 'address', title: 'Адрес', width: 320, minWidth: 240, visible: false, render: (row) => row.address || EMPTY_VALUE },
+  { key: 'icq', title: 'ICQ', width: 150, minWidth: 120, visible: false, render: (row) => row.icq || EMPTY_VALUE },
+  { key: 'skype', title: 'Skype', width: 180, minWidth: 140, visible: false, render: (row) => row.skype || EMPTY_VALUE },
+  { key: 's1cCode', title: 'Код 1С', width: 140, minWidth: 120, visible: false, render: (row) => row.s1cCode || EMPTY_VALUE },
+  { key: 'birthDay', title: 'Дата рождения', width: 160, minWidth: 140, visible: false, render: (row) => formatDate(row.birthDay) || EMPTY_VALUE },
+  { key: 'isMale', title: 'Пол', width: 140, minWidth: 120, visible: false, render: (row) => formatGender(row.isMale) },
+  { key: 'isRoot', title: 'Администратор', width: 150, minWidth: 130, visible: false, render: (row) => formatBoolean(row.isRoot) },
+  { key: 'isDismissed', title: 'Уволен', width: 120, minWidth: 100, visible: false, render: (row) => formatBoolean(row.isDismissed) },
+  { key: 'comment', title: 'Комментарий', width: 320, minWidth: 240, visible: false, render: (row) => row.comment || EMPTY_VALUE }
+];
 
 export function EmployeesPage() {
   const navigate = useNavigate();
@@ -189,14 +221,7 @@ export function EmployeesPage() {
               y: Math.min(event.clientY, window.innerHeight - 220)
             });
           }}
-          columns={[
-            { key: 'login', title: 'Логин', width: 180, minWidth: 150, render: (row) => row.login },
-            { key: 'fullName', title: 'ФИО', width: 260, minWidth: 220, render: (row) => row.fullName || EMPTY_VALUE },
-            { key: 'userGroup', title: 'Группа', width: 180, minWidth: 150, render: (row) => row.userGroup || EMPTY_VALUE },
-            { key: 'email', title: 'Почта', width: 240, minWidth: 210, render: (row) => row.email || EMPTY_VALUE },
-            { key: 'phone', title: 'Телефон', width: 180, minWidth: 150, render: (row) => row.phone || EMPTY_VALUE },
-            { key: 'isDismissed', title: 'Уволен', width: 120, minWidth: 100, visible: false, render: (row) => (row.isDismissed ? 'Да' : 'Нет') }
-          ]}
+          columns={employeeColumns}
         />
 
         <Pagination

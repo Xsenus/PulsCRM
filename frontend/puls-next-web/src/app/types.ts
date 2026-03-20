@@ -46,8 +46,21 @@ export interface EmployeeListItemDto {
   login: string;
   fullName?: string;
   userGroup?: string;
+  ruleName?: string;
+  privacyGroupName?: string;
   email?: string;
   phone?: string;
+  phoneWorkRedirect?: string;
+  site?: string;
+  address?: string;
+  position?: string;
+  icq?: string;
+  skype?: string;
+  comment?: string;
+  s1cCode?: string;
+  birthDay?: string;
+  isRoot: boolean;
+  isMale: boolean;
   isDismissed: boolean;
 }
 
@@ -94,20 +107,7 @@ export interface EmployeeUpsertRequest {
 export interface EmployeeDetailsDto extends EmployeeListItemDto {
   userGroupId?: number;
   ruleId?: number;
-  ruleName?: string;
   privacyGroupId?: number;
-  privacyGroupName?: string;
-  isRoot: boolean;
-  isMale: boolean;
-  phoneWorkRedirect?: string;
-  site?: string;
-  address?: string;
-  position?: string;
-  icq?: string;
-  skype?: string;
-  comment?: string;
-  s1cCode?: string;
-  birthDay?: string;
   avatarBase64?: string;
   avatarContentType?: string;
   photoBase64?: string;
