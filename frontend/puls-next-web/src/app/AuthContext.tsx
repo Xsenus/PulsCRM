@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getCurrentUser, getToken, login as loginRequest, setToken } from './api';
+import { rememberLastLoginProfile } from './lastLoginProfile';
 import type { CurrentUserDto } from './types';
 
 interface AuthContextValue {
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login: async (loginValue: string, password: string) => {
       const response = await loginRequest(loginValue, password);
       setToken(response.accessToken);
+      rememberLastLoginProfile(response.user);
       setUser(response.user);
     },
     logout: () => {
