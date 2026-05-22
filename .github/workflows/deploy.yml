@@ -65,4 +65,5 @@ jobs:
             -WebSourcePath "${{ github.workspace }}\frontend\puls-next-web\dist" `
             -WebTargetPath $env:WEB_SITE_PATH `
             -ApiConfigSourcePath $env:API_CONFIG_PATH `
-            -HealthcheckUrl $env:HEALTHCHECK_URL
+            -HealthcheckUrl $env:HEALTHCHECK_URL `
+            -WarmupUrls @($env:HEALTHCHECK_URL, "http://localhost:8080/")

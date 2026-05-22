@@ -13,7 +13,8 @@ param(
     [string]$WebTargetPath,
 
     [string]$ApiConfigSourcePath,
-    [string]$HealthcheckUrl
+    [string]$HealthcheckUrl,
+    [string[]]$WarmupUrls = @()
 )
 
 Set-StrictMode -Version Latest
@@ -126,6 +127,45 @@ function Wait-ForHealthcheck {
     throw "Healthcheck failed for $Url. Last error: $lastError"
 }
 
+function Invoke-WarmupUrls {
+    param(
+        [string[]]$Urls,
+        [int]$Attempts = 3,
+        [int]$DelaySeconds = 2
+    )
+
+    foreach ($url in $Urls) {
+        if ([string]::IsNullOrWhiteSpace($url)) {
+            continue
+        }
+
+        $lastError = $null
+        for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+            try {
+                $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30
+                if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
+                    Write-Host "Warmup passed: $url"
+                    $lastError = $null
+                    break
+                }
+
+                $lastError = "Unexpected status code: $($response.StatusCode)"
+            }
+            catch {
+                $lastError = $_.Exception.Message
+            }
+
+            if ($attempt -lt $Attempts) {
+                Start-Sleep -Seconds $DelaySeconds
+            }
+        }
+
+        if ($null -ne $lastError) {
+            Write-Warning "Warmup failed for $url. Last error: $lastError"
+        }
+    }
+}
+
 Assert-Directory -Path $ApiSourcePath -Label "API source"
 Assert-Directory -Path $WebSourcePath -Label "Web source"
 
@@ -149,5 +189,6 @@ Write-Host "Deploying frontend to $WebTargetPath"
 Invoke-RobocopyMirror -Source $WebSourcePath -Target $WebTargetPath
 
 Wait-ForHealthcheck -Url $HealthcheckUrl
+Invoke-WarmupUrls -Urls $WarmupUrls
 
 Write-Host "Deployment completed successfully."
