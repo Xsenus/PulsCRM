@@ -14,10 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DOTNET_VERSION: 9.0.x
-  NODE_VERSION: "20"
   API_PROJECT: backend/src/PulsNext.Api/PulsNext.Api.csproj
-  WORKER_PROJECT: backend/src/PulsNext.Worker/PulsNext.Worker.csproj
   FRONTEND_PATH: frontend/puls-next-web
 
 jobs:
@@ -32,17 +29,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: frontend/puls-next-web/package-lock.json
+      - name: Use installed toolchain
+        shell: powershell
+        run: |
+          "C:\Program Files\dotnet" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          dotnet --info
+          node --version
+          npm --version
 
       - name: Restore solution
         run: dotnet restore backend/PulsNextMailing.sln
@@ -58,18 +51,12 @@ jobs:
       - name: Publish API
         run: dotnet publish ${{ env.API_PROJECT }} -c Release --no-restore -o "${{ github.workspace }}\artifacts\api"
 
-      - name: Publish worker
-        run: dotnet publish ${{ env.WORKER_PROJECT }} -c Release --no-restore -o "${{ github.workspace }}\artifacts\worker"
-
       - name: Deploy artifacts
         shell: powershell
         env:
           API_SITE_PATH: ${{ vars.API_SITE_PATH }}
           WEB_SITE_PATH: ${{ vars.WEB_SITE_PATH }}
-          WORKER_PATH: ${{ vars.WORKER_PATH }}
           API_CONFIG_PATH: ${{ vars.API_CONFIG_PATH }}
-          WORKER_CONFIG_PATH: ${{ vars.WORKER_CONFIG_PATH }}
-          WORKER_SERVICE_NAME: ${{ vars.WORKER_SERVICE_NAME }}
           HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
         run: |
           .\scripts\deploy-iis.ps1 `
@@ -77,9 +64,5 @@ jobs:
             -ApiTargetPath $env:API_SITE_PATH `
             -WebSourcePath "${{ github.workspace }}\frontend\puls-next-web\dist" `
             -WebTargetPath $env:WEB_SITE_PATH `
-            -WorkerSourcePath "${{ github.workspace }}\artifacts\worker" `
-            -WorkerTargetPath $env:WORKER_PATH `
             -ApiConfigSourcePath $env:API_CONFIG_PATH `
-            -WorkerConfigSourcePath $env:WORKER_CONFIG_PATH `
-            -WorkerServiceName $env:WORKER_SERVICE_NAME `
             -HealthcheckUrl $env:HEALTHCHECK_URL

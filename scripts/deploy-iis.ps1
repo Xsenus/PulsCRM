@@ -12,15 +12,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$WebTargetPath,
 
-    [Parameter(Mandatory = $true)]
-    [string]$WorkerSourcePath,
-
-    [Parameter(Mandatory = $true)]
-    [string]$WorkerTargetPath,
-
     [string]$ApiConfigSourcePath,
-    [string]$WorkerConfigSourcePath,
-    [string]$WorkerServiceName,
     [string]$HealthcheckUrl
 )
 
@@ -136,24 +128,8 @@ function Wait-ForHealthcheck {
 
 Assert-Directory -Path $ApiSourcePath -Label "API source"
 Assert-Directory -Path $WebSourcePath -Label "Web source"
-Assert-Directory -Path $WorkerSourcePath -Label "Worker source"
 
 Copy-OptionalConfig -SourcePath $ApiConfigSourcePath -TargetDirectory $ApiSourcePath
-Copy-OptionalConfig -SourcePath $WorkerConfigSourcePath -TargetDirectory $WorkerSourcePath
-
-$workerService = $null
-if (-not [string]::IsNullOrWhiteSpace($WorkerServiceName)) {
-    $workerService = Get-Service -Name $WorkerServiceName -ErrorAction SilentlyContinue
-
-    if ($null -eq $workerService) {
-        Write-Warning "Worker service '$WorkerServiceName' was not found. Deployment will continue without restart."
-    }
-    elseif ($workerService.Status -ne [System.ServiceProcess.ServiceControllerStatus]::Stopped) {
-        Write-Host "Stopping worker service $WorkerServiceName"
-        Stop-Service -Name $WorkerServiceName -Force -ErrorAction Stop
-        $workerService.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Stopped, [TimeSpan]::FromSeconds(30))
-    }
-}
 
 Ensure-Directory -Path $ApiTargetPath
 $appOfflinePath = Join-Path $ApiTargetPath "app_offline.htm"
@@ -171,15 +147,6 @@ finally {
 
 Write-Host "Deploying frontend to $WebTargetPath"
 Invoke-RobocopyMirror -Source $WebSourcePath -Target $WebTargetPath
-
-Write-Host "Deploying worker to $WorkerTargetPath"
-Invoke-RobocopyMirror -Source $WorkerSourcePath -Target $WorkerTargetPath
-
-if ($null -ne $workerService) {
-    Write-Host "Starting worker service $WorkerServiceName"
-    Start-Service -Name $WorkerServiceName
-    $workerService.WaitForStatus([System.ServiceProcess.ServiceControllerStatus]::Running, [TimeSpan]::FromSeconds(30))
-}
 
 Wait-ForHealthcheck -Url $HealthcheckUrl
 

@@ -192,7 +192,7 @@ public enum RecipientSourceKind
     Director = 6
 }
 
-[Persistent("mail_TransportProfile")]
+[Persistent("MailTransportProfile")]
 public class MailTransportProfile(Session session) : XPObject(session)
 {
     private string? _name;
@@ -314,7 +314,7 @@ public class MailTransportProfile(Session session) : XPObject(session)
     public XPCollection<MailCampaign> Campaigns => GetCollection<MailCampaign>(nameof(Campaigns));
 }
 
-[Persistent("mail_Campaign")]
+[Persistent("MailCampaign")]
 public class MailCampaign(Session session) : XPObject(session)
 {
     private string? _name;
@@ -556,7 +556,7 @@ public class MailCampaign(Session session) : XPObject(session)
     public XPCollection<MailDispatchBatch> Batches => GetCollection<MailDispatchBatch>(nameof(Batches));
 }
 
-[Persistent("mail_CampaignTargetOrganization")]
+[Persistent("MailCampaignTargetOrganization")]
 public class MailCampaignTargetOrganization(Session session) : XPObject(session)
 {
     private MailCampaign? _campaign;
@@ -594,7 +594,7 @@ public class MailCampaignTargetOrganization(Session session) : XPObject(session)
     }
 }
 
-[Persistent("mail_StoredFile")]
+[Persistent("MailStoredFile")]
 public class MailStoredFile(Session session) : XPObject(session)
 {
     private string? _originalFileName;
@@ -672,7 +672,7 @@ public class MailStoredFile(Session session) : XPObject(session)
     public XPCollection<MailCampaignAttachment> CampaignAttachments => GetCollection<MailCampaignAttachment>(nameof(CampaignAttachments));
 }
 
-[Persistent("mail_CampaignAttachment")]
+[Persistent("MailCampaignAttachment")]
 public class MailCampaignAttachment(Session session) : XPObject(session)
 {
     private MailCampaign? _campaign;
@@ -725,7 +725,7 @@ public class MailCampaignAttachment(Session session) : XPObject(session)
     }
 }
 
-[Persistent("mail_DispatchBatch")]
+[Persistent("MailDispatchBatch")]
 public class MailDispatchBatch(Session session) : XPObject(session)
 {
     private MailCampaign? _campaign;
@@ -829,7 +829,7 @@ public class MailDispatchBatch(Session session) : XPObject(session)
     public XPCollection<MailDispatchItem> Items => GetCollection<MailDispatchItem>(nameof(Items));
 }
 
-[Persistent("mail_DispatchItem")]
+[Persistent("MailDispatchItem")]
 public class MailDispatchItem(Session session) : XPObject(session)
 {
     private MailDispatchBatch? _batch;

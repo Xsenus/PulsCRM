@@ -5,7 +5,7 @@
 - backend: ASP.NET Core Web API на .NET 9;
 - ORM: DevExpress XPO;
 - frontend: React + Vite + DevExtreme React;
-- фоновые процессы: отдельный Worker Service;
+- фоновые процессы рассылки: hosted services внутри ASP.NET Core API;
 - рассылка: MailKit + персистентная очередь + статистика;
 - legacy-интеграция: авторизация и чтение сотрудников / организаций / вкладки «Работа» из текущей БД.
 
@@ -27,14 +27,14 @@
 
 ## Архитектура
 
-Проект сознательно разделён на две БД:
+Проект использует одну основную БД SQL Server, но две логические области данных:
 
-1. **LegacyDb** — текущая рабочая БД существующего приложения. Из неё читаются:
+1. **LegacyDb** — текущая рабочая БД существующего приложения. Из неё читаются и при необходимости обновляются:
    - пользователи;
    - организации;
    - контакты;
    - данные вкладки «Работа» (`set_Job`).
-2. **MailingDb** — новая БД сервиса рассылки. В ней хранятся:
+2. **MailingDb** — логическое подключение к той же SQL Server БД для таблиц сервиса рассылки. В таблицах `Mail*` хранятся:
    - кампании;
    - вложения;
    - очереди отправки;
@@ -42,7 +42,7 @@
    - статистика;
    - SMTP-профили.
 
-Такой подход не ломает legacy-схему и упрощает внедрение.
+Такой подход не требует SQLite: legacy-таблицы `set_*` и новые таблицы рассылок `Mail*` находятся в одном каталоге SQL Server.
 
 ## Структура
 
@@ -54,7 +54,6 @@ backend/
     PulsNext.Domain.Mailing/
     PulsNext.Infrastructure/
     PulsNext.Api/
-    PulsNext.Worker/
 frontend/
   puls-next-web/
 storage/
@@ -68,21 +67,19 @@ storage/
 
 ```bash
 copy backend\src\PulsNext.Api\appsettings.Development.example.json backend\src\PulsNext.Api\appsettings.Development.json
-copy backend\src\PulsNext.Worker\appsettings.Development.example.json backend\src\PulsNext.Worker\appsettings.Development.json
 ```
 
 Далее отредактируйте:
 
 - `backend/src/PulsNext.Api/appsettings.Development.json`
-- `backend/src/PulsNext.Worker/appsettings.Development.json`
 
 Пример:
 
 ```json
 {
   "ConnectionStrings": {
-    "LegacyDb": "XpoProvider=MSSqlServer;data source=SERVER;integrated security=SSPI;initial catalog=DXPulsBase",
-    "MailingDb": "XpoProvider=SQLite;Data Source=../../../../storage/mailing.db"
+    "LegacyDb": "XpoProvider=MSSqlServer;data source=SERVER;integrated security=SSPI;initial catalog=DXPulsBase;TrustServerCertificate=true",
+    "MailingDb": "XpoProvider=MSSqlServer;data source=SERVER;integrated security=SSPI;initial catalog=DXPulsBase;TrustServerCertificate=true"
   }
 }
 ```
@@ -101,13 +98,6 @@ dotnet build PulsNextMailing.sln
 ```bash
 cd backend
 dotnet run --project src/PulsNext.Api
-```
-
-В отдельной консоли:
-
-```bash
-cd backend
-dotnet run --project src/PulsNext.Worker
 ```
 
 ### 4) Поднимите frontend
@@ -140,7 +130,7 @@ npm run dev
 - статистика по отправкам;
 - ручной запуск кампании.
 
-### Worker
+### Фоновые задачи в API
 
 - поиск кампаний, у которых наступило время запуска;
 - расчёт следующего времени отправки;

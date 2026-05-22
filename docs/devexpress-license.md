@@ -13,7 +13,7 @@
 
 Практическое правило:
 
-- если сервер только хостит `C:\Apps\PulsCRM\Api` и `C:\Apps\PulsCRM\Worker`, ключ на нем не нужен;
+- если сервер только хостит уже опубликованный `C:\Apps\PulsCRM\Api`, ключ на нем не нужен;
 - если этот же сервер через GitHub Actions runner или вручную делает `dotnet publish`, ключ на нем нужен.
 
 ## Где должна лежать лицензия
@@ -90,7 +90,6 @@ C:\Windows\System32\config\systemprofile\AppData\Roaming\DevExpress\DevExpress_L
 ```powershell
 dotnet build backend\PulsNextMailing.sln
 dotnet publish backend\src\PulsNext.Api\PulsNext.Api.csproj -c Release
-dotnet publish backend\src\PulsNext.Worker\PulsNext.Worker.csproj -c Release
 ```
 
 Или просто запусти GitHub Actions workflow деплоя и убедись, что в логе нет `DX1001`.
@@ -105,7 +104,6 @@ dotnet publish backend\src\PulsNext.Worker\PulsNext.Worker.csproj -c Release
 Сам файл лицензии не нужно копировать:
 
 - в `C:\Apps\PulsCRM\Api`;
-- в `C:\Apps\PulsCRM\Worker`;
 - в `C:\Apps\PulsCRM\Web`;
 - в репозиторий Git;
 - в артефакты публикации.

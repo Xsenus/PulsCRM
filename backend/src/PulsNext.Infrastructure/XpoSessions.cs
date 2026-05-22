@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Data.Common;
 using DevExpress.Xpo;
 using DevExpress.Xpo.DB;
 using Microsoft.AspNetCore.Http;
@@ -45,10 +44,8 @@ public static class ServiceCollectionExtensions
 
         var legacyConnectionString = configuration.GetConnectionString("LegacyDb")
             ?? throw new InvalidOperationException("ConnectionStrings:LegacyDb is not configured.");
-        var mailingConnectionString = NormalizeConnectionString(
-            configuration.GetConnectionString("MailingDb")
-                ?? throw new InvalidOperationException("ConnectionStrings:MailingDb is not configured."),
-            contentRootPath);
+        var mailingConnectionString = configuration.GetConnectionString("MailingDb")
+            ?? throw new InvalidOperationException("ConnectionStrings:MailingDb is not configured.");
         var autoCreateMailingSchema = configuration.GetSection(MailingDbOptions.SectionName).GetValue("AutoCreateSchema", true);
 
         services.AddHttpContextAccessor();
@@ -87,43 +84,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMailSender, MailSender>();
 
         return services;
-    }
-
-    private static string NormalizeConnectionString(string connectionString, string contentRootPath)
-    {
-        if (!connectionString.Contains("XpoProvider=SQLite", StringComparison.OrdinalIgnoreCase))
-        {
-            return connectionString;
-        }
-
-        var builder = new DbConnectionStringBuilder
-        {
-            ConnectionString = connectionString
-        };
-
-        string? dataSourceKey = null;
-        foreach (string key in builder.Keys)
-        {
-            if (string.Equals(key, "Data Source", StringComparison.OrdinalIgnoreCase))
-            {
-                dataSourceKey = key;
-                break;
-            }
-        }
-
-        if (dataSourceKey is null)
-        {
-            return connectionString;
-        }
-
-        var dataSource = Convert.ToString(builder[dataSourceKey]);
-        if (string.IsNullOrWhiteSpace(dataSource) || Path.IsPathRooted(dataSource))
-        {
-            return connectionString;
-        }
-
-        builder[dataSourceKey] = Path.GetFullPath(Path.Combine(contentRootPath, dataSource));
-        return builder.ConnectionString;
     }
 
     private static DirectoryInfo GetKeysDirectory(IConfiguration configuration, string contentRootPath)

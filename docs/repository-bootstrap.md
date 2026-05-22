@@ -16,7 +16,7 @@ git commit -m "Initial import"
 Что не попадет в репозиторий:
 
 - `node_modules`, `dist`, `bin`, `obj`, `artifacts`
-- содержимое `storage` и локальные SQLite-файлы
+- содержимое `storage` и локальные файлы данных
 - `appsettings.Development.json` и `appsettings.Production.json`
 - локальные файлы Visual Studio и `launchSettings.json`
 
@@ -49,7 +49,6 @@ gh repo create <repo-name> --private --source . --remote origin --push
 - исходный код
 - `.github/workflows/deploy.yml`
 - `scripts/deploy-iis.ps1`
-- `scripts/install-worker-service.ps1`
 - example-конфиги production
 - документацию из `docs`
 
