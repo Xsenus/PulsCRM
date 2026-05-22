@@ -14,7 +14,8 @@ param(
 
     [string]$ApiConfigSourcePath,
     [string]$HealthcheckUrl,
-    [string[]]$WarmupUrls = @()
+    [string[]]$WarmupUrls = @(),
+    [string]$ApiAppPoolName = "PulsCRM.Api"
 )
 
 Set-StrictMode -Version Latest
@@ -88,6 +89,65 @@ function Invoke-RobocopyMirror {
     if ($exitCode -ge 8) {
         throw "robocopy failed with exit code $exitCode"
     }
+
+    $global:LASTEXITCODE = 0
+}
+
+function Invoke-AppCmd {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $appCmdPath = Join-Path $env:windir "system32\inetsrv\appcmd.exe"
+    if (-not (Test-Path -LiteralPath $appCmdPath -PathType Leaf)) {
+        throw "IIS appcmd.exe was not found: $appCmdPath"
+    }
+
+    & $appCmdPath @Arguments
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw "appcmd failed with exit code $exitCode. Arguments: $($Arguments -join ' ')"
+    }
+
+    $global:LASTEXITCODE = 0
+}
+
+function Stop-AppPoolIfConfigured {
+    param(
+        [string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Name)) {
+        return
+    }
+
+    Write-Host "Stopping app pool $Name"
+    try {
+        Invoke-AppCmd -Arguments @("stop", "apppool", $Name)
+    }
+    catch {
+        $message = $_.Exception.Message
+        if ($message -match "is already stopped|Cannot find") {
+            Write-Warning $message
+            return
+        }
+
+        throw
+    }
+}
+
+function Start-AppPoolIfConfigured {
+    param(
+        [string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Name)) {
+        return
+    }
+
+    Write-Host "Starting app pool $Name"
+    Invoke-AppCmd -Arguments @("start", "apppool", $Name)
 }
 
 function Wait-ForHealthcheck {
@@ -176,6 +236,7 @@ $appOfflinePath = Join-Path $ApiTargetPath "app_offline.htm"
 Set-Content -LiteralPath $appOfflinePath -Value "<html><body>Maintenance</body></html>" -Encoding UTF8
 
 try {
+    Stop-AppPoolIfConfigured -Name $ApiAppPoolName
     Write-Host "Deploying API to $ApiTargetPath"
     Invoke-RobocopyMirror -Source $ApiSourcePath -Target $ApiTargetPath
 }
@@ -183,6 +244,8 @@ finally {
     if (Test-Path -LiteralPath $appOfflinePath) {
         Remove-Item -LiteralPath $appOfflinePath -Force -ErrorAction SilentlyContinue
     }
+
+    Start-AppPoolIfConfigured -Name $ApiAppPoolName
 }
 
 Write-Host "Deploying frontend to $WebTargetPath"
@@ -192,3 +255,4 @@ Wait-ForHealthcheck -Url $HealthcheckUrl
 Invoke-WarmupUrls -Urls $WarmupUrls
 
 Write-Host "Deployment completed successfully."
+$global:LASTEXITCODE = 0
