@@ -907,6 +907,29 @@ public sealed class CampaignRecipientPreviewDto
 }
 
 /// <summary>
+/// Результат проверки готовности кампании к запуску.
+/// </summary>
+public sealed class CampaignReadinessDto
+{
+    public bool IsReady { get; set; }
+    public int OrganizationCount { get; set; }
+    public int RecipientCount { get; set; }
+    public IReadOnlyCollection<CampaignReadinessItemDto> Items { get; set; } = Array.Empty<CampaignReadinessItemDto>();
+}
+
+/// <summary>
+/// Один пункт проверки готовности кампании.
+/// </summary>
+public sealed class CampaignReadinessItemDto
+{
+    public string Key { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public bool IsBlocking { get; set; }
+}
+
+/// <summary>
 /// Партия отправки, созданная при запуске кампании.
 /// </summary>
 public sealed class DispatchBatchDto

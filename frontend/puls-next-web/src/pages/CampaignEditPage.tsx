@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
+  checkCampaignReadiness,
   getCampaign,
   getCampaignStats,
   getTransportProfiles,
@@ -10,6 +11,7 @@ import {
   saveCampaign,
   uploadFile
 } from '../app/api';
+import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaignReadiness';
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
 import { campaignStatusOptions, dispatchStatusOptions, labelOf, recipientSourceOptions } from '../app/lookups';
@@ -17,6 +19,7 @@ import { showToast } from '../app/toast';
 import type {
   CampaignDetailsDto,
   CampaignRecipientPreviewDto,
+  CampaignReadinessDto,
   CampaignStatisticsDto,
   CampaignUpsertRequest,
   OrganizationListItemDto,
@@ -162,6 +165,8 @@ export function CampaignEditPage() {
   const [attachments, setAttachments] = useState<EditableAttachment[]>([]);
   const [schedulePreviewItems, setSchedulePreviewItems] = useState<Awaited<ReturnType<typeof previewSchedule>>>([]);
   const [recipientPreviewData, setRecipientPreviewData] = useState<CampaignRecipientPreviewDto | null>(null);
+  const [readiness, setReadiness] = useState<CampaignReadinessDto | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
   const [stats, setStats] = useState<CampaignStatisticsDto | null>(null);
 
   const buildRequest = useMemo<CampaignUpsertRequest>(() => ({
@@ -184,6 +189,7 @@ export function CampaignEditPage() {
       setTransportProfiles(transportResponse);
       setSchedulePreviewItems([]);
       setRecipientPreviewData(null);
+      setReadiness(null);
 
       if (id) {
         const campaign = await getCampaign(id);
@@ -206,6 +212,10 @@ export function CampaignEditPage() {
   useEffect(() => {
     void load();
   }, [id]);
+
+  useEffect(() => {
+    setReadiness(null);
+  }, [buildRequest]);
 
   const patchModel = (patch: Partial<CampaignUpsertRequest>) => {
     setModel((current) => ({ ...current, ...patch }));
@@ -281,9 +291,29 @@ export function CampaignEditPage() {
     ]);
   };
 
+  const checkReadinessClick = async () => {
+    setReadinessLoading(true);
+    try {
+      const result = await checkCampaignReadiness(buildRequest);
+      setReadiness(result);
+      showToast(result.isReady ? 'Кампания готова к запуску' : 'Кампания не готова к запуску', result.isReady ? 'success' : 'warning');
+      return result;
+    } catch (error: any) {
+      showToast(error.message || 'Не удалось проверить готовность кампании', 'error', 4000);
+      return null;
+    } finally {
+      setReadinessLoading(false);
+    }
+  };
+
   const runNow = async () => {
     if (!id) {
       showToast('Сначала сохраните кампанию', 'warning');
+      return;
+    }
+
+    const readinessResult = await checkReadinessClick();
+    if (!readinessResult?.isReady) {
       return;
     }
 
@@ -301,6 +331,9 @@ export function CampaignEditPage() {
           <>
             <button type="button" className="secondary-button button-inline" onClick={() => void previewRecipientsClick()}>
               Проверить получателей
+            </button>
+            <button type="button" className="secondary-button button-inline" disabled={readinessLoading} onClick={() => void checkReadinessClick()}>
+              {readinessLoading ? <LoadingButtonLabel label="Проверяем" /> : 'Проверить готовность'}
             </button>
             <button type="button" className="secondary-button button-inline" disabled={!id} onClick={() => void runNow()}>
               Запустить сейчас
@@ -324,6 +357,47 @@ export function CampaignEditPage() {
 
       {!loading ? (
         <>
+          <section className="panel campaign-readiness-panel">
+            <div className="section-header-inline">
+              <div>
+                <h3>Готовность к запуску</h3>
+                <div className="field-hint">{campaignReadinessSummary(readiness)}</div>
+              </div>
+
+              <button type="button" className="secondary-button button-inline" disabled={readinessLoading} onClick={() => void checkReadinessClick()}>
+                {readinessLoading ? <LoadingButtonLabel label="Проверяем" /> : 'Проверить'}
+              </button>
+            </div>
+
+            {readiness ? (
+              <>
+                <StatsCards
+                  items={[
+                    { label: 'Организаций', value: readiness.organizationCount },
+                    { label: 'Получателей', value: readiness.recipientCount },
+                    { label: 'Статус', value: readiness.isReady ? 'Готова' : 'Не готова' }
+                  ]}
+                />
+
+                <div className="campaign-readiness-list">
+                  {readiness.items.map((item) => (
+                    <div key={item.key} className={`campaign-readiness-item${item.isBlocking ? ' blocking' : ''}`}>
+                      <div>
+                        <strong>{item.label}</strong>
+                        <span>{item.message}</span>
+                      </div>
+                      <StatusBadge tone={campaignReadinessTone(item.status)}>
+                        {item.status === 'ok' ? 'OK' : item.status === 'warning' ? 'Внимание' : 'Ошибка'}
+                      </StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="empty-state">Запустите проверку, чтобы увидеть, можно ли ставить кампанию в очередь.</div>
+            )}
+          </section>
+
           <section className="panel">
             <h3>Основное</h3>
             <div className="form-grid campaign-main-grid">

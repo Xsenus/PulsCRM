@@ -124,6 +124,7 @@ public interface ICampaignService
     Task<CampaignDetailsDto> ChangeStatusAsync(int id, CampaignStatus status, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ScheduleOccurrenceDto>> PreviewScheduleAsync(SchedulePreviewRequest request, CancellationToken cancellationToken);
     Task<CampaignRecipientPreviewDto> PreviewRecipientsAsync(CampaignUpsertRequest request, CancellationToken cancellationToken);
+    Task<CampaignReadinessDto> CheckReadinessAsync(CampaignUpsertRequest request, CancellationToken cancellationToken);
     Task<DispatchBatchDto> RunAsync(int id, CampaignManualRunRequest request, CancellationToken cancellationToken);
 }
 
@@ -283,19 +284,7 @@ public sealed class CampaignService(
 
     public async Task<CampaignRecipientPreviewDto> PreviewRecipientsAsync(CampaignUpsertRequest request, CancellationToken cancellationToken)
     {
-        var selection = new CampaignRecipientSelection
-        {
-            TargetOrganizationIds = request.TargetOrganizationIds,
-            UseOrgPrimaryEmail = request.UseOrgPrimaryEmail,
-            UseContactEmails = request.UseContactEmails,
-            UseSalaryEmail = request.UseSalaryEmail,
-            UseOneCEmail = request.UseOneCEmail,
-            UseSiteEmail = request.UseSiteEmail,
-            UseDirectorEmail = request.UseDirectorEmail,
-            ManualRecipientsCsv = request.ManualRecipientsCsv
-        };
-
-        var recipients = await recipientResolver.ResolveAsync(selection, cancellationToken);
+        var recipients = await recipientResolver.ResolveAsync(CreateRecipientSelection(request), cancellationToken);
         var previewItems = recipients.Take(500).Select(x => new CampaignRecipientPreviewItemDto
         {
             LegacyOrgId = x.LegacyOrgId,
@@ -313,11 +302,154 @@ public sealed class CampaignService(
         };
     }
 
+    public async Task<CampaignReadinessDto> CheckReadinessAsync(CampaignUpsertRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var items = new List<CampaignReadinessItemDto>();
+
+        items.Add(string.IsNullOrWhiteSpace(request.Name)
+            ? ReadinessItem("name", "Название", "error", "Укажите название кампании.", isBlocking: true)
+            : ReadinessItem("name", "Название", "ok", "Название заполнено.", isBlocking: false));
+
+        items.Add(string.IsNullOrWhiteSpace(request.Subject)
+            ? ReadinessItem("subject", "Тема письма", "error", "Укажите тему письма.", isBlocking: true)
+            : ReadinessItem("subject", "Тема письма", "ok", "Тема письма заполнена.", isBlocking: false));
+
+        items.Add(string.IsNullOrWhiteSpace(request.HtmlBody) && string.IsNullOrWhiteSpace(request.PlainTextBody)
+            ? ReadinessItem("body", "Тело письма", "error", "Заполните HTML или текстовую версию письма.", isBlocking: true)
+            : ReadinessItem("body", "Тело письма", "ok", "Есть содержимое письма.", isBlocking: false));
+
+        items.Add(CheckTransportProfileReadiness(request.TransportProfileId));
+
+        var sourceSelected = request.TargetOrganizationIds.Any()
+            || !string.IsNullOrWhiteSpace(request.ManualRecipientsCsv);
+        if (!sourceSelected)
+        {
+            items.Add(ReadinessItem("recipient-source", "Источники получателей", "error", "Выберите организации или укажите ручные email-адреса.", isBlocking: true));
+        }
+        else
+        {
+            items.Add(ReadinessItem("recipient-source", "Источники получателей", "ok", "Источник получателей выбран.", isBlocking: false));
+        }
+
+        var recipients = await recipientResolver.ResolveAsync(CreateRecipientSelection(request), cancellationToken);
+        items.Add(recipients.Count == 0
+            ? ReadinessItem("recipients", "Получатели", "error", "Предпросмотр получателей не нашел ни одного email.", isBlocking: true)
+            : ReadinessItem("recipients", "Получатели", "ok", $"Найдено email: {recipients.Count}.", isBlocking: false));
+
+        items.Add(CheckScheduleReadiness(request));
+
+        return new CampaignReadinessDto
+        {
+            IsReady = items.All(x => !x.IsBlocking),
+            OrganizationCount = recipients.Where(x => x.LegacyOrgId > 0).Select(x => x.LegacyOrgId).Distinct().Count(),
+            RecipientCount = recipients.Count,
+            Items = items
+        };
+    }
+
     public Task<DispatchBatchDto> RunAsync(int id, CampaignManualRunRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         return dispatchService.CreateBatchAsync(id, DispatchTriggerKind.Manual, request.ScheduledAtUtc?.ToUniversalTime() ?? DateTime.UtcNow, request.Comment, cancellationToken);
     }
+
+    private CampaignReadinessItemDto CheckTransportProfileReadiness(int? transportProfileId)
+    {
+        MailTransportProfile? profile = null;
+        var explicitProfileRequested = transportProfileId is > 0;
+
+        if (explicitProfileRequested)
+        {
+            profile = mailingUnitOfWork.GetObjectByKey<MailTransportProfile>(transportProfileId!.Value);
+            if (profile is null)
+            {
+                return ReadinessItem("transport", "SMTP профиль", "error", $"SMTP-профиль #{transportProfileId} не найден.", isBlocking: true);
+            }
+        }
+
+        profile ??= new XPQuery<MailTransportProfile>(mailingUnitOfWork)
+            .ToList()
+            .Where(x => x.IsEnabled)
+            .OrderByDescending(x => x.IsDefault)
+            .ThenBy(x => x.Name ?? string.Empty)
+            .FirstOrDefault();
+
+        if (profile is null)
+        {
+            return ReadinessItem("transport", "SMTP профиль", "error", "Нет активного SMTP-профиля.", isBlocking: true);
+        }
+
+        if (!profile.IsEnabled)
+        {
+            return ReadinessItem("transport", "SMTP профиль", "error", $"SMTP-профиль \"{profile.Name}\" отключен.", isBlocking: true);
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.Host))
+        {
+            return ReadinessItem("transport", "SMTP профиль", "error", $"В SMTP-профиле \"{profile.Name}\" не указан сервер.", isBlocking: true);
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.SenderEmail))
+        {
+            return ReadinessItem("transport", "SMTP профиль", "error", $"В SMTP-профиле \"{profile.Name}\" не указан email отправителя.", isBlocking: true);
+        }
+
+        return explicitProfileRequested
+            ? ReadinessItem("transport", "SMTP профиль", "ok", $"Будет использован SMTP-профиль \"{profile.Name}\".", isBlocking: false)
+            : ReadinessItem("transport", "SMTP профиль", "warning", $"SMTP не выбран, будет использован профиль \"{profile.Name}\".", isBlocking: false);
+    }
+
+    private CampaignReadinessItemDto CheckScheduleReadiness(CampaignUpsertRequest request)
+    {
+        try
+        {
+            var preview = scheduleCalculator.Preview(new SchedulePreviewRequest
+            {
+                ScheduleKind = request.ScheduleKind,
+                CronExpression = request.CronExpression,
+                TimeZoneId = request.TimeZoneId,
+                StartAtUtc = request.StartAtUtc,
+                EndAtUtc = request.EndAtUtc,
+                IntervalMinutes = request.IntervalMinutes,
+                RandomIntervalMinMinutes = request.RandomIntervalMinMinutes,
+                RandomIntervalMaxMinutes = request.RandomIntervalMaxMinutes,
+                Count = 1
+            });
+
+            return preview.Count == 0
+                ? ReadinessItem("schedule", "Расписание", "error", "Расписание не дает будущих запусков.", isBlocking: true)
+                : ReadinessItem("schedule", "Расписание", "ok", "Расписание рассчитано.", isBlocking: false);
+        }
+        catch (Exception error)
+        {
+            return ReadinessItem("schedule", "Расписание", "error", error.Message, isBlocking: true);
+        }
+    }
+
+    private static CampaignRecipientSelection CreateRecipientSelection(CampaignUpsertRequest request)
+        => new()
+        {
+            TargetOrganizationIds = request.TargetOrganizationIds,
+            UseOrgPrimaryEmail = request.UseOrgPrimaryEmail,
+            UseContactEmails = request.UseContactEmails,
+            UseSalaryEmail = request.UseSalaryEmail,
+            UseOneCEmail = request.UseOneCEmail,
+            UseSiteEmail = request.UseSiteEmail,
+            UseDirectorEmail = request.UseDirectorEmail,
+            ManualRecipientsCsv = request.ManualRecipientsCsv
+        };
+
+    private static CampaignReadinessItemDto ReadinessItem(string key, string label, string status, string message, bool isBlocking)
+        => new()
+        {
+            Key = key,
+            Label = label,
+            Status = status,
+            Message = message,
+            IsBlocking = isBlocking
+        };
 
     private void SyncTargets(MailCampaign campaign, IReadOnlyCollection<int> targetOrganizationIds)
     {

@@ -100,6 +100,17 @@ public sealed class CampaignsController(ICampaignService campaignService, IStati
     }
 
     /// <summary>
+    /// Проверяет готовность кампании к запуску без фактической отправки писем.
+    /// </summary>
+    [HttpPost("readiness")]
+    [ProducesResponseType(typeof(CampaignReadinessDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<CampaignReadinessDto>> CheckReadiness([FromBody] CampaignUpsertRequest request, CancellationToken cancellationToken)
+    {
+        return Ok(await campaignService.CheckReadinessAsync(request, cancellationToken));
+    }
+
+    /// <summary>
     /// Меняет статус кампании.
     /// </summary>
     [HttpPost("{id:int}/status")]

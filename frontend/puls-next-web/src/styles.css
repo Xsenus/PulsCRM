@@ -3063,6 +3063,45 @@ body.is-dragging-column {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.campaign-readiness-panel {
+  gap: 16px;
+}
+
+.campaign-readiness-list {
+  display: grid;
+  gap: 10px;
+}
+
+.campaign-readiness-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.campaign-readiness-item.blocking {
+  border-color: #fecaca;
+  background: #fff7f7;
+}
+
+.campaign-readiness-item div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campaign-readiness-item strong {
+  color: var(--text);
+}
+
+.campaign-readiness-item span {
+  color: var(--text-muted);
+}
+
 .attachments-list {
   display: grid;
   gap: 14px;
@@ -3753,6 +3792,11 @@ body.is-dragging-column {
 
   .campaign-editor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .campaign-readiness-item {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .employee-account-grid {

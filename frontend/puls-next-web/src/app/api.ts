@@ -4,6 +4,7 @@ import type {
   CampaignDetailsDto,
   CampaignManualRunRequest,
   CampaignRecipientPreviewDto,
+  CampaignReadinessDto,
   CampaignStatisticsDto,
   CampaignStatusChangeRequest,
   CampaignUpsertRequest,
@@ -370,6 +371,15 @@ export async function previewSchedule(request: SchedulePreviewRequest): Promise<
 export async function previewRecipients(request: CampaignUpsertRequest): Promise<CampaignRecipientPreviewDto> {
   try {
     const { data } = await api.post<CampaignRecipientPreviewDto>('/api/campaigns/preview-recipients', request);
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function checkCampaignReadiness(request: CampaignUpsertRequest): Promise<CampaignReadinessDto> {
+  try {
+    const { data } = await api.post<CampaignReadinessDto>('/api/campaigns/readiness', request);
     return data;
   } catch (error) {
     unwrapError(error);

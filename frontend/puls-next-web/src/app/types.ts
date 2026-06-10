@@ -676,6 +676,21 @@ export interface CampaignRecipientPreviewDto {
   items: CampaignRecipientPreviewItemDto[];
 }
 
+export interface CampaignReadinessItemDto {
+  key: string;
+  label: string;
+  status: 'ok' | 'warning' | 'error' | string;
+  message: string;
+  isBlocking: boolean;
+}
+
+export interface CampaignReadinessDto {
+  isReady: boolean;
+  organizationCount: number;
+  recipientCount: number;
+  items: CampaignReadinessItemDto[];
+}
+
 export interface DispatchBatchDto {
   id: number;
   triggerKind: number;
