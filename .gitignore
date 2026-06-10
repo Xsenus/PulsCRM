@@ -35,6 +35,9 @@ TestResults/
 **/dist/
 **/.vite/
 **/coverage/
+**/test-results/
+**/playwright-report/
+**/blob-report/
 **/*.tsbuildinfo
 frontend/package-lock.json
 frontend/puls-next-web/vite.config.js
