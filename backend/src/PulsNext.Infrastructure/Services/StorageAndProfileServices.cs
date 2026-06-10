@@ -206,9 +206,13 @@ public sealed class TransportProfileService(
 
         try
         {
+            var host = string.IsNullOrWhiteSpace(entity.Host)
+                ? throw new ValidationException("В SMTP-профиле не указан сервер.")
+                : entity.Host;
+
             using var client = new SmtpClient();
             client.Timeout = 30000;
-            await client.ConnectAsync(entity.Host, entity.Port, entity.UseSsl, cancellationToken);
+            await client.ConnectAsync(host, entity.Port, entity.UseSsl, cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(entity.Username))
             {

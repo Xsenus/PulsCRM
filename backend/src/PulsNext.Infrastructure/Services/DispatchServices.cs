@@ -171,10 +171,13 @@ public sealed class MailSender(
 
         await using var lease = await transportProfileLimiter.AcquireAsync(profile, cancellationToken);
         var message = await mailComposer.BuildAsync(item, profile, cancellationToken);
+        var host = string.IsNullOrWhiteSpace(profile.Host)
+            ? throw new InvalidOperationException("В SMTP-профиле не указан сервер.")
+            : profile.Host;
 
         using var client = new SmtpClient();
         client.Timeout = 60000;
-        await client.ConnectAsync(profile.Host, profile.Port, profile.UseSsl, cancellationToken);
+        await client.ConnectAsync(host, profile.Port, profile.UseSsl, cancellationToken);
 
         if (!string.IsNullOrWhiteSpace(profile.Username))
         {

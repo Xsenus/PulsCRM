@@ -11,7 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DevExpress.Xpo" Version="25.2.5" />
-    <PackageReference Include="MailKit" Version="4.15.1" />
+    <PackageReference Include="MailKit" Version="4.17.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.4" />
     <PackageReference Include="Quartz" Version="3.16.1" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="10.0.5" />

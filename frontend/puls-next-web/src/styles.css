@@ -1450,6 +1450,30 @@ select {
   flex-direction: column;
 }
 
+.organization-list-filter-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
+.organization-list-filter-title {
+  font-weight: 800;
+  color: var(--text);
+}
+
+.organization-list-filter-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .organization-search-panel,
 .search-panel {
   padding: 18px 22px;
@@ -3583,6 +3607,16 @@ body.is-dragging-column {
 
   .organization-search-actions,
   .search-actions {
+    justify-content: flex-start;
+  }
+
+  .organization-list-filter-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .organization-list-filter-actions {
+    width: 100%;
     justify-content: flex-start;
   }
 

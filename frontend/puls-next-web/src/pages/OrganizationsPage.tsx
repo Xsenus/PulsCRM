@@ -6,6 +6,7 @@ import {
   getOrganizations
 } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { buildRaionSelectionSummary, getRaionSelectionId } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type {
@@ -19,7 +20,6 @@ import { Pagination } from '../components/Pagination';
 import { RowActionsMenu } from '../components/RowActionsMenu';
 import { SearchActionIcon, SearchPanel } from '../components/SearchPanel';
 
-const WITHOUT_RAION_ID = -1;
 const DEFAULT_SIDEBAR_WIDTH = 360;
 const MIN_SIDEBAR_WIDTH = 320;
 const MAX_SIDEBAR_WIDTH = 520;
@@ -33,10 +33,6 @@ interface RowContextMenuState {
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Неизвестная ошибка';
-}
-
-function raionSelectionId(raion: OrganizationRaionDto) {
-  return raion.id ?? WITHOUT_RAION_ID;
 }
 
 function clampSidebarWidth(value: number) {
@@ -94,25 +90,13 @@ export function OrganizationsPage() {
   }, [raionSearch, raions]);
 
   const selectedRaionSummary = useMemo(() => {
-    if (selectedRaionIds.length === 0) {
-      return 'Все районы';
-    }
-
-    const source = raions;
-    const names = source
-      .filter((raion) => selectedRaionIds.includes(raionSelectionId(raion)))
-      .map((raion) => raion.name);
-
-    if (names.length === 0) {
-      return `Выбрано районов: ${selectedRaionIds.length}`;
-    }
-
-    if (names.length <= 2) {
-      return names.join(', ');
-    }
-
-    return `${names.slice(0, 2).join(', ')} и еще ${names.length - 2}`;
+    return buildRaionSelectionSummary(raions, selectedRaionIds);
   }, [raions, selectedRaionIds]);
+
+  const activeFilterCount = useMemo(
+    () => (appliedSearch ? 1 : 0) + selectedRaionIds.length,
+    [appliedSearch, selectedRaionIds.length]
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -339,7 +323,7 @@ export function OrganizationsPage() {
 
           <div className="raion-list raion-checkbox-list">
             {filteredRaions.map((raion) => {
-              const selectionId = raionSelectionId(raion);
+              const selectionId = getRaionSelectionId(raion);
               const checked = selectedRaionIds.includes(selectionId);
 
               return (
@@ -379,6 +363,29 @@ export function OrganizationsPage() {
         </div>
 
         <section className="panel organizations-main">
+          <div className="organization-list-filter-summary">
+            <div>
+              <div className="organization-list-filter-title">Фильтры организаций</div>
+              <div className="field-hint">
+                {activeFilterCount > 0
+                  ? `${selectedRaionSummary}${appliedSearch ? `; поиск: "${appliedSearch}"` : ''}`
+                  : 'Показаны все организации'}
+              </div>
+            </div>
+
+            <div className="organization-list-filter-actions">
+              <span className="status-badge status-badge-info">Найдено: {totalCount}</span>
+              <button
+                type="button"
+                className="secondary-button button-inline"
+                onClick={clearOrganizationFilters}
+                disabled={activeFilterCount === 0 && !search && !raionSearch}
+              >
+                Сбросить фильтры
+              </button>
+            </div>
+          </div>
+
           <OrganizationsTable
             rows={rows}
             loading={loading}
