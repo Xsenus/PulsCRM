@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import {
   expectNoDocumentHorizontalOverflow,
   fulfillJson,
+  mainTransportProfile,
+  mockTransportProfiles,
   setupAuthenticatedSession
 } from './helpers';
 
@@ -72,28 +74,9 @@ const dispatchBatchesResponse = {
   totalCount: 1
 };
 
-const transportProfilesResponse = [
-  {
-    id: 601,
-    name: 'Main SMTP',
-    host: 'smtp.example.test',
-    port: 587,
-    useSsl: true,
-    username: 'mailer',
-    senderEmail: 'noreply@example.test',
-    senderName: 'Puls CRM',
-    replyToEmail: 'reply@example.test',
-    maxConnections: 2,
-    messagesPerMinute: 60,
-    isDefault: true,
-    isEnabled: true,
-    createdAtUtc: now,
-    updatedAtUtc: now
-  }
-];
-
 test.beforeEach(async ({ page }) => {
   await setupAuthenticatedSession(page);
+  await mockTransportProfiles(page);
 
   await page.route(/\/api\/campaigns(?:\?.*)?$/, async (route) => {
     await fulfillJson(route, campaignsResponse);
@@ -107,9 +90,6 @@ test.beforeEach(async ({ page }) => {
     await fulfillJson(route, dispatchBatchesResponse);
   });
 
-  await page.route(/\/api\/transport-profiles(?:\?.*)?$/, async (route) => {
-    await fulfillJson(route, transportProfilesResponse);
-  });
 });
 
 test('campaigns list opens with campaign data', async ({ page }) => {
@@ -140,8 +120,8 @@ test('settings smtp list fits mobile viewport', async ({ page }) => {
   await page.goto('/settings');
 
   await expect(page.locator('.app-shell')).toBeVisible();
-  const smtpCard = page.locator('.data-table-card').filter({ hasText: 'Main SMTP' });
+  const smtpCard = page.locator('.data-table-card').filter({ hasText: mainTransportProfile.name });
   await expect(smtpCard).toBeVisible();
-  await expect(smtpCard).toContainText('smtp.example.test');
+  await expect(smtpCard).toContainText(mainTransportProfile.host);
   await expect.poll(() => expectNoDocumentHorizontalOverflow(page)).toBe(true);
 });

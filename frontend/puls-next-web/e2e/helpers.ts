@@ -10,6 +10,24 @@ export const currentUser = {
   phone: '+7 000 000-00-00'
 };
 
+export const mainTransportProfile = {
+  id: 601,
+  name: 'Main SMTP',
+  host: 'smtp.example.test',
+  port: 587,
+  useSsl: true,
+  username: 'mailer',
+  senderEmail: 'noreply@example.test',
+  senderName: 'Puls CRM',
+  replyToEmail: 'reply@example.test',
+  maxConnections: 2,
+  messagesPerMinute: 60,
+  isDefault: true,
+  isEnabled: true,
+  createdAtUtc: '2026-06-10T12:00:00Z',
+  updatedAtUtc: '2026-06-10T12:00:00Z'
+};
+
 export async function fulfillJson(route: Route, value: unknown, status = 200) {
   await route.fulfill({
     status,
@@ -38,6 +56,12 @@ export async function setupAuthenticatedSession(page: Page) {
 
   await page.route(/\/api\/auth\/me(?:\?.*)?$/, async (route) => {
     await fulfillJson(route, currentUser);
+  });
+}
+
+export async function mockTransportProfiles(page: Page) {
+  await page.route(/\/api\/transport-profiles(?:\?.*)?$/, async (route) => {
+    await fulfillJson(route, [mainTransportProfile]);
   });
 }
 
