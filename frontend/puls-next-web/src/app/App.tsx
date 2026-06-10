@@ -13,6 +13,7 @@ const OrganizationsPage = lazy(() => import('../pages/OrganizationsPage').then((
 const OrganizationEditPage = lazy(() => import('../pages/OrganizationEditPage').then((module) => ({ default: module.OrganizationEditPage })));
 const CampaignsPage = lazy(() => import('../pages/CampaignsPage').then((module) => ({ default: module.CampaignsPage })));
 const CampaignEditPage = lazy(() => import('../pages/CampaignEditPage').then((module) => ({ default: module.CampaignEditPage })));
+const DispatchPage = lazy(() => import('../pages/DispatchPage').then((module) => ({ default: module.DispatchPage })));
 const TransportProfilesPage = lazy(() => import('../pages/TransportProfilesPage').then((module) => ({ default: module.TransportProfilesPage })));
 
 function ShellLayout() {
@@ -44,6 +45,7 @@ export function App() {
             <Route path="/campaigns" element={<CampaignsPage />} />
             <Route path="/campaigns/new" element={<CampaignEditPage />} />
             <Route path="/campaigns/:id" element={<CampaignEditPage />} />
+            <Route path="/dispatch" element={<DispatchPage />} />
             <Route path="/settings" element={<TransportProfilesPage />} />
             <Route path="/transport-profiles" element={<Navigate to="/settings" replace />} />
             <Route path="/work" element={<Navigate to="/" replace />} />

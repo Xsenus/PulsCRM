@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 
-type MenuIconKey = 'dashboard' | 'employees' | 'organizations' | 'campaigns' | 'settings';
+type MenuIconKey = 'dashboard' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
 
 const SIDEBAR_STATE_KEY = 'puls-next-sidebar-collapsed';
 
@@ -11,6 +11,7 @@ const menu: Array<{ to: string; label: string; icon: MenuIconKey }> = [
   { to: '/employees', label: 'Сотрудники', icon: 'employees' },
   { to: '/organizations', label: 'Организации', icon: 'organizations' },
   { to: '/campaigns', label: 'Рассылки', icon: 'campaigns' },
+  { to: '/dispatch', label: 'Очередь', icon: 'dispatch' },
   { to: '/settings', label: 'Настройки', icon: 'settings' }
 ];
 
@@ -45,6 +46,15 @@ function MenuIcon({ icon }: { icon: MenuIconKey }) {
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path
             d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5Zm2 0v11h11v-11Zm2.5 2h6v2h-6Zm0 4h7v2h-7Zm0 4h4v2h-4Z"
+            fill="currentColor"
+          />
+        </svg>
+      );
+    case 'dispatch':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M5 5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v2A1.5 1.5 0 0 1 17.5 9h-11A1.5 1.5 0 0 1 5 7.5Zm0 6A1.5 1.5 0 0 1 6.5 10h11a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 13.5Zm0 6A1.5 1.5 0 0 1 6.5 16h11a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5ZM8 6v1h8V6Zm0 6v1h8v-1Zm0 6v1h8v-1Z"
             fill="currentColor"
           />
         </svg>
@@ -130,6 +140,10 @@ function buildImageSource(base64?: string, contentType?: string) {
 function getCurrentSection(pathname: string) {
   if (pathname.startsWith('/campaigns/')) {
     return 'Рассылки';
+  }
+
+  if (pathname.startsWith('/dispatch')) {
+    return 'Очередь рассылок';
   }
 
   return menu.find((item) => (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)))?.label || 'Раздел';

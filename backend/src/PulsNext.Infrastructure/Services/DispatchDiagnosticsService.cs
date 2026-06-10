@@ -107,7 +107,7 @@ public sealed class DispatchDiagnosticsService(MailingUnitOfWork mailingUnitOfWo
     {
         var item = GetItemOrThrow(id);
 
-        if (item.Status is DispatchStatus.Sent or DispatchStatus.Processing or DispatchStatus.Cancelled)
+        if (item.Status is not (DispatchStatus.Failed or DispatchStatus.Deferred))
         {
             throw new InvalidOperationException("Повторить можно только ошибочные или отложенные сообщения.");
         }

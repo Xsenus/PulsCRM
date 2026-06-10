@@ -3249,6 +3249,68 @@ body.is-dragging-column {
   border-radius: 12px;
 }
 
+.dispatch-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(219, 228, 240, 0.9);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.metric-card-danger {
+  border-color: rgba(220, 38, 38, 0.16);
+  background: #fff7f7;
+}
+
+.metric-card-warning {
+  border-color: rgba(217, 119, 6, 0.18);
+  background: #fffbeb;
+}
+
+.metric-label {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.metric-value {
+  color: var(--text);
+  font-size: 1.8rem;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.dispatch-filter-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) repeat(2, minmax(140px, 0.8fr)) auto auto;
+}
+
+.dispatch-tabs {
+  justify-content: flex-start;
+  overflow-x: auto;
+}
+
+.dispatch-row-message {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+}
+
+.dispatch-mobile-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .attachments-list {
   display: grid;
   gap: 14px;
@@ -3978,6 +4040,23 @@ body.is-dragging-column {
 
   .campaign-dispatch-filters .settings-tab {
     flex: 0 0 auto;
+  }
+
+  .dispatch-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dispatch-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .dispatch-filter-panel .toolbar-button {
+    width: 100%;
+  }
+
+  .dispatch-tabs {
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
   }
 
   .employee-account-grid {
