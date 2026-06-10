@@ -65,6 +65,14 @@ api.interceptors.response.use(
 );
 
 function unwrapError(error: any): never {
+  if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
+    throw new Error('API недоступен. Проверьте адрес сервера, CORS и подключение к сети.');
+  }
+
+  if (!error?.response && error?.code === 'ECONNABORTED') {
+    throw new Error('API не ответил вовремя. Повторите запрос или проверьте сервер.');
+  }
+
   const message = error?.response?.data?.message || error?.message || 'Неизвестная ошибка';
   throw new Error(message);
 }

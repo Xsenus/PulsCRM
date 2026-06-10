@@ -6,6 +6,7 @@ import {
   getOrganizations
 } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { DEFAULT_PAGE_SIZE, loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type {
   OrganizationListItemDto,
@@ -15,10 +16,9 @@ import { Modal } from '../components/Modal';
 import { OrganizationsTable } from '../components/OrganizationsTable';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
+import { RowActionsMenu } from '../components/RowActionsMenu';
 import { SearchActionIcon, SearchPanel } from '../components/SearchPanel';
 
-const DEFAULT_PAGE_SIZE = 50;
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 75, 100];
 const WITHOUT_RAION_ID = -1;
 const DEFAULT_SIDEBAR_WIDTH = 360;
 const MIN_SIDEBAR_WIDTH = 320;
@@ -37,23 +37,6 @@ function toErrorMessage(error: unknown) {
 
 function raionSelectionId(raion: OrganizationRaionDto) {
   return raion.id ?? WITHOUT_RAION_ID;
-}
-
-function loadStoredPageSize(storageKey: string, ...fallbackStorageKeys: string[]) {
-  if (typeof window === 'undefined') {
-    return DEFAULT_PAGE_SIZE;
-  }
-
-  for (const currentKey of [storageKey, ...fallbackStorageKeys]) {
-    const rawValue = window.localStorage.getItem(currentKey);
-    const parsedValue = rawValue ? Number(rawValue) : NaN;
-
-    if (PAGE_SIZE_OPTIONS.includes(parsedValue)) {
-      return parsedValue;
-    }
-  }
-
-  return DEFAULT_PAGE_SIZE;
 }
 
 function clampSidebarWidth(value: number) {
@@ -88,7 +71,7 @@ export function OrganizationsPage() {
   const [raions, setRaions] = useState<OrganizationRaionDto[]>([]);
   const [selectedRowId, setSelectedRowId] = useState<number | undefined>();
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey, legacyPageSizeStorageKey));
+  const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey, DEFAULT_PAGE_SIZE, legacyPageSizeStorageKey));
   const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -164,7 +147,7 @@ export function OrganizationsPage() {
   }, [appliedSearch, page, pageSize, selectedRaionIdsKey]);
 
   useEffect(() => {
-    setPageSize(loadStoredPageSize(pageSizeStorageKey, legacyPageSizeStorageKey));
+    setPageSize(loadStoredPageSize(pageSizeStorageKey, DEFAULT_PAGE_SIZE, legacyPageSizeStorageKey));
     setPage(1);
   }, [legacyPageSizeStorageKey, pageSizeStorageKey]);
 
@@ -325,54 +308,6 @@ export function OrganizationsPage() {
         inputClassName="organization-search-input"
       />
 
-      {false ? <div className="panel organization-search-panel">
-        <div className="organization-search-shell">
-          <input
-            className="form-input organization-search-input"
-            value={search}
-            placeholder="Поиск по названию, ИНН, району или типу"
-            onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                applySearch();
-              }
-            }}
-          />
-
-          <div className="organization-search-actions">
-            <button
-              type="button"
-              className="secondary-button button-inline icon-button organization-search-button"
-              onClick={clearSearch}
-              aria-label="Очистить поиск"
-              title="Очистить"
-            >
-              <SearchActionIcon kind="clear" />
-            </button>
-
-            <button
-              type="button"
-              className="secondary-button button-inline icon-button organization-search-button"
-              onClick={() => void loadData()}
-              aria-label="Обновить список"
-              title="Обновить"
-            >
-              <SearchActionIcon kind="refresh" />
-            </button>
-
-            <button
-              type="button"
-              className="primary-button button-inline icon-button organization-search-button"
-              onClick={applySearch}
-              aria-label="Найти"
-              title="Найти"
-            >
-              <SearchActionIcon kind="search" />
-            </button>
-          </div>
-        </div>
-      </div> : null}
-
       <div
         className="organizations-layout"
         style={{ ['--organizations-sidebar-width' as string]: `${sidebarWidth}px` }}
@@ -454,6 +389,15 @@ export function OrganizationsPage() {
               <button type="button" className="primary-button button-inline" onClick={() => void openCreateEditor()}>
                 Новая организация
               </button>
+            )}
+            mobileActions={(row) => (
+              <RowActionsMenu
+                actions={[
+                  { key: 'edit', label: 'Редактировать', onClick: () => void openEditEditor(row) },
+                  { key: 'refresh', label: 'Обновить', onClick: () => refreshOrganizations() },
+                  { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
+                ]}
+              />
             )}
             onRowClick={(row) => setSelectedRowId(row.id)}
             onRowDoubleClick={(row) => void openEditEditor(row)}

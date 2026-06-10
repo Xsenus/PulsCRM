@@ -794,6 +794,115 @@ select {
   color: #b91c1c;
 }
 
+.status-badge {
+  width: fit-content;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.status-badge-neutral {
+  border-color: rgba(100, 116, 139, 0.18);
+  background: #f8fafc;
+  color: #475569;
+}
+
+.status-badge-success {
+  border-color: rgba(22, 163, 74, 0.18);
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge-warning {
+  border-color: rgba(217, 119, 6, 0.2);
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-badge-danger {
+  border-color: rgba(220, 38, 38, 0.18);
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-badge-info {
+  border-color: rgba(37, 99, 235, 0.18);
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-badge-stack {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.row-actions-menu {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.row-actions-menu-trigger.active {
+  border-color: rgba(37, 99, 235, 0.3);
+  background: #dbeafe;
+}
+
+.row-actions-menu-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 40;
+  min-width: 190px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid rgba(219, 228, 240, 0.95);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 24px 54px rgba(15, 23, 42, 0.16);
+}
+
+.row-actions-menu-item {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-actions-menu-item:hover:not(:disabled) {
+  background: #eef4ff;
+  color: var(--brand-2);
+}
+
+.row-actions-menu-item.danger {
+  color: var(--danger);
+}
+
+.row-actions-menu-item.danger:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.row-actions-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .split-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
@@ -949,6 +1058,81 @@ select {
 
 .table-empty .app-loader--inline {
   padding: 8px;
+}
+
+.data-table-card-list {
+  display: none;
+}
+
+.data-table-card-empty {
+  padding: 18px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.data-table-card {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--text);
+  text-align: left;
+}
+
+.data-table-card[role='button'] {
+  cursor: pointer;
+}
+
+.data-table-card.selected {
+  border-color: rgba(37, 99, 235, 0.32);
+  background: #eff6ff;
+}
+
+.data-table-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.data-table-card-title {
+  min-width: 0;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.data-table-card-actions {
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.data-table-card-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.data-table-card-field {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.data-table-card-field span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.data-table-card-field strong {
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .table-loading-overlay {
@@ -3116,6 +3300,13 @@ body.is-dragging-column {
   color: var(--brand-2);
 }
 
+.login-combobox-toggle svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  margin: 0 auto;
+}
+
 .login-dropdown {
   max-height: 280px;
   overflow: auto;
@@ -3565,6 +3756,26 @@ body.is-dragging-column {
     align-items: stretch;
   }
 
+  .table-shell {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .data-table {
+    display: none;
+  }
+
+  .data-table-card-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .data-table-card-field {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
   .table-settings-list {
     grid-template-columns: 1fr;
   }
@@ -3582,5 +3793,20 @@ body.is-dragging-column {
   .pagination-actions {
     margin-left: 0;
     justify-content: flex-start;
+  }
+
+  .pagination-pages {
+    display: none;
+  }
+
+  .pagination-page {
+    min-height: 40px;
+    display: grid;
+    place-items: center;
+    order: 3;
+  }
+
+  .pagination-nav-button {
+    width: 100%;
   }
 }

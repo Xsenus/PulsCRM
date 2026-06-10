@@ -10,6 +10,7 @@ import { DataTable, type DataTableColumn } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
+import { RowActionsMenu } from '../components/RowActionsMenu';
 import { SearchPanel } from '../components/SearchPanel';
 
 const EMPTY_VALUE = '—';
@@ -35,8 +36,8 @@ function formatGender(value: boolean) {
 
 const employeeColumns: Array<DataTableColumn<EmployeeListItemDto>> = [
   { key: 'id', title: 'ID', width: 96, minWidth: 80, visible: false, render: (row) => row.id },
-  { key: 'login', title: 'Логин', width: 180, minWidth: 150, render: (row) => row.login },
-  { key: 'fullName', title: 'ФИО', width: 260, minWidth: 220, render: (row) => row.fullName || EMPTY_VALUE },
+  { key: 'login', title: 'Логин', width: 180, minWidth: 150, priority: 2, render: (row) => row.login },
+  { key: 'fullName', title: 'ФИО', width: 260, minWidth: 220, isPrimary: true, priority: 1, render: (row) => row.fullName || EMPTY_VALUE },
   { key: 'userGroup', title: 'Группа', width: 180, minWidth: 150, render: (row) => row.userGroup || EMPTY_VALUE },
   { key: 'ruleName', title: 'Набор правил', width: 220, minWidth: 180, visible: false, render: (row) => row.ruleName || EMPTY_VALUE },
   { key: 'privacyGroupName', title: 'Приватность', width: 220, minWidth: 180, visible: false, render: (row) => row.privacyGroupName || EMPTY_VALUE },
@@ -210,6 +211,15 @@ export function EmployeesPage() {
             >
               Добавить сотрудника
             </button>
+          )}
+          mobileActions={(row) => (
+            <RowActionsMenu
+              actions={[
+                { key: 'edit', label: 'Редактировать', onClick: () => navigate(`/employees/${row.id}/edit`) },
+                { key: 'refresh', label: 'Обновить', onClick: () => refreshEmployees() },
+                { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
+              ]}
+            />
           )}
           onRowClick={(row) => setSelectedRowId(row.id)}
           onRowDoubleClick={(row) => navigate(`/employees/${row.id}/edit`)}

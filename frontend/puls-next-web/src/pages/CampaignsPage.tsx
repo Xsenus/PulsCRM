@@ -8,12 +8,31 @@ import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type { CampaignListItemDto } from '../app/types';
 import { DataTable } from '../components/DataTable';
+import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
+import { RowActionsMenu } from '../components/RowActionsMenu';
 import { SearchPanel } from '../components/SearchPanel';
+import { StatusBadge, type StatusBadgeTone } from '../components/StatusBadge';
 
 const EMPTY_VALUE = '—';
 const CAMPAIGNS_TABLE_STORAGE_ID = 'campaigns-list';
+
+function campaignStatusTone(status: number): StatusBadgeTone {
+  if (status === 1) {
+    return 'success';
+  }
+
+  if (status === 2) {
+    return 'warning';
+  }
+
+  if (status === 3 || status === 4) {
+    return 'neutral';
+  }
+
+  return 'info';
+}
 
 export function CampaignsPage() {
   const navigate = useNavigate();
@@ -31,6 +50,8 @@ export function CampaignsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey));
   const [totalCount, setTotalCount] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState<CampaignListItemDto | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -101,14 +122,21 @@ export function CampaignsPage() {
     await load();
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Удалить кампанию вместе с очередью и историей?')) {
+  const handleDelete = async () => {
+    if (!deleteTarget) {
       return;
     }
 
-    await deleteCampaign(id);
-    showToast('Кампания удалена', 'delete');
-    await load();
+    setDeleteBusy(true);
+
+    try {
+      await deleteCampaign(deleteTarget.id);
+      showToast('Кампания удалена', 'delete');
+      setDeleteTarget(null);
+      await load();
+    } finally {
+      setDeleteBusy(false);
+    }
   };
 
   return (
@@ -149,11 +177,22 @@ export function CampaignsPage() {
           settingsKey={tableSettingsKey}
           title="Список кампаний"
           columns={[
-            { key: 'name', title: 'Название', width: 240, minWidth: 200, render: (row) => row.name },
-            { key: 'subject', title: 'Тема', width: 260, minWidth: 220, render: (row) => row.subject || EMPTY_VALUE },
-            { key: 'status', title: 'Статус', width: 140, minWidth: 120, render: (row) => labelOf(campaignStatusOptions, row.status) },
-            { key: 'scheduleKind', title: 'Расписание', width: 160, minWidth: 140, render: (row) => labelOf(scheduleKindOptions, row.scheduleKind) },
-            { key: 'transportProfileName', title: 'SMTP профиль', width: 220, minWidth: 180, render: (row) => row.transportProfileName || EMPTY_VALUE },
+            { key: 'name', title: 'Название', width: 240, minWidth: 200, isPrimary: true, priority: 1, render: (row) => row.name },
+            { key: 'subject', title: 'Тема', width: 260, minWidth: 220, priority: 2, render: (row) => row.subject || EMPTY_VALUE },
+            {
+              key: 'status',
+              title: 'Статус',
+              width: 140,
+              minWidth: 120,
+              priority: 3,
+              render: (row) => (
+                <StatusBadge tone={campaignStatusTone(row.status)}>
+                  {labelOf(campaignStatusOptions, row.status)}
+                </StatusBadge>
+              )
+            },
+            { key: 'scheduleKind', title: 'Расписание', width: 160, minWidth: 140, priority: 4, render: (row) => labelOf(scheduleKindOptions, row.scheduleKind) },
+            { key: 'transportProfileName', title: 'SMTP профиль', width: 220, minWidth: 180, priority: 5, render: (row) => row.transportProfileName || EMPTY_VALUE },
             { key: 'targets', title: 'Орг.', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.targetOrganizationsCount },
             { key: 'attachments', title: 'Вложений', width: 120, minWidth: 100, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attachmentsCount },
             { key: 'nextRunAtUtc', title: 'Следующий запуск', width: 180, minWidth: 160, render: (row) => formatDateTime(row.nextRunAtUtc) || EMPTY_VALUE },
@@ -163,18 +202,22 @@ export function CampaignsPage() {
             {
               key: 'actions',
               title: 'Действия',
-              width: 360,
-              minWidth: 320,
+              width: 86,
+              minWidth: 76,
               canHide: false,
+              isActions: true,
+              mobileVisible: false,
+              headerClassName: 'organization-cell-right',
+              className: 'organization-cell-right',
               render: (row) => (
-                <div className="button-group">
-                  <button type="button" className="secondary-button button-inline" onClick={(event) => { event.stopPropagation(); navigate(`/campaigns/${row.id}`); }}>Открыть</button>
-                  <button type="button" className="secondary-button button-inline" onClick={(event) => { event.stopPropagation(); void handleRun(row.id); }}>Запустить</button>
-                  <button type="button" className="secondary-button button-inline" onClick={(event) => { event.stopPropagation(); void handlePauseResume(row); }}>
-                    {row.status === 1 ? 'Пауза' : 'Активировать'}
-                  </button>
-                  <button type="button" className="secondary-button button-inline danger-button" onClick={(event) => { event.stopPropagation(); void handleDelete(row.id); }}>Удалить</button>
-                </div>
+                <RowActionsMenu
+                  actions={[
+                    { key: 'open', label: 'Открыть', onClick: () => navigate(`/campaigns/${row.id}`) },
+                    { key: 'run', label: 'Запустить', onClick: () => handleRun(row.id) },
+                    { key: 'toggle', label: row.status === 1 ? 'Поставить на паузу' : 'Активировать', onClick: () => handlePauseResume(row) },
+                    { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
+                  ]}
+                />
               )
             }
           ]}
@@ -192,6 +235,28 @@ export function CampaignsPage() {
           pageSizeOptions={PAGE_SIZE_OPTIONS}
         />
       </div>
+
+      <Modal
+        open={!!deleteTarget}
+        title="Удалить кампанию"
+        onClose={() => !deleteBusy && setDeleteTarget(null)}
+        actions={(
+          <>
+            <button type="button" className="secondary-button" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>
+              Отмена
+            </button>
+            <button type="button" className="primary-button danger-button" onClick={() => void handleDelete()} disabled={deleteBusy}>
+              {deleteBusy ? 'Удаление...' : 'Удалить'}
+            </button>
+          </>
+        )}
+      >
+        <div className="confirmation-copy">
+          {deleteTarget
+            ? `Удалить кампанию «${deleteTarget.name}» вместе с очередью и историей отправок?`
+            : 'Кампания не выбрана.'}
+        </div>
+      </Modal>
     </div>
   );
 }

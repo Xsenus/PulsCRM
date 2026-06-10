@@ -13,6 +13,11 @@ export interface DataTableColumn<T> {
   minWidth?: number;
   visible?: boolean;
   canHide?: boolean;
+  mobileLabel?: string;
+  mobileVisible?: boolean;
+  isPrimary?: boolean;
+  isActions?: boolean;
+  priority?: number;
 }
 
 interface DataTableProps<T> {
@@ -30,6 +35,7 @@ interface DataTableProps<T> {
   title?: React.ReactNode;
   className?: string;
   tableClassName?: string;
+  mobileActions?: (row: T) => React.ReactNode;
 }
 
 interface ResolvedDataTableColumn<T> extends Omit<DataTableColumn<T>, 'minWidth'> {
@@ -192,7 +198,8 @@ export function DataTable<T>({
   actions,
   title,
   className,
-  tableClassName
+  tableClassName,
+  mobileActions
 }: DataTableProps<T>) {
   const resolvedColumns = useMemo(() => {
     const seen = new Set<string>();
@@ -285,6 +292,27 @@ export function DataTable<T>({
   const visibleDraftColumnCount = useMemo(
     () => draftSettings.columns.filter((column) => column.visible).length,
     [draftSettings.columns]
+  );
+
+  const primaryCardColumn = useMemo(
+    () => visibleColumns.find((column) => column.isPrimary)
+      ?? visibleColumns.find((column) => !column.isActions)
+      ?? visibleColumns[0],
+    [visibleColumns]
+  );
+
+  const actionCardColumns = useMemo(
+    () => visibleColumns.filter((column) => column.isActions),
+    [visibleColumns]
+  );
+
+  const detailCardColumns = useMemo(
+    () => visibleColumns
+      .filter((column) => column.key !== primaryCardColumn?.key)
+      .filter((column) => !column.isActions)
+      .filter((column) => column.mobileVisible !== false)
+      .sort((left, right) => (left.priority ?? 100) - (right.priority ?? 100)),
+    [primaryCardColumn?.key, visibleColumns]
   );
 
   const shellClassName = ['table-shell', configurable ? 'data-table-shell-configurable' : null, className]
@@ -567,6 +595,66 @@ export function DataTable<T>({
             <AppLoader variant="inline" label={rows.length > 0 ? 'Обновляем таблицу' : 'Загружаем таблицу'} />
           </div>
         ) : null}
+
+        <div className="data-table-card-list">
+          {rows.length === 0 ? (
+            <div className="data-table-card-empty">{loading ? null : emptyText}</div>
+          ) : rows.map((row) => {
+            const rowKey = getRowKey(row);
+            const isSelected = selectedRowKey !== undefined && String(selectedRowKey) === String(rowKey);
+
+            const openRow = () => onRowClick?.(row);
+
+            return (
+              <div
+                key={String(rowKey)}
+                role={onRowClick || onRowDoubleClick ? 'button' : undefined}
+                tabIndex={onRowClick || onRowDoubleClick ? 0 : undefined}
+                className={`data-table-card${isSelected ? ' selected' : ''}`}
+                onClick={openRow}
+                onDoubleClick={() => onRowDoubleClick?.(row)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    onRowDoubleClick?.(row);
+                    return;
+                  }
+
+                  if (event.key === ' ') {
+                    event.preventDefault();
+                    openRow();
+                  }
+                }}
+              >
+                <div className="data-table-card-head">
+                  <div className="data-table-card-title">
+                    {primaryCardColumn ? primaryCardColumn.render(row) : String(rowKey)}
+                  </div>
+
+                  {mobileActions || actionCardColumns.length > 0 ? (
+                    <div className="data-table-card-actions" onClick={(event) => event.stopPropagation()}>
+                      {mobileActions
+                        ? mobileActions(row)
+                        : actionCardColumns.map((column) => (
+                          <React.Fragment key={column.key}>{column.render(row)}</React.Fragment>
+                        ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                {detailCardColumns.length > 0 ? (
+                  <div className="data-table-card-fields">
+                    {detailCardColumns.map((column) => (
+                      <div key={column.key} className="data-table-card-field">
+                        <span>{column.mobileLabel ?? column.title}</span>
+                        <strong>{column.render(row)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <Modal

@@ -10,7 +10,9 @@ import { DataTable } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
+import { RowActionsMenu } from '../components/RowActionsMenu';
 import { SearchPanel } from '../components/SearchPanel';
+import { StatusBadge } from '../components/StatusBadge';
 
 const emptyModel: TransportProfileUpsertRequest = {
   name: '',
@@ -50,6 +52,8 @@ export function TransportProfilesPage() {
   const [model, setModel] = useState<TransportProfileUpsertRequest>(emptyModel);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey));
+  const [deleteTarget, setDeleteTarget] = useState<TransportProfileDto | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const editingProfile = useMemo(() => rows.find((item) => item.id === editingId), [editingId, rows]);
   const isSmtpGroup = activeGroup === 'smtp';
@@ -153,22 +157,27 @@ export function TransportProfilesPage() {
     showToast(result.message, result.success ? 'success' : 'error', 4000);
   };
 
-  const remove = async (id: number) => {
-    if (!window.confirm('Удалить SMTP профиль?')) {
+  const remove = async () => {
+    if (!deleteTarget) {
       return;
     }
 
+    setDeleteBusy(true);
+
     try {
-      await deleteTransportProfile(id);
+      await deleteTransportProfile(deleteTarget.id);
       showToast('Профиль удален', 'delete');
-      if (editingId === id) {
+      if (editingId === deleteTarget.id) {
         setModalOpen(false);
         setEditingId(undefined);
         setModel(emptyModel);
       }
+      setDeleteTarget(null);
       await load();
     } catch (error: any) {
       showToast(error.message || 'Не удалось удалить SMTP профиль', 'error', 4000);
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -263,36 +272,48 @@ export function TransportProfilesPage() {
             settingsKey={tableSettingsKey}
             title="Список профилей"
             columns={[
-              { key: 'name', title: 'Профиль', width: 220, minWidth: 180, render: (row) => row.name },
-              { key: 'host', title: 'Сервер', width: 220, minWidth: 180, render: (row) => row.host },
-              { key: 'port', title: 'Порт', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.port },
+              { key: 'name', title: 'Профиль', width: 220, minWidth: 180, isPrimary: true, priority: 1, render: (row) => row.name },
+              { key: 'host', title: 'Сервер', width: 220, minWidth: 180, priority: 2, render: (row) => row.host },
+              { key: 'port', title: 'Порт', width: 100, minWidth: 90, priority: 3, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.port },
               { key: 'username', title: 'Логин', width: 200, minWidth: 160, visible: false, render: (row) => row.username || EMPTY_VALUE },
-              { key: 'senderEmail', title: 'Отправитель', width: 220, minWidth: 180, render: (row) => row.senderEmail || EMPTY_VALUE },
+              { key: 'senderEmail', title: 'Отправитель', width: 220, minWidth: 180, priority: 4, render: (row) => row.senderEmail || EMPTY_VALUE },
               { key: 'senderName', title: 'Имя отправителя', width: 220, minWidth: 180, visible: false, render: (row) => row.senderName || EMPTY_VALUE },
               { key: 'replyToEmail', title: 'Reply-To', width: 220, minWidth: 180, visible: false, render: (row) => row.replyToEmail || EMPTY_VALUE },
               { key: 'ssl', title: 'SSL', width: 90, minWidth: 80, visible: false, render: (row) => (row.useSsl ? 'Да' : 'Нет') },
-              { key: 'limits', title: 'Лимиты', width: 130, minWidth: 110, render: (row) => `${row.maxConnections} / ${row.messagesPerMinute}` },
-              { key: 'status', title: 'Статус', width: 190, minWidth: 160, render: (row) => `${row.isEnabled ? 'Активен' : 'Выключен'}${row.isDefault ? ' • По умолчанию' : ''}` },
+              { key: 'limits', title: 'Лимиты', width: 130, minWidth: 110, priority: 5, render: (row) => `${row.maxConnections} / ${row.messagesPerMinute}` },
+              {
+                key: 'status',
+                title: 'Статус',
+                width: 190,
+                minWidth: 160,
+                priority: 6,
+                render: (row) => (
+                  <div className="status-badge-stack">
+                    <StatusBadge tone={row.isEnabled ? 'success' : 'neutral'}>{row.isEnabled ? 'Активен' : 'Выключен'}</StatusBadge>
+                    {row.isDefault ? <StatusBadge tone="info">По умолчанию</StatusBadge> : null}
+                  </div>
+                )
+              },
               { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.createdAtUtc) || EMPTY_VALUE },
               { key: 'updatedAtUtc', title: 'Обновлено', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.updatedAtUtc) || EMPTY_VALUE },
               {
                 key: 'actions',
                 title: 'Действия',
-                width: 320,
-                minWidth: 280,
+                width: 86,
+                minWidth: 76,
                 canHide: false,
+                isActions: true,
+                mobileVisible: false,
+                headerClassName: 'organization-cell-right',
+                className: 'organization-cell-right',
                 render: (row) => (
-                  <div className="button-group">
-                    <button type="button" className="secondary-button button-inline" onClick={(event) => { event.stopPropagation(); openEdit(row); }}>
-                      Редактировать
-                    </button>
-                    <button type="button" className="secondary-button button-inline" onClick={(event) => { event.stopPropagation(); void runTest(row.id); }}>
-                      Проверить
-                    </button>
-                    <button type="button" className="secondary-button button-inline danger-button" onClick={(event) => { event.stopPropagation(); void remove(row.id); }}>
-                      Удалить
-                    </button>
-                  </div>
+                  <RowActionsMenu
+                    actions={[
+                      { key: 'edit', label: 'Редактировать', onClick: () => openEdit(row) },
+                      { key: 'test', label: 'Проверить', onClick: () => runTest(row.id) },
+                      { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
+                    ]}
+                  />
                 )
               }
             ]}
@@ -395,6 +416,28 @@ export function TransportProfilesPage() {
             Создан: {new Date(editingProfile.createdAtUtc).toLocaleString()} • Обновлен: {new Date(editingProfile.updatedAtUtc).toLocaleString()}
           </div>
         ) : null}
+      </Modal>
+
+      <Modal
+        open={!!deleteTarget}
+        title="Удалить SMTP профиль"
+        onClose={() => !deleteBusy && setDeleteTarget(null)}
+        actions={(
+          <>
+            <button type="button" className="secondary-button" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>
+              Отмена
+            </button>
+            <button type="button" className="primary-button danger-button" onClick={() => void remove()} disabled={deleteBusy}>
+              {deleteBusy ? 'Удаление...' : 'Удалить'}
+            </button>
+          </>
+        )}
+      >
+        <div className="confirmation-copy">
+          {deleteTarget
+            ? `Удалить SMTP профиль «${deleteTarget.name}»? Если профиль используется в кампаниях, API не позволит удалить его.`
+            : 'SMTP профиль не выбран.'}
+        </div>
       </Modal>
     </div>
   );

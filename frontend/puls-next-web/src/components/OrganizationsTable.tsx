@@ -9,6 +9,7 @@ interface OrganizationsTableProps {
   selectedRowId?: number;
   settingsKey: string;
   actions?: React.ReactNode;
+  mobileActions?: (row: OrganizationListItemDto) => React.ReactNode;
   onRowClick?: (row: OrganizationListItemDto) => void;
   onRowDoubleClick?: (row: OrganizationListItemDto) => void;
   onRowContextMenu?: (row: OrganizationListItemDto, event: React.MouseEvent<HTMLTableRowElement>) => void;
@@ -22,6 +23,8 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'Название',
     width: 320,
     minWidth: 220,
+    isPrimary: true,
+    priority: 1,
     render: (row) => row.name || EMPTY_VALUE
   },
   {
@@ -29,6 +32,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'ИНН',
     width: 150,
     minWidth: 130,
+    priority: 2,
     render: (row) => row.inn || EMPTY_VALUE
   },
   {
@@ -36,6 +40,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'Район',
     width: 220,
     minWidth: 180,
+    priority: 3,
     render: (row) => row.raion || EMPTY_VALUE
   },
   {
@@ -43,6 +48,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'Тип',
     width: 220,
     minWidth: 180,
+    priority: 4,
     render: (row) => row.orgType || EMPTY_VALUE
   },
   {
@@ -52,6 +58,8 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     minWidth: 130,
     headerClassName: 'organization-cell-right',
     className: 'organization-cell-right',
+    mobileLabel: 'Открытых задач',
+    priority: 5,
     render: (row) => row.openWorkItems
   },
   {
@@ -61,6 +69,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     minWidth: 96,
     headerClassName: 'organization-cell-right',
     className: 'organization-cell-right',
+    priority: 6,
     render: (row) => row.emailCount
   },
   {
@@ -70,6 +79,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     minWidth: 100,
     headerClassName: 'organization-cell-right',
     className: 'organization-cell-right',
+    priority: 7,
     render: (row) => row.contactCount
   },
   {
@@ -105,6 +115,7 @@ export function OrganizationsTable({
   selectedRowId,
   settingsKey,
   actions,
+  mobileActions,
   onRowClick,
   onRowDoubleClick,
   onRowContextMenu
@@ -119,6 +130,7 @@ export function OrganizationsTable({
       selectedRowKey={selectedRowId}
       settingsKey={settingsKey}
       actions={actions}
+      mobileActions={mobileActions}
       title="Список организаций"
       className="organization-table-shell"
       tableClassName="organization-data-table"

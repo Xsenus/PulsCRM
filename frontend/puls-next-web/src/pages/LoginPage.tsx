@@ -99,6 +99,21 @@ function getUserMeta(user: { login: string; userGroup?: string }) {
   return [user.login, user.userGroup].filter(Boolean).join(' / ');
 }
 
+function LoginChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d={open ? 'M7 14l5-5 5 5' : 'M7 10l5 5 5-5'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function LoginPage() {
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
@@ -382,7 +397,7 @@ export function LoginPage() {
                     onClick={toggleUserDropdown}
                     aria-label={isUserDropdownOpen ? 'Скрыть список пользователей' : 'Показать список пользователей'}
                   >
-                    <span aria-hidden="true">{isUserDropdownOpen ? '^' : 'v'}</span>
+                    <LoginChevronIcon open={isUserDropdownOpen} />
                   </button>
                 </div>
 
