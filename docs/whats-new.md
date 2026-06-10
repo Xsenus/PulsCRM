@@ -1,5 +1,18 @@
 # Что нового
 
+## 2026-06-10 - hardening recovery очереди рассылок
+
+Усилена устойчивость очереди рассылок при рестартах IIS/API и повторной работе scheduler:
+
+- правила retry delay, recovery processing и сброса queue reservation вынесены в тестируемый `DispatchRecoveryPolicy`;
+- таймауты `ProcessingTimeoutMinutes` и `QueueReservationTimeoutMinutes` добавлены в конфигурацию `Dispatch`;
+- recovery больше не держит магические значения таймаутов внутри сервиса;
+- scheduled scheduler перед созданием партии проверяет, нет ли уже партии для той же кампании и того же времени запуска;
+- ключ `DispatchKey` формируется через единый helper с нормализацией email;
+- добавлены backend unit-тесты для retry backoff, recovery thresholds, queue reservation и scheduled batch guard.
+
+Проверки этого этапа включают backend-тесты, frontend-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную проверку API против SQL-БД.
+
 ## 2026-06-10 - интерфейс диагностики очереди рассылок
 
 Добавлена операторская страница `/dispatch` для диагностики очереди без прямого доступа к SQL:

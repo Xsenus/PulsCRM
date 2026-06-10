@@ -22,6 +22,8 @@ public sealed class DispatchOptions
     public int SenderConcurrency { get; set; } = 4;
     public int RetryBaseDelayMinutes { get; set; } = 3;
     public int RetryMaxDelayMinutes { get; set; } = 30;
+    public int ProcessingTimeoutMinutes { get; set; } = 15;
+    public int QueueReservationTimeoutMinutes { get; set; } = 5;
     public string WorkerNode { get; set; } = Environment.MachineName;
 }
 

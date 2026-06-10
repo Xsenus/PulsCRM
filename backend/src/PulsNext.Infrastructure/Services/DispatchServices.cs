@@ -338,7 +338,10 @@ public sealed class DispatchService(
             if (canRetry)
             {
                 item.Status = DispatchStatus.Deferred;
-                item.NextAttemptAtUtc = DateTime.UtcNow.AddMinutes(CalculateRetryDelayMinutes(item.AttemptCount));
+                item.NextAttemptAtUtc = DateTime.UtcNow.AddMinutes(DispatchRecoveryPolicy.CalculateRetryDelayMinutes(
+                    item.AttemptCount,
+                    dispatchOptions.Value.RetryBaseDelayMinutes,
+                    dispatchOptions.Value.RetryMaxDelayMinutes));
             }
             else
             {
@@ -356,11 +359,11 @@ public sealed class DispatchService(
     {
         var now = DateTime.UtcNow;
         var recovered = 0;
-        var processingTimeout = TimeSpan.FromMinutes(15);
-        var queueReservationTimeout = TimeSpan.FromMinutes(5);
+        var processingTimeoutMinutes = dispatchOptions.Value.ProcessingTimeoutMinutes;
+        var queueReservationTimeoutMinutes = dispatchOptions.Value.QueueReservationTimeoutMinutes;
         var items = new XPQuery<MailDispatchItem>(mailingUnitOfWork).ToList();
 
-        foreach (var item in items.Where(x => x.Status == DispatchStatus.Processing && DateTimeHelper.NullIfMin(x.StartedAtUtc) is DateTime startedAt && startedAt < now - processingTimeout))
+        foreach (var item in items.Where(x => x.Status == DispatchStatus.Processing && DispatchRecoveryPolicy.ShouldRecoverProcessing(now, x.StartedAtUtc, processingTimeoutMinutes)))
         {
             item.Status = DispatchStatus.Deferred;
             item.NextAttemptAtUtc = now.AddMinutes(Math.Max(1, dispatchOptions.Value.RetryBaseDelayMinutes));
@@ -371,7 +374,7 @@ public sealed class DispatchService(
         }
 
         foreach (var item in items.Where(x => x.Status is DispatchStatus.Queued or DispatchStatus.Deferred)
-                     .Where(x => DateTimeHelper.NullIfMin(x.ChannelQueuedAtUtc) is DateTime channelQueuedAt && channelQueuedAt < now - queueReservationTimeout))
+                     .Where(x => DispatchRecoveryPolicy.ShouldReleaseQueueReservation(now, x.ChannelQueuedAtUtc, queueReservationTimeoutMinutes)))
         {
             item.ChannelQueuedAtUtc = DateTime.MinValue;
             recovered++;
@@ -383,6 +386,14 @@ public sealed class DispatchService(
 
     private async Task CreateScheduledBatchInternalAsync(MailCampaign campaign, DateTime scheduledAtUtc, CancellationToken cancellationToken)
     {
+        var existingBatch = FindExistingScheduledBatch(campaign.Oid, scheduledAtUtc);
+        if (existingBatch is not null)
+        {
+            AdvanceCampaignScheduleAfterScheduledBatch(campaign, scheduledAtUtc);
+            mailingUnitOfWork.CommitChanges();
+            return;
+        }
+
         await CreateBatchInternalAsync(campaign, DispatchTriggerKind.Scheduled, scheduledAtUtc, null, updateCampaignSchedule: true, cancellationToken);
     }
 
@@ -424,7 +435,7 @@ public sealed class DispatchService(
                 SentAtUtc = DateTime.MinValue,
                 FailedAtUtc = DateTime.MinValue,
                 NextAttemptAtUtc = scheduledAtUtc,
-                DispatchKey = $"{campaign.Oid}:{scheduledAtUtc:O}:{recipient.LegacyOrgId}:{recipient.Email.ToLowerInvariant()}"
+                DispatchKey = DispatchRecoveryPolicy.BuildDispatchKey(campaign.Oid, scheduledAtUtc, recipient.LegacyOrgId, recipient.Email)
             };
         }
 
@@ -437,9 +448,7 @@ public sealed class DispatchService(
 
         if (updateCampaignSchedule)
         {
-            campaign.LastRunAtUtc = scheduledAtUtc;
-            campaign.LastRunStartedAtUtc = now;
-            campaign.NextRunAtUtc = DateTimeHelper.MinIfNull(scheduleCalculator.CalculateNextRunAfterExecution(campaign, scheduledAtUtc));
+            AdvanceCampaignScheduleAfterScheduledBatch(campaign, scheduledAtUtc, now);
             if (recipients.Count == 0)
             {
                 campaign.LastRunFinishedAtUtc = now;
@@ -453,6 +462,21 @@ public sealed class DispatchService(
 
         mailingUnitOfWork.CommitChanges();
         return batch;
+    }
+
+    private MailDispatchBatch? FindExistingScheduledBatch(int campaignId, DateTime scheduledAtUtc)
+    {
+        var scheduledAt = scheduledAtUtc.ToUniversalTime();
+        return new XPQuery<MailDispatchBatch>(mailingUnitOfWork)
+            .ToList()
+            .FirstOrDefault(x => DispatchRecoveryPolicy.IsSameScheduledBatch(x, campaignId, scheduledAt));
+    }
+
+    private void AdvanceCampaignScheduleAfterScheduledBatch(MailCampaign campaign, DateTime scheduledAtUtc, DateTime? startedAtUtc = null)
+    {
+        campaign.LastRunAtUtc = scheduledAtUtc.ToUniversalTime();
+        campaign.LastRunStartedAtUtc = startedAtUtc ?? DateTime.UtcNow;
+        campaign.NextRunAtUtc = DateTimeHelper.MinIfNull(scheduleCalculator.CalculateNextRunAfterExecution(campaign, scheduledAtUtc));
     }
 
     private void RefreshBatchCounters(int? batchId)
@@ -487,12 +511,4 @@ public sealed class DispatchService(
         }
     }
 
-    private int CalculateRetryDelayMinutes(int attemptCount)
-    {
-        var baseDelay = Math.Max(1, dispatchOptions.Value.RetryBaseDelayMinutes);
-        var maxDelay = Math.Max(baseDelay, dispatchOptions.Value.RetryMaxDelayMinutes);
-        var exponent = Math.Max(0, attemptCount - 1);
-        var delay = (int)Math.Min(maxDelay, baseDelay * Math.Pow(2, exponent));
-        return Math.Max(baseDelay, delay);
-    }
 }
