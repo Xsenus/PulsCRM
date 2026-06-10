@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { expectNoDocumentHorizontalOverflow, mockLoginUsers } from './helpers';
 
 const viewports = [
   { name: 'mobile', width: 390, height: 844 },
@@ -7,20 +8,7 @@ const viewports = [
 ];
 
 test.beforeEach(async ({ page }) => {
-  await page.route('**/api/auth/users**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([
-        {
-          id: 1,
-          login: 'demo',
-          fullName: 'Demo User',
-          userGroup: 'Administrators'
-        }
-      ])
-    });
-  });
+  await mockLoginUsers(page);
 });
 
 for (const viewport of viewports) {
@@ -32,10 +20,6 @@ for (const viewport of viewports) {
     await expect(page.locator('#login-value')).toBeVisible();
     await expect(page.locator('#password-value')).toBeVisible();
 
-    const hasHorizontalOverflow = await page.evaluate(() => (
-      document.documentElement.scrollWidth > window.innerWidth + 1
-    ));
-
-    expect(hasHorizontalOverflow).toBe(false);
+    await expect.poll(() => expectNoDocumentHorizontalOverflow(page)).toBe(true);
   });
 }

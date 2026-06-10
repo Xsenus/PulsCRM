@@ -1,24 +1,5 @@
 import { expect, test } from '@playwright/test';
-import type { Page } from '@playwright/test';
-
-const demoUsers = [
-  {
-    id: 1,
-    login: 'demo',
-    fullName: 'Demo User',
-    userGroup: 'Administrators'
-  }
-];
-
-async function mockLoginUsers(page: Page) {
-  await page.route('**/api/auth/users**', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(demoUsers)
-    });
-  });
-}
+import { fulfillJson, mockLoginUsers } from './helpers';
 
 test('login page renders the manual login form', async ({ page }) => {
   await mockLoginUsers(page);
@@ -43,11 +24,7 @@ test('protected route redirects unauthenticated user to login', async ({ page })
 test('login error is shown when API rejects credentials', async ({ page }) => {
   await mockLoginUsers(page);
   await page.route('**/api/auth/login', async (route) => {
-    await route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: JSON.stringify({ message: 'Bad credentials' })
-    });
+    await fulfillJson(route, { message: 'Bad credentials' }, 401);
   });
 
   await page.goto('/login');
