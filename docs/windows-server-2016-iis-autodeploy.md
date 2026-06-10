@@ -245,9 +245,12 @@ WEB_SITE_PATH = C:\Apps\PulsCRM\Web
 API_CONFIG_PATH = C:\PulsCRMConfig\Api\appsettings.Production.json
 HEALTHCHECK_URL = https://api.example.com/health
 FRONTEND_URL = https://app.example.com
+DEPLOY_BACKUP_PATH = C:\Apps\PulsCRM\Backups
 ```
 
 `FRONTEND_URL` можно не задавать, если frontend доступен с IIS-сервера на `http://localhost:8080/`. `PRODUCTION_API_URL` используется при сборке frontend и для smoke-проверки публичного `/api/auth/users?take=1`.
+
+`DEPLOY_BACKUP_PATH` можно не задавать, тогда workflow использует `C:\Apps\PulsCRM\Backups`. В этой папке хранятся пять последних публикаций API/Web для ручного отката.
 
 ## 9. Как работает workflow
 
@@ -261,9 +264,11 @@ FRONTEND_URL = https://app.example.com
 6. `dotnet publish` API в `artifacts\api`
 7. копирование production-конфига API
 8. `app_offline.htm` для остановки API
-9. `robocopy /MIR` API в `C:\Apps\PulsCRM\Api`
-10. `robocopy /MIR` frontend в `C:\Apps\PulsCRM\Web`
-11. healthcheck `/health`
+9. backup текущих каталогов API/Web в `DEPLOY_BACKUP_PATH\yyyyMMdd-HHmmss`
+10. `robocopy /MIR` API в `C:\Apps\PulsCRM\Api`
+11. `robocopy /MIR` frontend в `C:\Apps\PulsCRM\Web`
+12. healthcheck `/health`
+13. post-deploy smoke API/frontend
 
 Запуск деплоя:
 
@@ -277,7 +282,47 @@ git push origin main
 GitHub -> Actions -> Deploy Production -> Run workflow
 ```
 
-## 10. Проверки после деплоя
+## 10. Ручной rollback
+
+Перед заменой файлов `scripts\deploy-iis.ps1` сохраняет предыдущую публикацию в папку вида:
+
+```text
+C:\Apps\PulsCRM\Backups\20260610-184500
+```
+
+Внутри лежат:
+
+```text
+Api\
+Web\
+manifest.json
+```
+
+Чтобы вернуть предыдущую версию:
+
+```powershell
+cd C:\actions-runner\_work\PulsCRM\PulsCRM
+
+$backup = "C:\Apps\PulsCRM\Backups\20260610-184500"
+
+.\scripts\rollback-iis.ps1 `
+  -BackupPath $backup `
+  -ApiTargetPath C:\Apps\PulsCRM\Api `
+  -WebTargetPath C:\Apps\PulsCRM\Web `
+  -HealthcheckUrl http://localhost:8081/health `
+  -WarmupUrls @("http://localhost:8081/health", "http://localhost:8080/") `
+  -ApiAppPoolName "PulsCRM.Api"
+```
+
+Если нужно посмотреть доступные backup-папки:
+
+```powershell
+Get-ChildItem C:\Apps\PulsCRM\Backups -Directory | Sort-Object Name -Descending
+```
+
+В publish-каталогах `C:\Apps\PulsCRM\Api` и `C:\Apps\PulsCRM\Web` не нужно хранить пользовательские uploads, ключи, логи и другие mutable data. Для этого используется `C:\PulsCRMData`, который не попадает под `robocopy /MIR`.
+
+## 11. Проверки после деплоя
 
 ```powershell
 Invoke-WebRequest https://api.example.com/health -UseBasicParsing
@@ -312,7 +357,7 @@ MailStoredFile
 MailTransportProfile
 ```
 
-## 11. Типовые проблемы
+## 12. Типовые проблемы
 
 ### API не стартует, IIS 500.30
 

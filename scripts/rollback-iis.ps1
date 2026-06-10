@@ -1,24 +1,17 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
-    [string]$ApiSourcePath,
+    [string]$BackupPath,
 
     [Parameter(Mandatory = $true)]
     [string]$ApiTargetPath,
 
     [Parameter(Mandatory = $true)]
-    [string]$WebSourcePath,
-
-    [Parameter(Mandatory = $true)]
     [string]$WebTargetPath,
 
-    [string]$ApiConfigSourcePath,
     [string]$HealthcheckUrl,
     [string[]]$WarmupUrls = @(),
-    [string]$ApiAppPoolName = "PulsCRM.Api",
-    [string]$BackupRootPath,
-    [int]$BackupRetention = 5,
-    [switch]$SkipBackup
+    [string]$ApiAppPoolName = "PulsCRM.Api"
 )
 
 Set-StrictMode -Version Latest
@@ -53,27 +46,6 @@ function Ensure-Directory {
     }
 }
 
-function Copy-OptionalConfig {
-    param(
-        [string]$SourcePath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$TargetDirectory
-    )
-
-    if ([string]::IsNullOrWhiteSpace($SourcePath)) {
-        return
-    }
-
-    if (-not (Test-Path -LiteralPath $SourcePath -PathType Leaf)) {
-        throw "Config file was not found: $SourcePath"
-    }
-
-    $targetPath = Join-Path $TargetDirectory "appsettings.Production.json"
-    Copy-Item -LiteralPath $SourcePath -Destination $targetPath -Force
-    Write-Host "Copied config file to $targetPath"
-}
-
 function Invoke-RobocopyMirror {
     param(
         [Parameter(Mandatory = $true)]
@@ -93,103 +65,6 @@ function Invoke-RobocopyMirror {
     }
 
     $global:LASTEXITCODE = 0
-}
-
-function Resolve-BackupRootPath {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$ApiPath,
-
-        [string]$ConfiguredPath
-    )
-
-    if (-not [string]::IsNullOrWhiteSpace($ConfiguredPath)) {
-        return $ConfiguredPath
-    }
-
-    $apiParent = Split-Path -Path $ApiPath -Parent
-    if ([string]::IsNullOrWhiteSpace($apiParent)) {
-        throw "Cannot resolve backup root from API target path: $ApiPath"
-    }
-
-    return Join-Path $apiParent "Backups"
-}
-
-function New-DeploymentBackup {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$BackupPath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$ApiPath,
-
-        [Parameter(Mandatory = $true)]
-        [string]$WebPath
-    )
-
-    $apiBackupPath = Join-Path $backupPath "Api"
-    $webBackupPath = Join-Path $backupPath "Web"
-
-    Ensure-Directory -Path $backupPath
-
-    Write-Host "Creating deployment backup: $backupPath"
-
-    if (Test-Path -LiteralPath $ApiPath -PathType Container) {
-        Invoke-RobocopyMirror -Source $ApiPath -Target $apiBackupPath
-    }
-    else {
-        Ensure-Directory -Path $apiBackupPath
-        Write-Warning "API target directory does not exist yet. Empty API backup was created."
-    }
-
-    if (Test-Path -LiteralPath $WebPath -PathType Container) {
-        Invoke-RobocopyMirror -Source $WebPath -Target $webBackupPath
-    }
-    else {
-        Ensure-Directory -Path $webBackupPath
-        Write-Warning "Web target directory does not exist yet. Empty Web backup was created."
-    }
-
-    $manifestPath = Join-Path $backupPath "manifest.json"
-    $manifest = [ordered]@{
-        createdAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-        apiTargetPath = $ApiPath
-        webTargetPath = $WebPath
-        apiBackupPath = $apiBackupPath
-        webBackupPath = $webBackupPath
-        machineName = $env:COMPUTERNAME
-    }
-
-    $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
-    Write-Host "Backup manifest created: $manifestPath"
-}
-
-function Remove-OldDeploymentBackups {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$BackupRoot,
-
-        [int]$Retention
-    )
-
-    if ($Retention -le 0) {
-        Write-Host "Backup cleanup skipped: retention is $Retention."
-        return
-    }
-
-    if (-not (Test-Path -LiteralPath $BackupRoot -PathType Container)) {
-        return
-    }
-
-    $backups = Get-ChildItem -LiteralPath $BackupRoot -Directory |
-        Where-Object { $_.Name -match "^\d{8}-\d{6}$" } |
-        Sort-Object Name -Descending
-
-    $oldBackups = $backups | Select-Object -Skip $Retention
-    foreach ($backup in $oldBackups) {
-        Write-Host "Removing old deployment backup: $($backup.FullName)"
-        Remove-Item -LiteralPath $backup.FullName -Recurse -Force
-    }
 }
 
 function Invoke-AppCmd {
@@ -324,10 +199,13 @@ function Invoke-WarmupUrls {
     }
 }
 
-Assert-Directory -Path $ApiSourcePath -Label "API source"
-Assert-Directory -Path $WebSourcePath -Label "Web source"
+Assert-Directory -Path $BackupPath -Label "Backup"
 
-Copy-OptionalConfig -SourcePath $ApiConfigSourcePath -TargetDirectory $ApiSourcePath
+$apiBackupPath = Join-Path $BackupPath "Api"
+$webBackupPath = Join-Path $BackupPath "Web"
+
+Assert-Directory -Path $apiBackupPath -Label "API backup"
+Assert-Directory -Path $webBackupPath -Label "Web backup"
 
 Ensure-Directory -Path $ApiTargetPath
 $appOfflinePath = Join-Path $ApiTargetPath "app_offline.htm"
@@ -335,20 +213,8 @@ Set-Content -LiteralPath $appOfflinePath -Value "<html><body>Maintenance</body><
 
 try {
     Stop-AppPoolIfConfigured -Name $ApiAppPoolName
-    if ($SkipBackup) {
-        Write-Warning "Deployment backup skipped by parameter."
-    }
-    else {
-        $resolvedBackupRootPath = Resolve-BackupRootPath -ApiPath $ApiTargetPath -ConfiguredPath $BackupRootPath
-        Ensure-Directory -Path $resolvedBackupRootPath
-        $backupPath = Join-Path $resolvedBackupRootPath (Get-Date -Format "yyyyMMdd-HHmmss")
-        New-DeploymentBackup -BackupPath $backupPath -ApiPath $ApiTargetPath -WebPath $WebTargetPath
-        Remove-OldDeploymentBackups -BackupRoot $resolvedBackupRootPath -Retention $BackupRetention
-        Write-Host "Rollback source: $backupPath"
-    }
-
-    Write-Host "Deploying API to $ApiTargetPath"
-    Invoke-RobocopyMirror -Source $ApiSourcePath -Target $ApiTargetPath
+    Write-Host "Rolling back API from $apiBackupPath to $ApiTargetPath"
+    Invoke-RobocopyMirror -Source $apiBackupPath -Target $ApiTargetPath
 }
 finally {
     if (Test-Path -LiteralPath $appOfflinePath) {
@@ -358,11 +224,11 @@ finally {
     Start-AppPoolIfConfigured -Name $ApiAppPoolName
 }
 
-Write-Host "Deploying frontend to $WebTargetPath"
-Invoke-RobocopyMirror -Source $WebSourcePath -Target $WebTargetPath
+Write-Host "Rolling back frontend from $webBackupPath to $WebTargetPath"
+Invoke-RobocopyMirror -Source $webBackupPath -Target $WebTargetPath
 
 Wait-ForHealthcheck -Url $HealthcheckUrl
 Invoke-WarmupUrls -Urls $WarmupUrls
 
-Write-Host "Deployment completed successfully."
+Write-Host "Rollback completed successfully."
 $global:LASTEXITCODE = 0

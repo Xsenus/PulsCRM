@@ -60,9 +60,11 @@ jobs:
           API_CONFIG_PATH: ${{ vars.API_CONFIG_PATH }}
           HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+          DEPLOY_BACKUP_PATH: ${{ vars.DEPLOY_BACKUP_PATH }}
         run: |
           $frontendUrl = if ([string]::IsNullOrWhiteSpace($env:FRONTEND_URL)) { "http://localhost:8080/" } else { $env:FRONTEND_URL }
           $authUsersUrl = if ([string]::IsNullOrWhiteSpace($env:PRODUCTION_API_URL)) { "" } else { "$($env:PRODUCTION_API_URL.TrimEnd('/'))/api/auth/users?take=1" }
+          $backupRoot = if ([string]::IsNullOrWhiteSpace($env:DEPLOY_BACKUP_PATH)) { "C:\Apps\PulsCRM\Backups" } else { $env:DEPLOY_BACKUP_PATH }
 
           .\scripts\deploy-iis.ps1 `
             -ApiSourcePath "${{ github.workspace }}\artifacts\api" `
@@ -72,7 +74,9 @@ jobs:
             -ApiConfigSourcePath $env:API_CONFIG_PATH `
             -HealthcheckUrl $env:HEALTHCHECK_URL `
             -WarmupUrls @($env:HEALTHCHECK_URL, $frontendUrl) `
-            -ApiAppPoolName "PulsCRM.Api"
+            -ApiAppPoolName "PulsCRM.Api" `
+            -BackupRootPath $backupRoot `
+            -BackupRetention 5
 
           .\scripts\smoke-iis.ps1 `
             -HealthcheckUrl $env:HEALTHCHECK_URL `

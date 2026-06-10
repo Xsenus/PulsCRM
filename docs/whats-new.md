@@ -1,5 +1,18 @@
 # Что нового
 
+## 2026-06-10 - backup и rollback IIS deploy
+
+Деплой на IIS получил безопасный путь отката:
+
+- `scripts/deploy-iis.ps1` перед `robocopy /MIR` сохраняет текущие публикации API и frontend в backup-папку;
+- backup хранится в формате `yyyyMMdd-HHmmss` с подпапками `Api`, `Web` и `manifest.json`;
+- workflow `Deploy Production` использует `DEPLOY_BACKUP_PATH` или значение по умолчанию `C:\Apps\PulsCRM\Backups`;
+- добавлен `scripts/rollback-iis.ps1` для ручного восстановления API/Web из выбранного backup;
+- backup retention ограничивает хранение пятью последними публикациями;
+- IIS-гайд дополнен командами поиска backup-папок и ручного rollback.
+
+Проверки этого этапа включают parser-проверку PowerShell-скриптов, локальный dry-run backup/rollback на временных каталогах, backend-тесты, frontend-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную проверку API против SQL-БД.
+
 ## 2026-06-10 - smoke-проверка IIS deploy
 
 Добавлена отдельная post-deploy проверка для IIS-публикации:
