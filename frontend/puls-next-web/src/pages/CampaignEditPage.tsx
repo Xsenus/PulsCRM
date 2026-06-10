@@ -16,6 +16,7 @@ import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaign
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
 import { campaignStatusOptions, dispatchStatusOptions, labelOf, recipientSourceOptions } from '../app/lookups';
+import { DEFAULT_CAMPAIGN_TIME_ZONE } from '../app/scheduleValidation';
 import { showToast } from '../app/toast';
 import type {
   CampaignDetailsDto,
@@ -57,7 +58,7 @@ function createDefaultModel(): CampaignUpsertRequest {
     transportProfileId: undefined,
     scheduleKind: 0,
     cronExpression: '',
-    timeZoneId: 'Europe/Amsterdam',
+    timeZoneId: DEFAULT_CAMPAIGN_TIME_ZONE,
     startAtUtc: new Date().toISOString(),
     endAtUtc: undefined,
     intervalMinutes: 2,
@@ -194,6 +195,8 @@ export function CampaignEditPage() {
   const [transportProfiles, setTransportProfiles] = useState<TransportProfileDto[]>([]);
   const [attachments, setAttachments] = useState<EditableAttachment[]>([]);
   const [schedulePreviewItems, setSchedulePreviewItems] = useState<Awaited<ReturnType<typeof previewSchedule>>>([]);
+  const [schedulePreviewLoading, setSchedulePreviewLoading] = useState(false);
+  const [schedulePreviewError, setSchedulePreviewError] = useState('');
   const [recipientPreviewData, setRecipientPreviewData] = useState<CampaignRecipientPreviewDto | null>(null);
   const [readiness, setReadiness] = useState<CampaignReadinessDto | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
@@ -215,6 +218,7 @@ export function CampaignEditPage() {
 
       setTransportProfiles(transportResponse);
       setSchedulePreviewItems([]);
+      setSchedulePreviewError('');
       setRecipientPreviewData(null);
       setReadiness(null);
 
@@ -290,6 +294,8 @@ export function CampaignEditPage() {
   };
 
   const previewScheduleClick = async () => {
+    setSchedulePreviewLoading(true);
+    setSchedulePreviewError('');
     try {
       const preview = await previewSchedule({
         scheduleKind: model.scheduleKind,
@@ -304,7 +310,10 @@ export function CampaignEditPage() {
       });
       setSchedulePreviewItems(preview);
     } catch (error: any) {
+      setSchedulePreviewError(error.message || 'Не удалось построить расписание');
       showToast(error.message || 'Не удалось построить расписание', 'error', 4000);
+    } finally {
+      setSchedulePreviewLoading(false);
     }
   };
 
@@ -552,9 +561,14 @@ export function CampaignEditPage() {
               randomIntervalMinMinutes: model.randomIntervalMinMinutes,
               randomIntervalMaxMinutes: model.randomIntervalMaxMinutes
             }}
-            onChange={(patch) => patchModel(patch)}
+            onChange={(patch) => {
+              setSchedulePreviewError('');
+              patchModel(patch);
+            }}
             preview={schedulePreviewItems}
             onPreview={previewScheduleClick}
+            previewLoading={schedulePreviewLoading}
+            previewError={schedulePreviewError}
           />
           ) : null}
 

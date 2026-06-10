@@ -1,7 +1,9 @@
 import React from 'react';
 import { formatDateTime, fromDateTimeLocalValue, toDateTimeLocalValue } from '../app/format';
 import { scheduleKindOptions } from '../app/lookups';
+import { DEFAULT_CAMPAIGN_TIME_ZONE, validateScheduleBuilderValue } from '../app/scheduleValidation';
 import type { ScheduleOccurrenceDto } from '../app/types';
+import { LoadingButtonLabel } from './AppLoader';
 
 export interface ScheduleBuilderValue {
   scheduleKind: number;
@@ -19,32 +21,51 @@ interface ScheduleBuilderProps {
   onChange: (patch: Partial<ScheduleBuilderValue>) => void;
   preview: ScheduleOccurrenceDto[];
   onPreview: () => Promise<void> | void;
+  previewLoading?: boolean;
+  previewError?: string;
 }
 
-export function ScheduleBuilder({ value, onChange, preview, onPreview }: ScheduleBuilderProps) {
+const scheduleDescriptions: Record<number, string> = {
+  0: 'Один запуск в выбранное время.',
+  1: 'Повторять через одинаковый интервал.',
+  2: 'Повторять через случайный интервал в заданных границах.',
+  3: 'Использовать cron-выражение для сложного расписания.'
+};
+
+export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLoading = false, previewError }: ScheduleBuilderProps) {
+  const validationIssues = validateScheduleBuilderValue(value);
+  const canPreview = validationIssues.length === 0 && !previewLoading;
+
   return (
     <section className="panel">
       <h3>Расписание</h3>
 
-      <div className="form-grid">
-        <div className="field">
-          <label>Тип расписания</label>
-          <select
-            className="form-select"
-            value={value.scheduleKind}
-            onChange={(event) => onChange({ scheduleKind: Number(event.target.value) })}
+      <div className="settings-tabs schedule-kind-tabs" role="tablist" aria-label="Тип расписания">
+        {scheduleKindOptions.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`settings-tab${value.scheduleKind === option.value ? ' active' : ''}`}
+            role="tab"
+            aria-selected={value.scheduleKind === option.value}
+            title={scheduleDescriptions[option.value]}
+            onClick={() => onChange({ scheduleKind: option.value })}
           >
-            {scheduleKindOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+            {option.label}
+          </button>
+        ))}
+      </div>
 
+      <div className="field-hint schedule-kind-description">
+        {scheduleDescriptions[value.scheduleKind] || 'Выберите режим расчета расписания.'}
+      </div>
+
+      <div className="form-grid">
         <div className="field">
           <label>Часовой пояс</label>
           <input
             className="form-input"
-            value={value.timeZoneId || 'Europe/Amsterdam'}
+            value={value.timeZoneId || DEFAULT_CAMPAIGN_TIME_ZONE}
             onChange={(event) => onChange({ timeZoneId: event.target.value })}
           />
         </div>
@@ -125,9 +146,23 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview }: Schedul
         </div>
       ) : null}
 
+      {validationIssues.length > 0 ? (
+        <div className="form-validation-list" role="alert">
+          {validationIssues.map((issue) => (
+            <div key={issue.key}>{issue.message}</div>
+          ))}
+        </div>
+      ) : null}
+
+      {previewError ? (
+        <div className="form-validation-list" role="alert">
+          <div>{previewError}</div>
+        </div>
+      ) : null}
+
       <div className="row-actions">
-        <button type="button" className="secondary-button" onClick={() => void onPreview()}>
-          Показать ближайшие запуски
+        <button type="button" className="secondary-button" disabled={!canPreview} onClick={() => void onPreview()}>
+          {previewLoading ? <LoadingButtonLabel label="Считаем расписание" /> : 'Показать ближайшие запуски'}
         </button>
       </div>
 
