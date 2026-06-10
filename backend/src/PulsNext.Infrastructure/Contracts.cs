@@ -1053,3 +1053,70 @@ public sealed class ResolvedRecipient
     public string? DisplayName { get; set; }
     public RecipientSourceKind SourceKind { get; set; }
 }
+
+/// <summary>
+/// Storage and Data Protection diagnostics result.
+/// </summary>
+public sealed class StorageDiagnosticsDto
+{
+    /// <summary>
+    /// Overall status: <c>ok</c> or <c>error</c>.
+    /// </summary>
+    public string Status { get; set; } = "unknown";
+
+    /// <summary>
+    /// UTC timestamp when diagnostics were collected.
+    /// </summary>
+    public DateTime CheckedAtUtc { get; set; }
+
+    /// <summary>
+    /// Data Protection keys directory diagnostics.
+    /// </summary>
+    public StoragePathDiagnosticsDto Keys { get; set; } = new();
+
+    /// <summary>
+    /// Uploads directory diagnostics.
+    /// </summary>
+    public StoragePathDiagnosticsDto Uploads { get; set; } = new();
+
+    /// <summary>
+    /// Operational notes for administrators.
+    /// </summary>
+    public IReadOnlyCollection<string> Notes { get; set; } = Array.Empty<string>();
+}
+
+/// <summary>
+/// Diagnostics result for one storage directory.
+/// </summary>
+public sealed class StoragePathDiagnosticsDto
+{
+    /// <summary>
+    /// Logical directory name.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Absolute server path. Returned only by the protected diagnostics API.
+    /// </summary>
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether this directory is required for API operation.
+    /// </summary>
+    public bool Required { get; set; }
+
+    /// <summary>
+    /// Whether the directory exists after the create attempt.
+    /// </summary>
+    public bool Exists { get; set; }
+
+    /// <summary>
+    /// Whether probe write, read and delete operations succeeded.
+    /// </summary>
+    public bool CanWrite { get; set; }
+
+    /// <summary>
+    /// Short technical diagnostics message.
+    /// </summary>
+    public string Message { get; set; } = string.Empty;
+}

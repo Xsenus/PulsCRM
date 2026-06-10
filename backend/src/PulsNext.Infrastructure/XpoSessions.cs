@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<IStorageDiagnosticsService, StorageDiagnosticsService>();
         services.AddScoped<ITransportProfileService, TransportProfileService>();
         services.AddScoped<ICampaignService, CampaignService>();
         services.AddScoped<IRecipientResolver, RecipientResolver>();
@@ -92,7 +93,7 @@ public static class ServiceCollectionExtensions
         var rootPath = configuration.GetSection(StorageOptions.SectionName).GetValue<string>(nameof(StorageOptions.RootPath)) ?? "../../../storage";
         var keysPath = configuration.GetSection(StorageOptions.SectionName).GetValue<string>(nameof(StorageOptions.KeysPath)) ?? "keys";
 
-        var combined = Path.GetFullPath(Path.Combine(contentRootPath, rootPath, keysPath));
+        var combined = StoragePathHelper.GetAbsolutePath(contentRootPath, rootPath, keysPath);
         Directory.CreateDirectory(combined);
         return new DirectoryInfo(combined);
     }
