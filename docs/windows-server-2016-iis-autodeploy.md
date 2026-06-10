@@ -269,6 +269,7 @@ DEPLOY_BACKUP_PATH = C:\Apps\PulsCRM\Backups
 11. `robocopy /MIR` frontend в `C:\Apps\PulsCRM\Web`
 12. healthcheck `/health`
 13. post-deploy smoke API/frontend
+14. read-only проверка `Mail*` таблиц, SMTP-профилей и очереди в SQL
 
 Запуск деплоя:
 
@@ -332,6 +333,9 @@ Invoke-WebRequest https://api.example.com/health -UseBasicParsing
   -AuthUsersUrl https://api.example.com/api/auth/users?take=1 `
   -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
   -ProductionApiUrl https://api.example.com
+
+.\scripts\check-mailing-db.ps1 `
+  -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json
 ```
 
 SQL:
@@ -355,6 +359,14 @@ MailDispatchBatch
 MailDispatchItem
 MailStoredFile
 MailTransportProfile
+```
+
+`check-mailing-db.ps1` выполняет только read-only запросы. Скрипт проверяет наличие `Mail*` таблиц, выводит количество строк в каждой таблице, количество SMTP-профилей, глубину очереди и количество failed-элементов. Если нужно сделать SMTP-профиль обязательным условием приемки, запустите:
+
+```powershell
+.\scripts\check-mailing-db.ps1 `
+  -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
+  -RequireTransportProfile
 ```
 
 ## 12. Типовые проблемы

@@ -84,3 +84,6 @@ jobs:
             -AuthUsersUrl $authUsersUrl `
             -ApiConfigPath $env:API_CONFIG_PATH `
             -ProductionApiUrl $env:PRODUCTION_API_URL
+
+          .\scripts\check-mailing-db.ps1 `
+            -ApiConfigPath $env:API_CONFIG_PATH

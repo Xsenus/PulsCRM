@@ -1,5 +1,17 @@
 # Что нового
 
+## 2026-06-10 - проверка БД после IIS deploy
+
+Добавлен read-only SQL-check для проверки состояния модуля рассылок после деплоя:
+
+- новый `scripts/check-mailing-db.ps1` читает `MailingDb` из `appsettings.Production.json` или принимает строку подключения напрямую;
+- XPO-префикс `XpoProvider=...` автоматически убирается перед подключением через SQL Server provider;
+- проверяется наличие ожидаемых таблиц `Mail*`, количество строк в каждой таблице, SMTP-профили, глубина очереди и failed-сообщения;
+- workflow `Deploy Production` запускает DB-check после API/frontend smoke;
+- IIS-гайд дополнен ручным запуском DB-check и опцией `-RequireTransportProfile` для строгой приемки SMTP-профиля.
+
+Проверки этого этапа включают parser-проверку PowerShell-скриптов, локальный запуск DB-check против SQL-БД, backend-тесты, frontend-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную проверку API против SQL-БД.
+
 ## 2026-06-10 - backup и rollback IIS deploy
 
 Деплой на IIS получил безопасный путь отката:
