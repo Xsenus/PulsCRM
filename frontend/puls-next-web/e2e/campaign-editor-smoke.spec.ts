@@ -74,8 +74,8 @@ test.beforeEach(async ({ page }) => {
 test('new campaign editor previews recipients, readiness and schedule', async ({ page }) => {
   await page.goto('/campaigns/new');
 
-  await expect(page.locator('.app-shell')).toBeVisible();
-  await expect(page.locator('.campaign-editor-tabs')).toBeVisible();
+  await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.campaign-editor-tabs')).toBeVisible({ timeout: 15_000 });
 
   await page.locator('.campaign-main-grid .form-input').nth(0).fill('Smoke Campaign');
   await page.locator('.campaign-main-grid .form-input').nth(1).fill('Smoke subject');

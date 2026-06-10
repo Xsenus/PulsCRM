@@ -1,5 +1,17 @@
 # Что нового
 
+## 2026-06-10 - smoke-проверка IIS deploy
+
+Добавлена отдельная post-deploy проверка для IIS-публикации:
+
+- новый `scripts/smoke-iis.ps1` проверяет API `/health`, frontend root, frontend bundle и опционально публичный `/api/auth/users?take=1`;
+- workflow `Deploy Production` запускает smoke после копирования API/frontend и использует `FRONTEND_URL` для warmup;
+- smoke выводит фактические `PRODUCTION_API_URL`, `HEALTHCHECK_URL`, `FRONTEND_URL` и проверяет наличие production-конфига API;
+- IIS-гайд дополнен переменной `FRONTEND_URL` и примером ручного запуска smoke-скрипта;
+- скрипт локально проверен против API на SQL-БД и frontend dev-сервера.
+
+Проверки этого этапа включают backend-тесты, frontend-тесты, Playwright smoke-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную проверку API против SQL-БД.
+
 ## 2026-06-10 - e2e smoke формы кампании
 
 Добавлен браузерный smoke-тест для ключевого сценария подготовки рассылки в форме кампании:

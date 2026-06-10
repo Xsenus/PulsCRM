@@ -54,11 +54,16 @@ jobs:
       - name: Deploy artifacts
         shell: powershell
         env:
+          PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
           API_SITE_PATH: ${{ vars.API_SITE_PATH }}
           WEB_SITE_PATH: ${{ vars.WEB_SITE_PATH }}
           API_CONFIG_PATH: ${{ vars.API_CONFIG_PATH }}
           HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
         run: |
+          $frontendUrl = if ([string]::IsNullOrWhiteSpace($env:FRONTEND_URL)) { "http://localhost:8080/" } else { $env:FRONTEND_URL }
+          $authUsersUrl = if ([string]::IsNullOrWhiteSpace($env:PRODUCTION_API_URL)) { "" } else { "$($env:PRODUCTION_API_URL.TrimEnd('/'))/api/auth/users?take=1" }
+
           .\scripts\deploy-iis.ps1 `
             -ApiSourcePath "${{ github.workspace }}\artifacts\api" `
             -ApiTargetPath $env:API_SITE_PATH `
@@ -66,5 +71,12 @@ jobs:
             -WebTargetPath $env:WEB_SITE_PATH `
             -ApiConfigSourcePath $env:API_CONFIG_PATH `
             -HealthcheckUrl $env:HEALTHCHECK_URL `
-            -WarmupUrls @($env:HEALTHCHECK_URL, "http://localhost:8080/") `
+            -WarmupUrls @($env:HEALTHCHECK_URL, $frontendUrl) `
             -ApiAppPoolName "PulsCRM.Api"
+
+          .\scripts\smoke-iis.ps1 `
+            -HealthcheckUrl $env:HEALTHCHECK_URL `
+            -FrontendUrl $frontendUrl `
+            -AuthUsersUrl $authUsersUrl `
+            -ApiConfigPath $env:API_CONFIG_PATH `
+            -ProductionApiUrl $env:PRODUCTION_API_URL

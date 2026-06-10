@@ -244,7 +244,10 @@ API_SITE_PATH = C:\Apps\PulsCRM\Api
 WEB_SITE_PATH = C:\Apps\PulsCRM\Web
 API_CONFIG_PATH = C:\PulsCRMConfig\Api\appsettings.Production.json
 HEALTHCHECK_URL = https://api.example.com/health
+FRONTEND_URL = https://app.example.com
 ```
+
+`FRONTEND_URL` можно не задавать, если frontend доступен с IIS-сервера на `http://localhost:8080/`. `PRODUCTION_API_URL` используется при сборке frontend и для smoke-проверки публичного `/api/auth/users?take=1`.
 
 ## 9. Как работает workflow
 
@@ -278,6 +281,12 @@ GitHub -> Actions -> Deploy Production -> Run workflow
 
 ```powershell
 Invoke-WebRequest https://api.example.com/health -UseBasicParsing
+.\scripts\smoke-iis.ps1 `
+  -HealthcheckUrl https://api.example.com/health `
+  -FrontendUrl https://app.example.com `
+  -AuthUsersUrl https://api.example.com/api/auth/users?take=1 `
+  -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
+  -ProductionApiUrl https://api.example.com
 ```
 
 SQL:
