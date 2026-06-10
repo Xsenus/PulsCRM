@@ -8,6 +8,7 @@ import { DataTable } from '../components/DataTable';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
 import { SearchPanel } from '../components/SearchPanel';
+import { StatusBadge } from '../components/StatusBadge';
 
 const EMPTY_VALUE = '—';
 const WORK_TABLE_STORAGE_ID = 'work-list';
@@ -135,6 +136,19 @@ export function WorkPage() {
     applySearchValue('');
   };
 
+  const resetFilters = () => {
+    const nextFilters: WorkFilters = {
+      search: '',
+      orgId: undefined,
+      employeeId: undefined,
+      onlyOpen: true
+    };
+
+    setFilters(nextFilters);
+    setAppliedFilters(nextFilters);
+    setPage(1);
+  };
+
   return (
     <div className="page">
       <PageHeader
@@ -186,6 +200,7 @@ export function WorkPage() {
         </label>
 
         <button type="button" className="primary-button toolbar-button" onClick={applyFilters}>Применить</button>
+        <button type="button" className="secondary-button toolbar-button" onClick={resetFilters}>Сбросить</button>
       </div>
 
       <div className="panel">
@@ -197,17 +212,28 @@ export function WorkPage() {
           settingsKey={tableSettingsKey}
           title="Список задач"
           columns={[
-            { key: 'orgName', title: 'Организация', width: 240, minWidth: 200, render: (row) => row.orgName || EMPTY_VALUE },
-            { key: 'userFromName', title: 'От кого', width: 200, minWidth: 170, render: (row) => row.userFromName || EMPTY_VALUE },
-            { key: 'userToName', title: 'Кому', width: 200, minWidth: 170, render: (row) => row.userToName || EMPTY_VALUE },
-            { key: 'category', title: 'Категория', width: 170, minWidth: 140, render: (row) => row.category || EMPTY_VALUE },
-            { key: 'task', title: 'Задача', width: 260, minWidth: 220, render: (row) => row.task || EMPTY_VALUE },
-            { key: 'message', title: 'Сообщение', width: 320, minWidth: 240, render: (row) => row.message || EMPTY_VALUE },
+            { key: 'task', title: 'Задача', width: 260, minWidth: 220, isPrimary: true, priority: 1, render: (row) => row.task || row.message || EMPTY_VALUE },
+            { key: 'orgName', title: 'Организация', width: 240, minWidth: 200, priority: 2, render: (row) => row.orgName || EMPTY_VALUE },
+            { key: 'userFromName', title: 'От кого', width: 200, minWidth: 170, priority: 5, render: (row) => row.userFromName || EMPTY_VALUE },
+            { key: 'userToName', title: 'Кому', width: 200, minWidth: 170, priority: 4, render: (row) => row.userToName || EMPTY_VALUE },
+            { key: 'category', title: 'Категория', width: 170, minWidth: 140, priority: 6, render: (row) => row.category || EMPTY_VALUE },
+            { key: 'message', title: 'Сообщение', width: 320, minWidth: 240, priority: 3, render: (row) => row.message || EMPTY_VALUE },
             { key: 'comment', title: 'Комментарий', width: 280, minWidth: 220, visible: false, render: (row) => row.comment || EMPTY_VALUE },
-            { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, render: (row) => formatDateTime(row.createdAtUtc) || EMPTY_VALUE },
-            { key: 'dateToUtc', title: 'Срок', width: 180, minWidth: 160, render: (row) => formatDateTime(row.dateToUtc) || EMPTY_VALUE },
+            { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, priority: 8, render: (row) => formatDateTime(row.createdAtUtc) || EMPTY_VALUE },
+            { key: 'dateToUtc', title: 'Срок', width: 180, minWidth: 160, priority: 7, render: (row) => formatDateTime(row.dateToUtc) || EMPTY_VALUE },
             { key: 'dateCompletedUtc', title: 'Завершено', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.dateCompletedUtc) || EMPTY_VALUE },
-            { key: 'isCompleted', title: 'Готово', width: 110, minWidth: 90, render: (row) => (row.isCompleted ? 'Да' : 'Нет') }
+            {
+              key: 'isCompleted',
+              title: 'Статус',
+              width: 130,
+              minWidth: 110,
+              priority: 9,
+              render: (row) => (
+                <StatusBadge tone={row.isCompleted ? 'success' : 'warning'}>
+                  {row.isCompleted ? 'Завершено' : 'Открыто'}
+                </StatusBadge>
+              )
+            }
           ]}
         />
 

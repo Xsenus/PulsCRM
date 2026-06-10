@@ -30,6 +30,7 @@ import { OrganizationPicker } from '../components/OrganizationPicker';
 import { PageHeader } from '../components/PageHeader';
 import { ScheduleBuilder } from '../components/ScheduleBuilder';
 import { StatsCards } from '../components/StatsCards';
+import { StatusBadge, type StatusBadgeTone } from '../components/StatusBadge';
 
 function createDefaultModel(): CampaignUpsertRequest {
   return {
@@ -59,6 +60,26 @@ function createDefaultModel(): CampaignUpsertRequest {
     targetOrganizationIds: [],
     attachments: []
   };
+}
+
+function dispatchStatusTone(status: number): StatusBadgeTone {
+  if (status === 2) {
+    return 'success';
+  }
+
+  if (status === 3) {
+    return 'danger';
+  }
+
+  if (status === 4) {
+    return 'warning';
+  }
+
+  if (status === 1) {
+    return 'info';
+  }
+
+  return 'neutral';
 }
 
 function mapCampaignToState(campaign: CampaignDetailsDto): {
@@ -476,10 +497,10 @@ export function CampaignEditPage() {
                 getRowKey={(row) => `${row.legacyOrgId}-${row.email}`}
                 settingsKey={previewTableSettingsKey}
                 columns={[
-                  { key: 'legacyOrgName', title: 'Организация', width: 260, minWidth: 220, render: (row) => row.legacyOrgName || '—' },
-                  { key: 'email', title: 'Адрес', width: 240, minWidth: 200, render: (row) => row.email },
-                  { key: 'displayName', title: 'Имя', width: 220, minWidth: 180, render: (row) => row.displayName || '—' },
-                  { key: 'sourceKind', title: 'Источник', width: 170, minWidth: 150, render: (row) => labelOf(recipientSourceOptions, row.sourceKind) }
+                  { key: 'email', title: 'Адрес', width: 240, minWidth: 200, isPrimary: true, priority: 1, render: (row) => row.email },
+                  { key: 'legacyOrgName', title: 'Организация', width: 260, minWidth: 220, priority: 2, render: (row) => row.legacyOrgName || '—' },
+                  { key: 'displayName', title: 'Имя', width: 220, minWidth: 180, priority: 3, render: (row) => row.displayName || '—' },
+                  { key: 'sourceKind', title: 'Источник', width: 170, minWidth: 150, priority: 4, render: (row) => labelOf(recipientSourceOptions, row.sourceKind) }
                 ]}
               />
             </section>
@@ -509,13 +530,13 @@ export function CampaignEditPage() {
                     settingsKey={batchesTableSettingsKey}
                     emptyText="Нет пакетов"
                     columns={[
-                      { key: 'id', title: '#', width: 80, minWidth: 70, render: (row) => row.id },
-                      { key: 'createdAtUtc', title: 'Создан', width: 170, minWidth: 150, render: (row) => formatDateTime(row.createdAtUtc) || '—' },
-                      { key: 'scheduledAtUtc', title: 'Запланирован', width: 170, minWidth: 150, render: (row) => formatDateTime(row.scheduledAtUtc) || '—' },
-                      { key: 'totalRecipients', title: 'Всего', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.totalRecipients },
-                      { key: 'sentCount', title: 'Отправлено', width: 120, minWidth: 100, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.sentCount },
-                      { key: 'failedCount', title: 'Ошибок', width: 110, minWidth: 100, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.failedCount },
-                      { key: 'processingCount', title: 'В обработке', width: 130, minWidth: 110, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.processingCount }
+                      { key: 'id', title: '#', width: 80, minWidth: 70, isPrimary: true, priority: 1, render: (row) => `Пакет #${row.id}` },
+                      { key: 'createdAtUtc', title: 'Создан', width: 170, minWidth: 150, priority: 2, render: (row) => formatDateTime(row.createdAtUtc) || '—' },
+                      { key: 'scheduledAtUtc', title: 'Запланирован', width: 170, minWidth: 150, priority: 3, render: (row) => formatDateTime(row.scheduledAtUtc) || '—' },
+                      { key: 'totalRecipients', title: 'Всего', width: 100, minWidth: 90, priority: 4, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.totalRecipients },
+                      { key: 'sentCount', title: 'Отправлено', width: 120, minWidth: 100, priority: 5, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.sentCount },
+                      { key: 'failedCount', title: 'Ошибок', width: 110, minWidth: 100, priority: 6, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.failedCount },
+                      { key: 'processingCount', title: 'В обработке', width: 130, minWidth: 110, priority: 7, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.processingCount }
                     ]}
                   />
                 </div>
@@ -528,12 +549,23 @@ export function CampaignEditPage() {
                     settingsKey={itemsTableSettingsKey}
                     emptyText="Нет сообщений"
                     columns={[
-                      { key: 'recipientEmail', title: 'Адрес', width: 240, minWidth: 200, render: (row) => row.recipientEmail || '—' },
-                      { key: 'legacyOrgName', title: 'Организация', width: 240, minWidth: 200, render: (row) => row.legacyOrgName || '—' },
-                      { key: 'status', title: 'Статус', width: 150, minWidth: 130, render: (row) => labelOf(dispatchStatusOptions, row.status) },
-                      { key: 'attemptCount', title: 'Попыток', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attemptCount },
-                      { key: 'sentAtUtc', title: 'Отправлено', width: 170, minWidth: 150, render: (row) => formatDateTime(row.sentAtUtc) || '—' },
-                      { key: 'errorMessage', title: 'Ошибка', width: 280, minWidth: 220, render: (row) => row.errorMessage || '—' }
+                      { key: 'recipientEmail', title: 'Адрес', width: 240, minWidth: 200, isPrimary: true, priority: 1, render: (row) => row.recipientEmail || '—' },
+                      { key: 'legacyOrgName', title: 'Организация', width: 240, minWidth: 200, priority: 2, render: (row) => row.legacyOrgName || '—' },
+                      {
+                        key: 'status',
+                        title: 'Статус',
+                        width: 150,
+                        minWidth: 130,
+                        priority: 3,
+                        render: (row) => (
+                          <StatusBadge tone={dispatchStatusTone(row.status)}>
+                            {labelOf(dispatchStatusOptions, row.status)}
+                          </StatusBadge>
+                        )
+                      },
+                      { key: 'attemptCount', title: 'Попыток', width: 100, minWidth: 90, priority: 4, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attemptCount },
+                      { key: 'sentAtUtc', title: 'Отправлено', width: 170, minWidth: 150, priority: 5, render: (row) => formatDateTime(row.sentAtUtc) || '—' },
+                      { key: 'errorMessage', title: 'Ошибка', width: 280, minWidth: 220, priority: 6, render: (row) => row.errorMessage || '—' }
                     ]}
                   />
                 </div>

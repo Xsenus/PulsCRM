@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getOrganizationRaions, getOrganizations } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../app/table';
 import type { OrganizationListItemDto, OrganizationRaionDto } from '../app/types';
 import { DataTable } from './DataTable';
 import { Modal } from './Modal';
 import { Pagination } from './Pagination';
 import { SearchPanel } from './SearchPanel';
 
-const DEFAULT_PAGE_SIZE = 25;
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 75, 100];
 const EMPTY_VALUE = '—';
 
 interface OrganizationPickerProps {
@@ -233,6 +232,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
                   width: 70,
                   minWidth: 70,
                   canHide: false,
+                  mobileVisible: false,
                   render: (row) => (
                     <input
                       type="checkbox"
@@ -242,11 +242,20 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
                     />
                   )
                 },
-                { key: 'name', title: 'Название', width: 280, minWidth: 220, render: (row) => row.name || EMPTY_VALUE },
-                { key: 'inn', title: 'ИНН', width: 150, minWidth: 130, render: (row) => row.inn || EMPTY_VALUE },
-                { key: 'raion', title: 'Район', width: 220, minWidth: 180, render: (row) => row.raion || EMPTY_VALUE },
-                { key: 'orgType', title: 'Тип', width: 220, minWidth: 180, render: (row) => row.orgType || EMPTY_VALUE }
+                { key: 'name', title: 'Название', width: 280, minWidth: 220, isPrimary: true, priority: 1, render: (row) => row.name || EMPTY_VALUE },
+                { key: 'inn', title: 'ИНН', width: 150, minWidth: 130, priority: 2, render: (row) => row.inn || EMPTY_VALUE },
+                { key: 'raion', title: 'Район', width: 220, minWidth: 180, priority: 3, render: (row) => row.raion || EMPTY_VALUE },
+                { key: 'orgType', title: 'Тип', width: 220, minWidth: 180, priority: 4, render: (row) => row.orgType || EMPTY_VALUE }
               ]}
+              mobileActions={(row) => (
+                <button
+                  type="button"
+                  className={`secondary-button button-inline${draftSelection[row.id] ? ' active' : ''}`}
+                  onClick={() => toggleDraftItem(row)}
+                >
+                  {draftSelection[row.id] ? 'Выбрано' : 'Выбрать'}
+                </button>
+              )}
             />
 
             <Pagination
