@@ -3208,6 +3208,47 @@ body.is-dragging-column {
   font-weight: 800;
 }
 
+.campaign-problem-list {
+  display: grid;
+  gap: 10px;
+}
+
+.campaign-problem-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff7f7;
+}
+
+.campaign-problem-item div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campaign-problem-item strong {
+  color: var(--text);
+}
+
+.campaign-problem-item span {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.campaign-dispatch-filters {
+  justify-content: flex-end;
+}
+
+.campaign-dispatch-filters .settings-tab {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+}
+
 .attachments-list {
   display: grid;
   gap: 14px;
@@ -3922,6 +3963,21 @@ body.is-dragging-column {
 
   .message-validation-item {
     flex-direction: column;
+  }
+
+  .campaign-problem-item {
+    flex-direction: column;
+  }
+
+  .campaign-dispatch-filters {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+  }
+
+  .campaign-dispatch-filters .settings-tab {
+    flex: 0 0 auto;
   }
 
   .employee-account-grid {

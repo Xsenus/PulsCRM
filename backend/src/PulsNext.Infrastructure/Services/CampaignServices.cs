@@ -592,7 +592,9 @@ public sealed class StatisticsService(MailingUnitOfWork mailingUnitOfWork) : ISt
             LastBatchScheduledAtUtc = batches.Select(x => DateTimeHelper.NullIfMin(x.ScheduledAtUtc)).FirstOrDefault(x => x is not null),
             LastBatchCompletedAtUtc = batches.Select(x => DateTimeHelper.NullIfMin(x.CompletedAtUtc)).FirstOrDefault(x => x is not null),
             RecentBatches = batches.Take(20).Select(MappingHelper.ToDispatchBatchDto).ToArray(),
-            RecentItems = items.Take(200).Select(MappingHelper.ToDispatchItemDto).ToArray()
+            RecentItems = items.Take(200).Select(MappingHelper.ToDispatchItemDto).ToArray(),
+            FailedItems = items.Where(x => x.Status == DispatchStatus.Failed).Take(200).Select(MappingHelper.ToDispatchItemDto).ToArray(),
+            DeferredItems = items.Where(x => x.Status == DispatchStatus.Deferred).Take(200).Select(MappingHelper.ToDispatchItemDto).ToArray()
         };
 
         return Task.FromResult(dto);

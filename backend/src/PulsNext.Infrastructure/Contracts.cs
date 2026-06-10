@@ -989,6 +989,8 @@ public sealed class CampaignStatisticsDto
     public DateTime? LastBatchCompletedAtUtc { get; set; }
     public IReadOnlyCollection<DispatchBatchDto> RecentBatches { get; set; } = Array.Empty<DispatchBatchDto>();
     public IReadOnlyCollection<DispatchItemDto> RecentItems { get; set; } = Array.Empty<DispatchItemDto>();
+    public IReadOnlyCollection<DispatchItemDto> FailedItems { get; set; } = Array.Empty<DispatchItemDto>();
+    public IReadOnlyCollection<DispatchItemDto> DeferredItems { get; set; } = Array.Empty<DispatchItemDto>();
 }
 
 /// <summary>

@@ -12,6 +12,7 @@ import {
   uploadFile
 } from '../app/api';
 import { createCampaignDraftSnapshot } from '../app/campaignDraft';
+import { buildProblemItems, filterDispatchItems, findLatestProblemItem, type DispatchStatusFilter } from '../app/campaignStats';
 import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaignReadiness';
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
@@ -202,6 +203,8 @@ export function CampaignEditPage() {
   const [readiness, setReadiness] = useState<CampaignReadinessDto | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [stats, setStats] = useState<CampaignStatisticsDto | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [dispatchStatusFilter, setDispatchStatusFilter] = useState<DispatchStatusFilter>('all');
   const [activeTab, setActiveTab] = useState<CampaignEditorTab>('basic');
   const [savedSnapshot, setSavedSnapshot] = useState<string>('');
 
@@ -214,6 +217,18 @@ export function CampaignEditPage() {
   const messageValidationIssues = useMemo(
     () => validateMessageContent(model.htmlBody, model.plainTextBody, attachments),
     [attachments, model.htmlBody, model.plainTextBody]
+  );
+  const filteredRecentItems = useMemo(
+    () => stats ? filterDispatchItems(stats.recentItems, dispatchStatusFilter) : [],
+    [dispatchStatusFilter, stats]
+  );
+  const latestProblemItem = useMemo(
+    () => stats ? findLatestProblemItem(stats.failedItems, stats.deferredItems) : null,
+    [stats]
+  );
+  const problemItems = useMemo(
+    () => stats ? buildProblemItems(stats.failedItems, stats.deferredItems, 8) : [],
+    [stats]
   );
 
   const load = async () => {
@@ -295,6 +310,21 @@ export function CampaignEditPage() {
       showToast(error.message || 'Не удалось сохранить кампанию', 'error', 4000);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const refreshStats = async () => {
+    if (!id) {
+      return;
+    }
+
+    setStatsLoading(true);
+    try {
+      setStats(await getCampaignStats(id));
+    } catch (error: any) {
+      showToast(error.message || 'Не удалось обновить статистику', 'error', 4000);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -381,7 +411,7 @@ export function CampaignEditPage() {
 
     await runCampaign(id, {});
     showToast('Ручной запуск поставлен в очередь', 'success');
-    setStats(await getCampaignStats(id));
+    await refreshStats();
   };
 
   return (
@@ -718,7 +748,17 @@ export function CampaignEditPage() {
           {activeTab === 'stats' ? (
           stats ? (
             <section className="panel">
-              <h3>Статистика</h3>
+              <div className="section-header-inline">
+                <div>
+                  <h3>Статистика</h3>
+                  <div className="field-hint">
+                    {latestProblemItem?.errorMessage || latestProblemItem?.smtpResponse || 'Очередь без последних критичных сообщений.'}
+                  </div>
+                </div>
+                <button type="button" className="secondary-button button-inline" disabled={statsLoading} onClick={() => void refreshStats()}>
+                  {statsLoading ? <LoadingButtonLabel label="Обновляем" /> : 'Обновить'}
+                </button>
+              </div>
 
               <StatsCards
                 items={[
@@ -730,6 +770,22 @@ export function CampaignEditPage() {
                   { label: 'Отложено', value: stats.deferred }
                 ]}
               />
+
+              {problemItems.length > 0 ? (
+                <div className="campaign-problem-list">
+                  {problemItems.map((item) => (
+                    <div key={item.id} className="campaign-problem-item">
+                      <div>
+                        <strong>{item.recipientEmail || 'Получатель не указан'}</strong>
+                        <span>{item.errorMessage || item.smtpResponse || 'Сообщение ожидает повторной обработки.'}</span>
+                      </div>
+                      <StatusBadge tone={dispatchStatusTone(item.status)}>
+                        {labelOf(dispatchStatusOptions, item.status)}
+                      </StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="split-layout">
                 <div className="panel-subsection">
@@ -752,9 +808,32 @@ export function CampaignEditPage() {
                 </div>
 
                 <div className="panel-subsection">
-                  <h4>Последние сообщения</h4>
+                  <div className="section-header-inline">
+                    <h4>Последние сообщения</h4>
+                    <div className="settings-tabs campaign-dispatch-filters" role="tablist" aria-label="Фильтр сообщений очереди">
+                      {[
+                        { id: 'all', label: 'Все' },
+                        { id: 'queued', label: 'Очередь' },
+                        { id: 'processing', label: 'В работе' },
+                        { id: 'sent', label: 'Отправлено' },
+                        { id: 'failed', label: 'Ошибки' },
+                        { id: 'deferred', label: 'Отложено' }
+                      ].map((filter) => (
+                        <button
+                          key={filter.id}
+                          type="button"
+                          className={`settings-tab${dispatchStatusFilter === filter.id ? ' active' : ''}`}
+                          role="tab"
+                          aria-selected={dispatchStatusFilter === filter.id}
+                          onClick={() => setDispatchStatusFilter(filter.id as DispatchStatusFilter)}
+                        >
+                          {filter.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <DataTable
-                    rows={stats.recentItems}
+                    rows={filteredRecentItems}
                     getRowKey={(row) => row.id}
                     settingsKey={itemsTableSettingsKey}
                     emptyText="Нет сообщений"
@@ -774,8 +853,11 @@ export function CampaignEditPage() {
                         )
                       },
                       { key: 'attemptCount', title: 'Попыток', width: 100, minWidth: 90, priority: 4, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attemptCount },
-                      { key: 'sentAtUtc', title: 'Отправлено', width: 170, minWidth: 150, priority: 5, render: (row) => formatDateTime(row.sentAtUtc) || '—' },
-                      { key: 'errorMessage', title: 'Ошибка', width: 280, minWidth: 220, priority: 6, render: (row) => row.errorMessage || '—' }
+                      { key: 'queuedAtUtc', title: 'Поставлено', width: 170, minWidth: 150, priority: 5, render: (row) => formatDateTime(row.queuedAtUtc) || '—' },
+                      { key: 'sentAtUtc', title: 'Отправлено', width: 170, minWidth: 150, priority: 6, render: (row) => formatDateTime(row.sentAtUtc) || '—' },
+                      { key: 'nextAttemptAtUtc', title: 'След. попытка', width: 170, minWidth: 150, priority: 7, render: (row) => formatDateTime(row.nextAttemptAtUtc) || '—' },
+                      { key: 'errorMessage', title: 'Ошибка', width: 280, minWidth: 220, priority: 8, render: (row) => row.errorMessage || '—' },
+                      { key: 'smtpResponse', title: 'SMTP ответ', width: 260, minWidth: 220, priority: 9, render: (row) => row.smtpResponse || row.messageId || '—' }
                     ]}
                   />
                 </div>

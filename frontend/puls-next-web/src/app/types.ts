@@ -739,6 +739,8 @@ export interface CampaignStatisticsDto {
   lastBatchCompletedAtUtc?: string;
   recentBatches: DispatchBatchDto[];
   recentItems: DispatchItemDto[];
+  failedItems: DispatchItemDto[];
+  deferredItems: DispatchItemDto[];
 }
 
 export interface CampaignStatusChangeRequest {
