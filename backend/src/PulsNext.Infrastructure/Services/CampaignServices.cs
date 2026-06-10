@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 using DevExpress.Xpo;
 using PulsNext.Domain.Legacy;
 using PulsNext.Domain.Mailing;
@@ -316,9 +317,7 @@ public sealed class CampaignService(
             ? ReadinessItem("subject", "Тема письма", "error", "Укажите тему письма.", isBlocking: true)
             : ReadinessItem("subject", "Тема письма", "ok", "Тема письма заполнена.", isBlocking: false));
 
-        items.Add(string.IsNullOrWhiteSpace(request.HtmlBody) && string.IsNullOrWhiteSpace(request.PlainTextBody)
-            ? ReadinessItem("body", "Тело письма", "error", "Заполните HTML или текстовую версию письма.", isBlocking: true)
-            : ReadinessItem("body", "Тело письма", "ok", "Есть содержимое письма.", isBlocking: false));
+        items.AddRange(CheckMessageReadiness(request));
 
         items.Add(CheckTransportProfileReadiness(request.TransportProfileId));
 
@@ -426,6 +425,56 @@ public sealed class CampaignService(
         {
             return ReadinessItem("schedule", "Расписание", "error", error.Message, isBlocking: true);
         }
+    }
+
+    private static IReadOnlyCollection<CampaignReadinessItemDto> CheckMessageReadiness(CampaignUpsertRequest request)
+    {
+        var items = new List<CampaignReadinessItemDto>();
+        var htmlBody = request.HtmlBody?.Trim() ?? string.Empty;
+        var plainTextBody = request.PlainTextBody?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(htmlBody) && string.IsNullOrWhiteSpace(plainTextBody))
+        {
+            items.Add(ReadinessItem("body", "Тело письма", "error", "Заполните HTML или текстовую версию письма.", isBlocking: true));
+            return items;
+        }
+
+        items.Add(ReadinessItem("body", "Тело письма", "ok", "Есть содержимое письма.", isBlocking: false));
+
+        if (!string.IsNullOrWhiteSpace(htmlBody) && string.IsNullOrWhiteSpace(plainTextBody))
+        {
+            items.Add(ReadinessItem("plain-text", "Текстовая версия", "warning", "Добавьте текстовую версию письма для клиентов без HTML.", isBlocking: false));
+        }
+
+        var cidReferences = Regex.Matches(htmlBody, "cid:([^\"'\\s>)]+)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+            .Select(x => x.Groups[1].Value.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.Ordinal);
+        var inlineAttachments = request.Attachments.Where(x => x.AttachmentKind == AttachmentKind.InlineImage).ToArray();
+        var inlineContentIds = inlineAttachments
+            .Select(x => x.ContentId?.Trim())
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x!)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (inlineAttachments.Any(x => string.IsNullOrWhiteSpace(x.ContentId)))
+        {
+            items.Add(ReadinessItem("inline-missing-cid", "Встроенные изображения", "error", "У встроенного изображения не заполнен Content-ID.", isBlocking: true));
+        }
+
+        var missingInlineFiles = cidReferences.Where(x => !inlineContentIds.Contains(x)).ToArray();
+        if (missingInlineFiles.Length > 0)
+        {
+            items.Add(ReadinessItem("inline-missing-file", "Встроенные изображения", "error", $"В HTML есть cid без файла: {string.Join(", ", missingInlineFiles.Select(x => $"cid:{x}"))}.", isBlocking: true));
+        }
+
+        var unusedInlineFiles = inlineContentIds.Where(x => !cidReferences.Contains(x)).ToArray();
+        if (unusedInlineFiles.Length > 0)
+        {
+            items.Add(ReadinessItem("inline-unused", "Встроенные изображения", "warning", $"Inline-файлы не найдены в HTML: {string.Join(", ", unusedInlineFiles.Select(x => $"cid:{x}"))}.", isBlocking: false));
+        }
+
+        return items;
     }
 
     private static CampaignRecipientSelection CreateRecipientSelection(CampaignUpsertRequest request)

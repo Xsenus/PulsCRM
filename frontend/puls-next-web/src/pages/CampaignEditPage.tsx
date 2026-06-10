@@ -16,6 +16,7 @@ import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaign
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
 import { campaignStatusOptions, dispatchStatusOptions, labelOf, recipientSourceOptions } from '../app/lookups';
+import { validateMessageContent } from '../app/messageValidation';
 import { DEFAULT_CAMPAIGN_TIME_ZONE } from '../app/scheduleValidation';
 import { showToast } from '../app/toast';
 import type {
@@ -210,6 +211,10 @@ export function CampaignEditPage() {
   );
   const currentSnapshot = useMemo(() => createCampaignDraftSnapshot(buildRequest), [buildRequest]);
   const hasUnsavedChanges = Boolean(savedSnapshot) && currentSnapshot !== savedSnapshot;
+  const messageValidationIssues = useMemo(
+    () => validateMessageContent(model.htmlBody, model.plainTextBody, attachments),
+    [attachments, model.htmlBody, model.plainTextBody]
+  );
 
   const load = async () => {
     setLoading(true);
@@ -651,7 +656,26 @@ export function CampaignEditPage() {
           {activeTab === 'message' ? (
           <>
           <section className="panel">
-            <h3>Шаблон письма</h3>
+            <div className="section-header-inline">
+              <div>
+                <h3>Шаблон письма</h3>
+                <div className="field-hint">HTML, текстовая версия и проверка встроенных изображений.</div>
+              </div>
+              <StatusBadge tone={messageValidationIssues.some((issue) => issue.tone === 'danger') ? 'danger' : messageValidationIssues.length > 0 ? 'warning' : 'success'}>
+                {messageValidationIssues.length === 0 ? 'Письмо заполнено' : `Проверок: ${messageValidationIssues.length}`}
+              </StatusBadge>
+            </div>
+
+            {messageValidationIssues.length > 0 ? (
+              <div className="message-validation-list">
+                {messageValidationIssues.map((issue) => (
+                  <div key={issue.key} className={`message-validation-item message-validation-item-${issue.tone}`}>
+                    <StatusBadge tone={issue.tone}>{issue.tone === 'danger' ? 'Ошибка' : 'Внимание'}</StatusBadge>
+                    <span>{issue.message}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             <div className="campaign-editor-grid">
               <div className="field">
@@ -659,6 +683,7 @@ export function CampaignEditPage() {
                 <textarea
                   className="form-textarea form-textarea-code"
                   value={model.htmlBody || ''}
+                  placeholder="<p>Здравствуйте!</p>&#10;<p>Текст письма...</p>"
                   onChange={(event) => patchModel({ htmlBody: event.target.value })}
                 />
                 <div className="field-hint">Используется как основная HTML-версия письма.</div>
@@ -680,12 +705,13 @@ export function CampaignEditPage() {
               <textarea
                 className="form-textarea"
                 value={model.plainTextBody || ''}
+                placeholder="Здравствуйте! Текстовая версия письма..."
                 onChange={(event) => patchModel({ plainTextBody: event.target.value })}
               />
             </div>
           </section>
 
-          <AttachmentManager attachments={attachments} onChange={setAttachments} onUploadFiles={uploadFiles} />
+          <AttachmentManager attachments={attachments} htmlBody={model.htmlBody} onChange={setAttachments} onUploadFiles={uploadFiles} />
           </>
           ) : null}
 
