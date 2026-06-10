@@ -3063,6 +3063,21 @@ body.is-dragging-column {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.campaign-editor-navigation {
+  gap: 16px;
+}
+
+.campaign-editor-tabs {
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+.campaign-editor-tabs .settings-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .campaign-readiness-panel {
   gap: 16px;
 }
@@ -3792,6 +3807,17 @@ body.is-dragging-column {
 
   .campaign-editor-grid {
     grid-template-columns: 1fr;
+  }
+
+  .campaign-editor-tabs {
+    flex-wrap: nowrap;
+    margin-inline: -4px;
+    padding-inline: 4px;
+  }
+
+  .campaign-editor-tabs .settings-tab {
+    min-height: 40px;
+    padding: 0 12px;
   }
 
   .campaign-readiness-item {

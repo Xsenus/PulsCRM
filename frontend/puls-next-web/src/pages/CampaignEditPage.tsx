@@ -11,6 +11,7 @@ import {
   saveCampaign,
   uploadFile
 } from '../app/api';
+import { createCampaignDraftSnapshot } from '../app/campaignDraft';
 import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaignReadiness';
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
@@ -34,6 +35,17 @@ import { PageHeader } from '../components/PageHeader';
 import { ScheduleBuilder } from '../components/ScheduleBuilder';
 import { StatsCards } from '../components/StatsCards';
 import { StatusBadge, type StatusBadgeTone } from '../components/StatusBadge';
+
+type CampaignEditorTab = 'basic' | 'recipients' | 'message' | 'schedule' | 'review' | 'stats';
+
+const campaignEditorTabs: Array<{ id: CampaignEditorTab; label: string }> = [
+  { id: 'basic', label: 'Основное' },
+  { id: 'recipients', label: 'Получатели' },
+  { id: 'message', label: 'Письмо' },
+  { id: 'schedule', label: 'Расписание' },
+  { id: 'review', label: 'Проверка и запуск' },
+  { id: 'stats', label: 'Статистика' }
+];
 
 function createDefaultModel(): CampaignUpsertRequest {
   return {
@@ -146,6 +158,24 @@ function mapCampaignToState(campaign: CampaignDetailsDto): {
   };
 }
 
+function buildCampaignRequest(
+  model: CampaignUpsertRequest,
+  selectedOrganizations: OrganizationListItemDto[],
+  attachments: EditableAttachment[]
+): CampaignUpsertRequest {
+  return {
+    ...model,
+    targetOrganizationIds: selectedOrganizations.map((item) => item.id),
+    attachments: attachments.map((item, index) => ({
+      storedFileId: item.storedFile.id,
+      attachmentKind: item.attachmentKind,
+      displayName: item.displayName || item.storedFile.originalFileName,
+      contentId: item.contentId,
+      sortOrder: index
+    }))
+  };
+}
+
 export function CampaignEditPage() {
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
@@ -168,18 +198,15 @@ export function CampaignEditPage() {
   const [readiness, setReadiness] = useState<CampaignReadinessDto | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [stats, setStats] = useState<CampaignStatisticsDto | null>(null);
+  const [activeTab, setActiveTab] = useState<CampaignEditorTab>('basic');
+  const [savedSnapshot, setSavedSnapshot] = useState<string>('');
 
-  const buildRequest = useMemo<CampaignUpsertRequest>(() => ({
-    ...model,
-    targetOrganizationIds: selectedOrganizations.map((item) => item.id),
-    attachments: attachments.map((item, index) => ({
-      storedFileId: item.storedFile.id,
-      attachmentKind: item.attachmentKind,
-      displayName: item.displayName || item.storedFile.originalFileName,
-      contentId: item.contentId,
-      sortOrder: index
-    }))
-  }), [attachments, model, selectedOrganizations]);
+  const buildRequest = useMemo<CampaignUpsertRequest>(
+    () => buildCampaignRequest(model, selectedOrganizations, attachments),
+    [attachments, model, selectedOrganizations]
+  );
+  const currentSnapshot = useMemo(() => createCampaignDraftSnapshot(buildRequest), [buildRequest]);
+  const hasUnsavedChanges = Boolean(savedSnapshot) && currentSnapshot !== savedSnapshot;
 
   const load = async () => {
     setLoading(true);
@@ -197,11 +224,14 @@ export function CampaignEditPage() {
         setModel(mapped.model);
         setAttachments(mapped.attachments);
         setSelectedOrganizations(mapped.selectedOrganizations);
+        setSavedSnapshot(createCampaignDraftSnapshot(buildCampaignRequest(mapped.model, mapped.selectedOrganizations, mapped.attachments)));
         setStats(await getCampaignStats(id));
       } else {
-        setModel(createDefaultModel());
+        const defaultModel = createDefaultModel();
+        setModel(defaultModel);
         setAttachments([]);
         setSelectedOrganizations([]);
+        setSavedSnapshot(createCampaignDraftSnapshot(buildCampaignRequest(defaultModel, [], [])));
         setStats(null);
       }
     } finally {
@@ -217,6 +247,20 @@ export function CampaignEditPage() {
     setReadiness(null);
   }, [buildRequest]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const patchModel = (patch: Partial<CampaignUpsertRequest>) => {
     setModel((current) => ({ ...current, ...patch }));
   };
@@ -229,6 +273,7 @@ export function CampaignEditPage() {
       setModel(mapped.model);
       setAttachments(mapped.attachments);
       setSelectedOrganizations((current) => current.length > 0 ? current : mapped.selectedOrganizations);
+      setSavedSnapshot(createCampaignDraftSnapshot(buildCampaignRequest(mapped.model, mapped.selectedOrganizations, mapped.attachments)));
       showToast('Кампания сохранена', id ? 'update' : 'create');
 
       if (!id) {
@@ -265,6 +310,7 @@ export function CampaignEditPage() {
 
   const previewRecipientsClick = async () => {
     try {
+      setActiveTab('recipients');
       setRecipientPreviewData(await previewRecipients(buildRequest));
     } catch (error: any) {
       showToast(error.message || 'Не удалось получить список получателей', 'error', 4000);
@@ -294,6 +340,7 @@ export function CampaignEditPage() {
   const checkReadinessClick = async () => {
     setReadinessLoading(true);
     try {
+      setActiveTab('review');
       const result = await checkCampaignReadiness(buildRequest);
       setReadiness(result);
       showToast(result.isReady ? 'Кампания готова к запуску' : 'Кампания не готова к запуску', result.isReady ? 'success' : 'warning');
@@ -308,6 +355,7 @@ export function CampaignEditPage() {
 
   const runNow = async () => {
     if (!id) {
+      setActiveTab('basic');
       showToast('Сначала сохраните кампанию', 'warning');
       return;
     }
@@ -357,6 +405,36 @@ export function CampaignEditPage() {
 
       {!loading ? (
         <>
+          <section className="panel campaign-editor-navigation">
+            <div className="section-header-inline">
+              <div>
+                <h3>Настройка кампании</h3>
+                <div className="field-hint">
+                  {hasUnsavedChanges ? 'Есть несохраненные изменения.' : 'Все изменения сохранены.'}
+                </div>
+              </div>
+              <StatusBadge tone={hasUnsavedChanges ? 'warning' : 'success'}>
+                {hasUnsavedChanges ? 'Черновик изменен' : 'Сохранено'}
+              </StatusBadge>
+            </div>
+
+            <div className="settings-tabs campaign-editor-tabs" role="tablist" aria-label="Разделы кампании">
+              {campaignEditorTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`settings-tab${activeTab === tab.id ? ' active' : ''}`}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {activeTab === 'review' ? (
           <section className="panel campaign-readiness-panel">
             <div className="section-header-inline">
               <div>
@@ -397,7 +475,9 @@ export function CampaignEditPage() {
               <div className="empty-state">Запустите проверку, чтобы увидеть, можно ли ставить кампанию в очередь.</div>
             )}
           </section>
+          ) : null}
 
+          {activeTab === 'basic' ? (
           <section className="panel">
             <h3>Основное</h3>
             <div className="form-grid campaign-main-grid">
@@ -458,7 +538,9 @@ export function CampaignEditPage() {
               </div>
             </div>
           </section>
+          ) : null}
 
+          {activeTab === 'schedule' ? (
           <ScheduleBuilder
             value={{
               scheduleKind: model.scheduleKind,
@@ -474,7 +556,10 @@ export function CampaignEditPage() {
             preview={schedulePreviewItems}
             onPreview={previewScheduleClick}
           />
+          ) : null}
 
+          {activeTab === 'recipients' ? (
+          <>
           <OrganizationPicker value={selectedOrganizations} onChange={setSelectedOrganizations} />
 
           <section className="panel">
@@ -517,6 +602,40 @@ export function CampaignEditPage() {
             </div>
           </section>
 
+          {recipientPreviewData ? (
+            <section className="panel">
+              <h3>Предпросмотр получателей</h3>
+
+              <StatsCards
+                items={[
+                  { label: 'Организаций', value: recipientPreviewData.organizationCount },
+                  { label: 'Адресов', value: recipientPreviewData.recipientCount },
+                  { label: 'Показано', value: recipientPreviewData.items.length, hint: 'Предел отображения в интерфейсе' }
+                ]}
+              />
+
+              <DataTable
+                rows={recipientPreviewData.items}
+                getRowKey={(row) => `${row.legacyOrgId}-${row.email}`}
+                settingsKey={previewTableSettingsKey}
+                columns={[
+                  { key: 'email', title: 'Адрес', width: 240, minWidth: 200, isPrimary: true, priority: 1, render: (row) => row.email },
+                  { key: 'legacyOrgName', title: 'Организация', width: 260, minWidth: 220, priority: 2, render: (row) => row.legacyOrgName || '—' },
+                  { key: 'displayName', title: 'Имя', width: 220, minWidth: 180, priority: 3, render: (row) => row.displayName || '—' },
+                  { key: 'sourceKind', title: 'Источник', width: 170, minWidth: 150, priority: 4, render: (row) => labelOf(recipientSourceOptions, row.sourceKind) }
+                ]}
+              />
+            </section>
+          ) : (
+            <section className="panel">
+              <div className="empty-state">Нажмите “Проверить получателей”, чтобы увидеть найденные email.</div>
+            </section>
+          )}
+          </>
+          ) : null}
+
+          {activeTab === 'message' ? (
+          <>
           <section className="panel">
             <h3>Шаблон письма</h3>
 
@@ -553,34 +672,11 @@ export function CampaignEditPage() {
           </section>
 
           <AttachmentManager attachments={attachments} onChange={setAttachments} onUploadFiles={uploadFiles} />
-
-          {recipientPreviewData ? (
-            <section className="panel">
-              <h3>Предпросмотр получателей</h3>
-
-              <StatsCards
-                items={[
-                  { label: 'Организаций', value: recipientPreviewData.organizationCount },
-                  { label: 'Адресов', value: recipientPreviewData.recipientCount },
-                  { label: 'Показано', value: recipientPreviewData.items.length, hint: 'Предел отображения в интерфейсе' }
-                ]}
-              />
-
-              <DataTable
-                rows={recipientPreviewData.items}
-                getRowKey={(row) => `${row.legacyOrgId}-${row.email}`}
-                settingsKey={previewTableSettingsKey}
-                columns={[
-                  { key: 'email', title: 'Адрес', width: 240, minWidth: 200, isPrimary: true, priority: 1, render: (row) => row.email },
-                  { key: 'legacyOrgName', title: 'Организация', width: 260, minWidth: 220, priority: 2, render: (row) => row.legacyOrgName || '—' },
-                  { key: 'displayName', title: 'Имя', width: 220, minWidth: 180, priority: 3, render: (row) => row.displayName || '—' },
-                  { key: 'sourceKind', title: 'Источник', width: 170, minWidth: 150, priority: 4, render: (row) => labelOf(recipientSourceOptions, row.sourceKind) }
-                ]}
-              />
-            </section>
+          </>
           ) : null}
 
-          {stats ? (
+          {activeTab === 'stats' ? (
+          stats ? (
             <section className="panel">
               <h3>Статистика</h3>
 
@@ -645,6 +741,11 @@ export function CampaignEditPage() {
                 </div>
               </div>
             </section>
+          ) : (
+            <section className="panel">
+              <div className="empty-state">Статистика появится после сохранения и запуска кампании.</div>
+            </section>
+          )
           ) : null}
         </>
       ) : null}
