@@ -403,8 +403,8 @@ public sealed class EmployeeService(
 
 public interface IOrganizationService
 {
-    Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, IReadOnlyCollection<int> raionIds, int skip, int take, CancellationToken cancellationToken);
-    Task<IReadOnlyCollection<OrganizationRaionDto>> GetRaionsAsync(string? search, CancellationToken cancellationToken);
+    Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, IReadOnlyCollection<int> raionIds, bool hasEmail, int skip, int take, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<OrganizationRaionDto>> GetRaionsAsync(string? search, bool hasEmail, CancellationToken cancellationToken);
     Task<OrganizationEditorLookupsDto> GetLookupsAsync(CancellationToken cancellationToken);
     Task<OrganizationDetailsDto?> GetByIdAsync(int id, CancellationToken cancellationToken);
     Task<OrganizationDetailsDto> UpsertAsync(int? id, OrganizationUpsertRequest request, CancellationToken cancellationToken);
@@ -416,16 +416,22 @@ public sealed class OrganizationService(
     MailingUnitOfWork mailingUnitOfWork,
     ICurrentUserAccessor currentUserAccessor) : IOrganizationService
 {
-    public Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, IReadOnlyCollection<int> raionIds, int skip, int take, CancellationToken cancellationToken)
+    public Task<PagedResult<OrganizationListItemDto>> GetAsync(string? search, IReadOnlyCollection<int> raionIds, bool hasEmail, int skip, int take, CancellationToken cancellationToken)
     {
         var term = TextHelper.NullIfWhiteSpace(search);
         var query = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, NormalizeRaionIds(raionIds));
 
-        var totalCount = query.Count();
-        var itemsPage = query.OrderBy(x => x.Name).ThenBy(x => x.Oid)
-            .Skip(Math.Max(0, skip))
-            .Take(NormalizeTake(take))
-            .ToList();
+        List<LegacyOrg> itemsPage;
+        int totalCount;
+
+        if (hasEmail)
+        {
+            itemsPage = GetEmailFilteredOrganizationsPage(query, skip, take, out totalCount);
+        }
+        else
+        {
+            itemsPage = GetOrganizationsPage(query, skip, take, out totalCount);
+        }
 
         var openWorkCounts = BuildOpenWorkCounts(itemsPage.Select(x => x.Oid).ToArray());
         var items = itemsPage
@@ -435,10 +441,12 @@ public sealed class OrganizationService(
         return Task.FromResult(new PagedResult<OrganizationListItemDto>(items, totalCount));
     }
 
-    public Task<IReadOnlyCollection<OrganizationRaionDto>> GetRaionsAsync(string? search, CancellationToken cancellationToken)
+    public Task<IReadOnlyCollection<OrganizationRaionDto>> GetRaionsAsync(string? search, bool hasEmail, CancellationToken cancellationToken)
     {
         var term = TextHelper.NullIfWhiteSpace(search);
-        var items = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, [])
+        var query = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, []);
+        var source = hasEmail ? query.ToList().Where(OrganizationHasEmail) : query.AsEnumerable();
+        var items = source
             .GroupBy(x => new
             {
                 Id = x.Raion == null ? null : (int?)x.Raion.Oid,
@@ -455,6 +463,34 @@ public sealed class OrganizationService(
 
         return Task.FromResult<IReadOnlyCollection<OrganizationRaionDto>>(items);
     }
+
+    private static List<LegacyOrg> GetOrganizationsPage(IQueryable<LegacyOrg> query, int skip, int take, out int totalCount)
+    {
+        totalCount = query.Count();
+        return query.OrderBy(x => x.Name).ThenBy(x => x.Oid)
+            .Skip(Math.Max(0, skip))
+            .Take(NormalizeTake(take))
+            .ToList();
+    }
+
+    private static List<LegacyOrg> GetEmailFilteredOrganizationsPage(IQueryable<LegacyOrg> query, int skip, int take, out int totalCount)
+    {
+        var filtered = query
+            .ToList()
+            .Where(OrganizationHasEmail)
+            .OrderBy(x => x.Name)
+            .ThenBy(x => x.Oid)
+            .ToList();
+
+        totalCount = filtered.Count;
+        return filtered
+            .Skip(Math.Max(0, skip))
+            .Take(NormalizeTake(take))
+            .ToList();
+    }
+
+    private static bool OrganizationHasEmail(LegacyOrg organization)
+        => EmailHelper.CollectOrganizationEmails(organization).Count > 0;
 
     public Task<OrganizationEditorLookupsDto> GetLookupsAsync(CancellationToken cancellationToken)
     {

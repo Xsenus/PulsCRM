@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildRaionSelectionSummary, getRaionSelectionId, WITHOUT_RAION_ID } from './organizationFilters';
+import {
+  buildOrganizationPickerFilterSummary,
+  buildRaionSelectionSummary,
+  getRaionSelectionId,
+  WITHOUT_RAION_ID
+} from './organizationFilters';
 
 const raions = [
   { id: 1, name: 'Центральный' },
@@ -25,5 +30,11 @@ describe('organization raion filter helpers', () => {
 
   it('falls back to selected count when raions are not loaded yet', () => {
     expect(buildRaionSelectionSummary([], [1, 2, WITHOUT_RAION_ID])).toBe('Выбрано районов: 3');
+  });
+
+  it('formats organization picker summary with email-only mode', () => {
+    expect(buildOrganizationPickerFilterSummary(12, true)).toBe('Найдено с email: 12');
+    expect(buildOrganizationPickerFilterSummary(12, false)).toBe('Найдено: 12');
+    expect(buildOrganizationPickerFilterSummary(-1, true)).toBe('Найдено с email: 0');
   });
 });

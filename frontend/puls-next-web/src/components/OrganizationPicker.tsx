@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getOrganizationRaions, getOrganizations } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { buildOrganizationPickerFilterSummary } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../app/table';
 import type { OrganizationListItemDto, OrganizationRaionDto } from '../app/types';
 import { DataTable } from './DataTable';
@@ -24,6 +25,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
   const [search, setSearch] = useState('');
   const [appliedSearch, setAppliedSearch] = useState('');
   const [selectedRaionId, setSelectedRaionId] = useState<number | undefined>();
+  const [onlyWithEmail, setOnlyWithEmail] = useState(true);
   const [rows, setRows] = useState<OrganizationListItemDto[]>([]);
   const [raions, setRaions] = useState<OrganizationRaionDto[]>([]);
   const [page, setPage] = useState(1);
@@ -52,10 +54,11 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
         getOrganizations({
           search: appliedSearch,
           raionIds: selectedRaionId ? [selectedRaionId] : [],
+          hasEmail: onlyWithEmail,
           skip: (page - 1) * pageSize,
           take: pageSize
         }),
-        getOrganizationRaions(appliedSearch)
+        getOrganizationRaions(appliedSearch, onlyWithEmail)
       ]);
 
       setRows(organizationsResponse.items);
@@ -72,7 +75,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
     }
 
     void loadData();
-  }, [appliedSearch, modalOpen, page, pageSize, selectedRaionId]);
+  }, [appliedSearch, modalOpen, onlyWithEmail, page, pageSize, selectedRaionId]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -94,6 +97,11 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
   const clearSearch = () => {
     setSearch('');
     applySearchValue('');
+  };
+
+  const toggleOnlyWithEmail = (checked: boolean) => {
+    setOnlyWithEmail(checked);
+    setPage(1);
   };
 
   const toggleDraftItem = (item: OrganizationListItemDto) => {
@@ -218,6 +226,19 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
               refreshSuccessMessage="Справочник организаций обновлен."
             />
 
+            <div className="picker-filter-strip">
+              <label className="checkbox-option">
+                <input
+                  type="checkbox"
+                  checked={onlyWithEmail}
+                  onChange={(event) => toggleOnlyWithEmail(event.target.checked)}
+                />
+                <span>Только организации с email</span>
+              </label>
+
+              <span className="field-hint">{buildOrganizationPickerFilterSummary(totalCount, onlyWithEmail)}</span>
+            </div>
+
             <DataTable
               rows={rows}
               getRowKey={(row) => row.id}
@@ -245,7 +266,8 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
                 { key: 'name', title: 'Название', width: 280, minWidth: 220, isPrimary: true, priority: 1, render: (row) => row.name || EMPTY_VALUE },
                 { key: 'inn', title: 'ИНН', width: 150, minWidth: 130, priority: 2, render: (row) => row.inn || EMPTY_VALUE },
                 { key: 'raion', title: 'Район', width: 220, minWidth: 180, priority: 3, render: (row) => row.raion || EMPTY_VALUE },
-                { key: 'orgType', title: 'Тип', width: 220, minWidth: 180, priority: 4, render: (row) => row.orgType || EMPTY_VALUE }
+                { key: 'orgType', title: 'Тип', width: 220, minWidth: 180, priority: 4, render: (row) => row.orgType || EMPTY_VALUE },
+                { key: 'emailCount', title: 'Email', width: 100, minWidth: 90, priority: 5, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.emailCount }
               ]}
               mobileActions={(row) => (
                 <button

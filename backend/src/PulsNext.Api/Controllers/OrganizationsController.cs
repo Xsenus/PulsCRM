@@ -23,6 +23,7 @@ public sealed class OrganizationsController(IOrganizationService organizationSer
         var result = await organizationService.GetAsync(
             query.Search,
             ParseRaionIds(query),
+            query.HasEmail == true,
             query.Skip ?? 0,
             query.Take ?? 100,
             cancellationToken);
@@ -37,7 +38,7 @@ public sealed class OrganizationsController(IOrganizationService organizationSer
     [ProducesResponseType(typeof(IReadOnlyCollection<OrganizationRaionDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyCollection<OrganizationRaionDto>>> GetRaions([FromQuery] OrganizationRaionsQuery query, CancellationToken cancellationToken)
     {
-        return Ok(await organizationService.GetRaionsAsync(query.Search, cancellationToken));
+        return Ok(await organizationService.GetRaionsAsync(query.Search, query.HasEmail == true, cancellationToken));
     }
 
     /// <summary>

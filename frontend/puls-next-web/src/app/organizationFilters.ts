@@ -33,3 +33,10 @@ export function buildRaionSelectionSummary(
 
   return `${names.slice(0, safeLimit).join(', ')} и еще ${names.length - safeLimit}`;
 }
+
+export function buildOrganizationPickerFilterSummary(totalCount: number, onlyWithEmail: boolean) {
+  const normalizedTotal = Math.max(0, Math.trunc(totalCount));
+  return onlyWithEmail
+    ? `Найдено с email: ${normalizedTotal}`
+    : `Найдено: ${normalizedTotal}`;
+}

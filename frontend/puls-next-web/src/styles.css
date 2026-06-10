@@ -3098,6 +3098,14 @@ body.is-dragging-column {
   color: var(--text-muted);
 }
 
+.picker-filter-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+
 .picker-list {
   display: grid;
   gap: 10px;
@@ -3788,6 +3796,11 @@ body.is-dragging-column {
   .pagination-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .picker-filter-strip {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .table-shell {

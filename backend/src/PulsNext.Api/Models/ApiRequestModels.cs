@@ -94,6 +94,11 @@ public sealed class OrganizationListQuery
     public string? RaionIds { get; set; }
 
     /// <summary>
+    /// Возвращать только организации, у которых найден хотя бы один email.
+    /// </summary>
+    public bool? HasEmail { get; set; }
+
+    /// <summary>
     /// Количество записей, которое нужно пропустить.
     /// </summary>
     public int? Skip { get; set; }
@@ -113,6 +118,11 @@ public sealed class OrganizationRaionsQuery
     /// Поиск по названию района.
     /// </summary>
     public string? Search { get; set; }
+
+    /// <summary>
+    /// Считать районы только по организациям, у которых найден хотя бы один email.
+    /// </summary>
+    public bool? HasEmail { get; set; }
 }
 
 /// <summary>

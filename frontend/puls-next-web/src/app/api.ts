@@ -185,6 +185,7 @@ export async function deleteEmployee(id: number): Promise<void> {
 export async function getOrganizations(params: {
   search?: string;
   raionIds?: number[];
+  hasEmail?: boolean;
   skip?: number;
   take?: number;
 } = {}): Promise<PagedResult<OrganizationListItemDto>> {
@@ -193,6 +194,7 @@ export async function getOrganizations(params: {
       params: {
         search: params.search ?? '',
         raionIds: params.raionIds && params.raionIds.length > 0 ? params.raionIds.join(',') : undefined,
+        hasEmail: params.hasEmail || undefined,
         skip: params.skip ?? 0,
         take: params.take ?? 50
       }
@@ -203,10 +205,10 @@ export async function getOrganizations(params: {
   }
 }
 
-export async function getOrganizationRaions(search = ''): Promise<OrganizationRaionDto[]> {
+export async function getOrganizationRaions(search = '', hasEmail = false): Promise<OrganizationRaionDto[]> {
   try {
     const { data } = await api.get<OrganizationRaionDto[]>('/api/organizations/raions', {
-      params: { search }
+      params: { search, hasEmail: hasEmail || undefined }
     });
     return data;
   } catch (error) {
