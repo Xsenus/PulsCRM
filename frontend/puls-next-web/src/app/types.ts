@@ -726,6 +726,21 @@ export interface DispatchItemDto {
   messageId?: string;
 }
 
+export interface DispatchItemListQuery {
+  status?: number;
+  campaignId?: number;
+  batchId?: number;
+  search?: string;
+  skip?: number;
+  take?: number;
+}
+
+export interface DispatchBatchListQuery {
+  campaignId?: number;
+  skip?: number;
+  take?: number;
+}
+
 export interface CampaignStatisticsDto {
   campaignId: number;
   totalItems: number;

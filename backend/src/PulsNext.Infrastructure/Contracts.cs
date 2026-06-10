@@ -973,6 +973,29 @@ public sealed class DispatchItemDto
 }
 
 /// <summary>
+/// Параметры фильтрации диагностического списка элементов очереди.
+/// </summary>
+public sealed class DispatchItemListQuery
+{
+    public DispatchStatus? Status { get; set; }
+    public int? CampaignId { get; set; }
+    public int? BatchId { get; set; }
+    public string? Search { get; set; }
+    public int? Skip { get; set; }
+    public int? Take { get; set; }
+}
+
+/// <summary>
+/// Параметры фильтрации диагностического списка партий отправки.
+/// </summary>
+public sealed class DispatchBatchListQuery
+{
+    public int? CampaignId { get; set; }
+    public int? Skip { get; set; }
+    public int? Take { get; set; }
+}
+
+/// <summary>
 /// Статистика отправки по кампании с последними партиями и элементами очереди.
 /// </summary>
 public sealed class CampaignStatisticsDto

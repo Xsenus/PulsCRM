@@ -28,6 +28,9 @@ import type {
   WorkItemDto,
   CampaignListItemDto,
   DispatchBatchDto,
+  DispatchBatchListQuery,
+  DispatchItemDto,
+  DispatchItemListQuery,
   CurrentUserDto,
   LoginUserOptionDto
 } from './types';
@@ -407,6 +410,46 @@ export async function runCampaign(id: number, request: CampaignManualRunRequest)
 export async function getCampaignStats(id: number): Promise<CampaignStatisticsDto> {
   try {
     const { data } = await api.get<CampaignStatisticsDto>(`/api/campaigns/${id}/stats`);
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function getDispatchItems(query: DispatchItemListQuery = {}): Promise<PagedResult<DispatchItemDto>> {
+  try {
+    const { data } = await api.get<PagedResult<DispatchItemDto>>('/api/dispatch/items', {
+      params: query
+    });
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function getDispatchBatches(query: DispatchBatchListQuery = {}): Promise<PagedResult<DispatchBatchDto>> {
+  try {
+    const { data } = await api.get<PagedResult<DispatchBatchDto>>('/api/dispatch/batches', {
+      params: query
+    });
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function retryDispatchItem(id: number): Promise<DispatchItemDto> {
+  try {
+    const { data } = await api.post<DispatchItemDto>(`/api/dispatch/items/${id}/retry`);
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function cancelDispatchItem(id: number): Promise<DispatchItemDto> {
+  try {
+    const { data } = await api.post<DispatchItemDto>(`/api/dispatch/items/${id}/cancel`);
     return data;
   } catch (error) {
     unwrapError(error);

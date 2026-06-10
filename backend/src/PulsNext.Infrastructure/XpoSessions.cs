@@ -79,6 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICampaignService, CampaignService>();
         services.AddScoped<IRecipientResolver, RecipientResolver>();
         services.AddScoped<IDispatchService, DispatchService>();
+        services.AddScoped<IDispatchDiagnosticsService, DispatchDiagnosticsService>();
         services.AddScoped<IStatisticsService, StatisticsService>();
         services.AddScoped<IMailComposer, MailComposer>();
         services.AddScoped<IMailSender, MailSender>();
