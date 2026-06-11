@@ -1,0 +1,66 @@
+import React from 'react';
+import { formatDateTime } from '../../app/format';
+import type { OrganizationEventDto } from '../../app/types';
+
+const EMPTY_VALUE = '-';
+
+function formatMoney(value?: number | null) {
+  return new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value ?? 0);
+}
+
+export function OrganizationEventTimeline({
+  events
+}: {
+  events: OrganizationEventDto[];
+}) {
+  if (!events.length) {
+    return <div className="empty-state organization-record-inline-empty">История событий по организации пока пуста.</div>;
+  }
+
+  return (
+    <div className="organization-timeline">
+      {events.map((event, index) => {
+        const title = event.name || event.taskName || event.categoryName || event.categoryFullName || `Событие #${event.id}`;
+        const eventDate = formatDateTime(event.eventDateUtc) || formatDateTime(event.createdAtUtc) || EMPTY_VALUE;
+        const meta = [
+          event.userName,
+          event.categoryName || event.categoryFullName,
+          event.isInProcess ? 'в процессе' : undefined,
+          event.isCompleted === undefined ? undefined : event.isCompleted ? 'завершено' : 'не завершено'
+        ].filter(Boolean);
+        const period = [formatDateTime(event.dateFromUtc), formatDateTime(event.dateToUtc)].filter(Boolean).join(' — ');
+        return (
+          <article key={event.id} className="organization-timeline-item">
+            <div className="organization-timeline-marker" aria-hidden="true">
+              <span className="organization-timeline-dot" />
+              {index < events.length - 1 ? <span className="organization-timeline-stem" /> : null}
+            </div>
+            <div className="organization-timeline-card">
+              <div className="organization-timeline-head">
+                <div className="organization-timeline-head-main">
+                  <strong>{title}</strong>
+                  <span className="field-hint">{eventDate}</span>
+                </div>
+                <div className="organization-card-chip-row">
+                  {event.licenseKey ? <span className="organization-chip">{event.licenseKey}</span> : null}
+                  {event.licenseAmount !== undefined && event.licenseAmount !== null ? (
+                    <span className="organization-chip">{formatMoney(event.licenseAmount)}</span>
+                  ) : null}
+                </div>
+              </div>
+              {meta.length ? <div className="organization-timeline-meta">{meta.join(' • ')}</div> : null}
+              {period ? <div className="field-hint">Период: {period}</div> : null}
+              {event.comment?.trim() ? <div className="organization-timeline-comment">{event.comment.trim()}</div> : null}
+              {event.licenseAmountComment?.trim() ? (
+                <div className="field-hint">Комментарий суммы: {event.licenseAmountComment.trim()}</div>
+              ) : null}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}

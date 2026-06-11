@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-11 - лента событий карточки организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- `EventTimeline` вынесен из workspace в компонент `components/organization/OrganizationEventTimeline.tsx`;
+- форматирование дат, сумм, статусов и пустого состояния ленты событий теперь находится рядом с компонентом истории;
+- `OrganizationRecordWorkspace` больше не содержит JSX ленты событий и использует новый компонент в режиме `Лента`;
+- добавлены компонентные тесты на заполненную ленту, fallback-заголовки, метаданные, период, лицензионные чипы и empty state.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - sidebar карточки организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
