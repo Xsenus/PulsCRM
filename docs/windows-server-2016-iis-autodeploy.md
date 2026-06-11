@@ -93,8 +93,8 @@ Copy-Item backend\src\PulsNext.Api\appsettings.Production.example.json C:\PulsCR
 ```json
 {
   "ConnectionStrings": {
-    "LegacyDb": "XpoProvider=MSSqlServer;data source=SQLSERVER01;integrated security=SSPI;initial catalog=DXPulsBase;TrustServerCertificate=true",
-    "MailingDb": "XpoProvider=MSSqlServer;data source=SQLSERVER01;integrated security=SSPI;initial catalog=DXPulsBase;TrustServerCertificate=true"
+    "LegacyDb": "XpoProvider=MSSqlServer;data source=SQLSERVER01;integrated security=SSPI;initial catalog=DXPulsBase;Encrypt=false;TrustServerCertificate=true",
+    "MailingDb": "XpoProvider=MSSqlServer;data source=SQLSERVER01;integrated security=SSPI;initial catalog=DXPulsBase;Encrypt=false;TrustServerCertificate=true"
   },
   "Jwt": {
     "Issuer": "PulsNext.Api",
@@ -368,6 +368,29 @@ MailTransportProfile
   -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
   -RequireTransportProfile
 ```
+
+Для полной проверки отправки рассылки можно запустить E2E smoke. Он поднимает локальный SMTP-catcher, создает временный SMTP-профиль, временную кампанию с ручным получателем, запускает отправку, проверяет полученное письмо и после успеха удаляет временные записи:
+
+```powershell
+.\scripts\smoke-mailing-e2e.ps1 `
+  -ApiBaseUrl http://localhost:8081 `
+  -Login "Администратор" `
+  -Password "ВАШ_ПАРОЛЬ" `
+  -RecipientEmail pulscrm-smoke@example.test `
+  -SmtpPort 2525
+```
+
+Для локальной разработки можно использовать dev JWT без ввода пароля:
+
+```powershell
+.\scripts\smoke-mailing-e2e.ps1 `
+  -ApiBaseUrl http://127.0.0.1:5152 `
+  -UseDevelopmentToken `
+  -RecipientEmail pulscrm-smoke@example.test `
+  -SmtpPort 2525
+```
+
+Если проверка упала и нужно оставить временную кампанию/SMTP-профиль для разбора в UI или SQL, добавьте `-KeepArtifacts`.
 
 ## 12. Типовые проблемы
 
