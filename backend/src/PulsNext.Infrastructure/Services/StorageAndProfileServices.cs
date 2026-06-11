@@ -188,7 +188,8 @@ public sealed class TransportProfileService(
         var entity = mailingUnitOfWork.GetObjectByKey<MailTransportProfile>(id)
             ?? throw new KeyNotFoundException($"SMTP-профиль #{id} не найден.");
 
-        var usedByCampaign = new XPQuery<MailCampaign>(mailingUnitOfWork).ToList().Any(x => x.TransportProfile?.Oid == id);
+        var usedByCampaign = new XPQuery<MailCampaign>(mailingUnitOfWork)
+            .Any(x => x.TransportProfile != null && x.TransportProfile.Oid == id);
         if (usedByCampaign)
         {
             throw new ValidationException("Нельзя удалить SMTP-профиль, который используется в кампаниях.");

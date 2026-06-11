@@ -579,13 +579,15 @@ public sealed class OrganizationService(
             throw new ValidationException("Нельзя удалить организацию, у которой есть связанные контакты.");
         }
 
-        var hasJobs = new XPQuery<LegacyJob>(legacyUnitOfWork).ToList().Any(x => x.Org != null && x.Org.Oid == id);
+        var hasJobs = new XPQuery<LegacyJob>(legacyUnitOfWork)
+            .Any(x => x.Org != null && x.Org.Oid == id);
         if (hasJobs)
         {
             throw new ValidationException("Нельзя удалить организацию, у которой есть связанные задачи.");
         }
 
-        var usedByCampaigns = new XPQuery<MailCampaignTargetOrganization>(mailingUnitOfWork).ToList().Any(x => x.LegacyOrgId == id);
+        var usedByCampaigns = new XPQuery<MailCampaignTargetOrganization>(mailingUnitOfWork)
+            .Any(x => x.LegacyOrgId == id);
         if (usedByCampaigns)
         {
             throw new ValidationException("Нельзя удалить организацию, которая используется в кампаниях.");
