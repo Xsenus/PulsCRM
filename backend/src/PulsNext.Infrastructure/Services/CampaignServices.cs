@@ -598,8 +598,14 @@ public sealed class StatisticsService(MailingUnitOfWork mailingUnitOfWork) : ISt
 {
     public Task<CampaignStatisticsDto> GetCampaignStatisticsAsync(int campaignId, CancellationToken cancellationToken)
     {
-        var batches = new XPQuery<MailDispatchBatch>(mailingUnitOfWork).ToList().Where(x => x.Campaign?.Oid == campaignId).OrderByDescending(x => x.CreatedAtUtc).ToList();
-        var items = new XPQuery<MailDispatchItem>(mailingUnitOfWork).ToList().Where(x => x.Campaign?.Oid == campaignId).OrderByDescending(x => x.QueuedAtUtc).ToList();
+        var batches = ApplyBatchCampaignFilter(new XPQuery<MailDispatchBatch>(mailingUnitOfWork), campaignId)
+            .ToList()
+            .OrderByDescending(x => x.CreatedAtUtc)
+            .ToList();
+        var items = ApplyItemCampaignFilter(new XPQuery<MailDispatchItem>(mailingUnitOfWork), campaignId)
+            .ToList()
+            .OrderByDescending(x => x.QueuedAtUtc)
+            .ToList();
 
         var dto = new CampaignStatisticsDto
         {
@@ -620,5 +626,15 @@ public sealed class StatisticsService(MailingUnitOfWork mailingUnitOfWork) : ISt
         };
 
         return Task.FromResult(dto);
+    }
+
+    private static IQueryable<MailDispatchBatch> ApplyBatchCampaignFilter(IQueryable<MailDispatchBatch> query, int campaignId)
+    {
+        return query.Where(x => x.Campaign != null && x.Campaign.Oid == campaignId);
+    }
+
+    private static IQueryable<MailDispatchItem> ApplyItemCampaignFilter(IQueryable<MailDispatchItem> query, int campaignId)
+    {
+        return query.Where(x => x.Campaign != null && x.Campaign.Oid == campaignId);
     }
 }
