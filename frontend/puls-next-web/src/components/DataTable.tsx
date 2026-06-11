@@ -20,6 +20,8 @@ export interface DataTableColumn<T> {
   priority?: number;
 }
 
+export type DataTableDisplayMode = 'auto' | 'table' | 'cards';
+
 interface DataTableProps<T> {
   rows: T[];
   columns: Array<DataTableColumn<T>>;
@@ -36,6 +38,7 @@ interface DataTableProps<T> {
   className?: string;
   tableClassName?: string;
   mobileActions?: (row: T) => React.ReactNode;
+  displayMode?: DataTableDisplayMode;
 }
 
 interface ResolvedDataTableColumn<T> extends Omit<DataTableColumn<T>, 'minWidth'> {
@@ -199,7 +202,8 @@ export function DataTable<T>({
   title,
   className,
   tableClassName,
-  mobileActions
+  mobileActions,
+  displayMode = 'auto'
 }: DataTableProps<T>) {
   const resolvedColumns = useMemo(() => {
     const seen = new Set<string>();
@@ -240,7 +244,9 @@ export function DataTable<T>({
     [resolvedColumns]
   );
 
-  const configurable = !!settingsKey && resolvedColumns.length > 0;
+  const tableEnabled = displayMode !== 'cards';
+  const cardsEnabled = displayMode !== 'table';
+  const configurable = tableEnabled && !!settingsKey && resolvedColumns.length > 0;
   const [settings, setSettings] = useState<DataTableSettings>(() => loadSettings(settingsKey, resolvedColumns));
   const [draftSettings, setDraftSettings] = useState<DataTableSettings>(() => loadSettings(settingsKey, resolvedColumns));
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -281,6 +287,11 @@ export function DataTable<T>({
     [resolvedColumnMap, settings.columns]
   );
 
+  const cardColumns = useMemo(
+    () => resolvedColumns.filter((column) => column.initialVisible),
+    [resolvedColumns]
+  );
+
   const tableMinWidth = useMemo(
     () => Math.max(
       configurable ? 920 : 640,
@@ -295,27 +306,32 @@ export function DataTable<T>({
   );
 
   const primaryCardColumn = useMemo(
-    () => visibleColumns.find((column) => column.isPrimary)
-      ?? visibleColumns.find((column) => !column.isActions)
-      ?? visibleColumns[0],
-    [visibleColumns]
+    () => cardColumns.find((column) => column.isPrimary)
+      ?? cardColumns.find((column) => !column.isActions)
+      ?? cardColumns[0],
+    [cardColumns]
   );
 
   const actionCardColumns = useMemo(
-    () => visibleColumns.filter((column) => column.isActions),
-    [visibleColumns]
+    () => cardColumns.filter((column) => column.isActions),
+    [cardColumns]
   );
 
   const detailCardColumns = useMemo(
-    () => visibleColumns
+    () => cardColumns
       .filter((column) => column.key !== primaryCardColumn?.key)
       .filter((column) => !column.isActions)
       .filter((column) => column.mobileVisible !== false)
       .sort((left, right) => (left.priority ?? 100) - (right.priority ?? 100)),
-    [primaryCardColumn?.key, visibleColumns]
+    [cardColumns, primaryCardColumn?.key]
   );
 
-  const shellClassName = ['table-shell', configurable ? 'data-table-shell-configurable' : null, className]
+  const shellClassName = [
+    'table-shell',
+    `data-table-mode-${displayMode}`,
+    configurable ? 'data-table-shell-configurable' : null,
+    className
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -511,6 +527,7 @@ export function DataTable<T>({
       ) : null}
 
       <div className={shellClassName}>
+        {tableEnabled ? (
         <table className={resolvedTableClassName} style={{ minWidth: `${tableMinWidth}px` }}>
           {visibleColumns.length > 0 ? (
             <colgroup>
@@ -589,6 +606,7 @@ export function DataTable<T>({
             })}
           </tbody>
         </table>
+        ) : null}
 
         {loading ? (
           <div className="table-loading-overlay">
@@ -596,6 +614,7 @@ export function DataTable<T>({
           </div>
         ) : null}
 
+        {cardsEnabled ? (
         <div className="data-table-card-list">
           {rows.length === 0 ? (
             <div className="data-table-card-empty">{loading ? null : emptyText}</div>
@@ -655,6 +674,7 @@ export function DataTable<T>({
             );
           })}
         </div>
+        ) : null}
       </div>
 
       <Modal

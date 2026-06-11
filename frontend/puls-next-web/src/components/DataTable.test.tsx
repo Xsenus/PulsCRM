@@ -3,7 +3,7 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act, Simulate } from 'react-dom/test-utils';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { DataTable, type DataTableColumn } from './DataTable';
+import { DataTable, type DataTableColumn, type DataTableDisplayMode } from './DataTable';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -34,14 +34,18 @@ const columns: Array<DataTableColumn<TestRow>> = [
     title: 'Email',
     render: (row) => row.email,
     width: 220,
-    visible: true
+    visible: true,
+    mobileLabel: 'Mail',
+    priority: 1
   },
   {
     key: 'id',
     title: 'ID',
     render: (row) => row.id,
     width: 100,
-    visible: false
+    visible: false,
+    mobileLabel: 'Identifier',
+    priority: 2
   }
 ];
 
@@ -57,13 +61,14 @@ function render(ui: React.ReactElement) {
   return container;
 }
 
-function renderTable(settingsKey = 'datatable-test-settings') {
+function renderTable(settingsKey = 'datatable-test-settings', displayMode?: DataTableDisplayMode) {
   return render(
     <DataTable
       rows={rows}
       columns={columns}
       getRowKey={(row) => row.id}
       settingsKey={settingsKey}
+      displayMode={displayMode}
       title={<h3>Users</h3>}
     />
   );
@@ -127,8 +132,36 @@ describe('DataTable settings', () => {
     const view = renderTable();
 
     expect(getHeaderTexts(view)).toEqual(['Name']);
-    expect(view.textContent).toContain('Alpha');
-    expect(view.textContent).not.toContain('alpha@example.com');
+    expect(view.querySelector('.data-table')?.textContent).toContain('Alpha');
+    expect(view.querySelector('.data-table')?.textContent).not.toContain('alpha@example.com');
+  });
+
+  it('renders cards mode independently from stored table visibility', () => {
+    window.localStorage.setItem('datatable-test-settings', JSON.stringify({
+      columns: [
+        { key: 'name', visible: true, width: 180 },
+        { key: 'email', visible: false, width: 220 },
+        { key: 'id', visible: true, width: 100 }
+      ]
+    }));
+
+    const view = renderTable('datatable-test-settings', 'cards');
+
+    expect(view.querySelector('.data-table')).toBeNull();
+    expect(view.querySelector('.data-table-action-button')).toBeNull();
+    expect(view.querySelector('.data-table-card-title')?.textContent).toBe('Alpha');
+    expect(view.querySelector('.data-table-card-fields')?.textContent).toContain('Mail');
+    expect(view.querySelector('.data-table-card-fields')?.textContent).toContain('alpha@example.com');
+    expect(view.querySelector('.data-table-card-fields')?.textContent).not.toContain('Identifier');
+  });
+
+  it('keeps table mode forced on small-screen CSS contracts', () => {
+    const view = renderTable('datatable-test-settings', 'table');
+
+    expect(view.querySelector('.table-shell')?.className).toContain('data-table-mode-table');
+    expect(view.querySelector('.data-table')).not.toBeNull();
+    expect(view.querySelector('.data-table-card-list')).toBeNull();
+    expect(view.querySelector('.data-table-action-button')).not.toBeNull();
   });
 
   it('saves draft visibility only after confirmation', () => {

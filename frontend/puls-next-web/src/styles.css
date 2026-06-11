@@ -1064,6 +1064,25 @@ select {
   display: none;
 }
 
+.data-table-mode-cards {
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+}
+
+.data-table-mode-cards .data-table {
+  display: none;
+}
+
+.data-table-mode-cards .data-table-card-list {
+  display: grid;
+  gap: 10px;
+}
+
+.data-table-mode-table .data-table-card-list {
+  display: none;
+}
+
 .data-table-card-empty {
   padding: 18px;
   display: grid;
@@ -4156,17 +4175,17 @@ body.is-dragging-column {
     flex-direction: column;
   }
 
-  .table-shell {
+  .data-table-mode-auto {
     overflow: visible;
     border: 0;
     border-radius: 0;
   }
 
-  .data-table {
+  .data-table-mode-auto .data-table {
     display: none;
   }
 
-  .data-table-card-list {
+  .data-table-mode-auto .data-table-card-list {
     display: grid;
     gap: 10px;
   }
