@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActionIcon } from './ActionIcon';
 
 interface PaginationProps {
   page: number;
@@ -45,48 +46,6 @@ function buildVisiblePages(page: number, totalPages: number): Array<number | 'el
   }
 
   return result;
-}
-
-function NavigationIcon({ kind }: { kind: 'first' | 'previous' | 'next' | 'last' }) {
-  if (kind === 'first') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M7 5v14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        <path d="M17 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  if (kind === 'previous') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  if (kind === 'next') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M17 5v14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M7 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 export function Pagination({
@@ -172,7 +131,7 @@ export function Pagination({
               <span className="pagination-size-spacer" aria-hidden="true" />
               <span className="pagination-size-value">{pageSize}</span>
               <span className="pagination-size-icon">
-                <ChevronIcon />
+                <ActionIcon kind="chevronDown" />
               </span>
             </button>
 
@@ -213,7 +172,7 @@ export function Pagination({
           disabled={safePage <= 1}
           onClick={() => onPageChange(1)}
         >
-          <NavigationIcon kind="first" />
+          <ActionIcon kind="first" />
         </button>
         <button
           type="button"
@@ -223,7 +182,7 @@ export function Pagination({
           disabled={safePage <= 1}
           onClick={() => onPageChange(safePage - 1)}
         >
-          <NavigationIcon kind="previous" />
+          <ActionIcon kind="previous" />
         </button>
 
         <div className="pagination-pages" aria-label="Страницы">
@@ -254,7 +213,7 @@ export function Pagination({
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(safePage + 1)}
         >
-          <NavigationIcon kind="next" />
+          <ActionIcon kind="next" />
         </button>
         <button
           type="button"
@@ -264,7 +223,7 @@ export function Pagination({
           disabled={safePage >= totalPages}
           onClick={() => onPageChange(totalPages)}
         >
-          <NavigationIcon kind="last" />
+          <ActionIcon kind="last" />
         </button>
       </div>
     </div>

@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getDashboard } from '../app/api';
 import type { DashboardDto } from '../app/types';
+import { ActionIcon } from '../components/ActionIcon';
 import { AppLoader } from '../components/AppLoader';
 import { PageHeader } from '../components/PageHeader';
-import { SearchActionIcon } from '../components/SearchPanel';
 import { StatsCards } from '../components/StatsCards';
 
 export function DashboardPage() {
@@ -36,7 +36,7 @@ export function DashboardPage() {
             aria-label="Обновить"
             title="Обновить"
           >
-            <SearchActionIcon kind="refresh" />
+            <ActionIcon kind="refresh" />
           </button>
         )}
       />

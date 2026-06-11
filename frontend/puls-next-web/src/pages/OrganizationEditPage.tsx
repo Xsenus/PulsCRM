@@ -8,6 +8,7 @@ import type {
   OrganizationEditorLookupsDto,
   OrganizationUpsertRequest
 } from '../app/types';
+import { ActionIcon } from '../components/ActionIcon';
 import { AppLoader, LoadingButtonLabel } from '../components/AppLoader';
 import { OrganizationRecordWorkspace } from '../components/OrganizationRecordWorkspace';
 import { PageHeader } from '../components/PageHeader';
@@ -45,21 +46,6 @@ const ORGANIZATION_REQUEST_KEYS: Array<keyof OrganizationUpsertRequest> = [
   'siteContactName',
   'siteContactPhone'
 ];
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M19 12H7M12 7L7 12L12 17"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function createEmptyOrganizationRequest(): OrganizationUpsertRequest {
   return {
@@ -226,7 +212,7 @@ export function OrganizationEditPage() {
             aria-label="К списку организаций"
             title="К списку организаций"
           >
-            <BackIcon />
+            <ActionIcon kind="back" />
           </button>
         )}
         actions={(

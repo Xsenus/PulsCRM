@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { showToast } from '../app/toast';
-
-type SearchActionKind = 'clear' | 'refresh' | 'search';
+import { ActionIcon } from './ActionIcon';
 
 interface SearchPanelProps {
   value: string;
@@ -20,32 +19,6 @@ interface SearchPanelProps {
 
 function toErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
-}
-
-export function SearchActionIcon({ kind }: { kind: SearchActionKind }) {
-  if (kind === 'clear') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    );
-  }
-
-  if (kind === 'refresh') {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M19 7v5h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M18.4 12a6.4 6.4 0 10-1.88 4.53L19 14.8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <circle cx="11" cy="11" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M16 16l4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
 }
 
 export function SearchPanel({
@@ -168,7 +141,7 @@ export function SearchPanel({
             title="Найти"
           >
             <span className="search-action-icon">
-              <SearchActionIcon kind="search" />
+              <ActionIcon kind="search" />
             </span>
           </button>
 
@@ -180,7 +153,7 @@ export function SearchPanel({
             title="Сбросить"
           >
             <span className="search-action-icon">
-              <SearchActionIcon kind="clear" />
+              <ActionIcon kind="clear" />
             </span>
           </button>
 
@@ -194,7 +167,7 @@ export function SearchPanel({
               title={refreshing ? 'Обновляем...' : 'Обновить'}
             >
               <span className="search-action-icon">
-                <SearchActionIcon kind="refresh" />
+                <ActionIcon kind="refresh" />
               </span>
             </button>
           ) : null}

@@ -13,12 +13,13 @@ import type {
   OrganizationListItemDto,
   OrganizationRaionDto
 } from '../app/types';
+import { ActionIcon } from '../components/ActionIcon';
 import { Modal } from '../components/Modal';
 import { OrganizationsTable } from '../components/OrganizationsTable';
 import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
 import { RowActionsMenu } from '../components/RowActionsMenu';
-import { SearchActionIcon, SearchPanel } from '../components/SearchPanel';
+import { SearchPanel } from '../components/SearchPanel';
 
 const DEFAULT_SIDEBAR_WIDTH = 360;
 const MIN_SIDEBAR_WIDTH = 320;
@@ -310,7 +311,7 @@ export function OrganizationsPage() {
               aria-label="Очистить фильтры"
               title="Очистить фильтры"
             >
-              <SearchActionIcon kind="clear" />
+              <ActionIcon kind="clear" />
             </button>
           </div>
 

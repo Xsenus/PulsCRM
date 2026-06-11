@@ -4,25 +4,11 @@ import { getEmployee, getEmployeeLookups, saveEmployee } from '../app/api';
 import { useAuth } from '../app/AuthContext';
 import { showToast } from '../app/toast';
 import type { EmployeeDetailsDto, EmployeeEditorLookupsDto, EmployeeUpsertRequest } from '../app/types';
+import { ActionIcon } from '../components/ActionIcon';
 import { AppLoader, LoadingButtonLabel } from '../components/AppLoader';
 import { EmployeeEditorForm } from '../components/EmployeeEditorForm';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M19 12H7M12 7L7 12L12 17"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 function normalizeDateInput(value?: string) {
   return value ? value.slice(0, 10) : undefined;
@@ -250,7 +236,7 @@ export function EmployeeEditPage() {
             aria-label="К списку сотрудников"
             title="К списку сотрудников"
           >
-            <BackIcon />
+            <ActionIcon kind="back" />
           </button>
         )}
         actions={(
