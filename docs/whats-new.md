@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-11 - status bar карточки организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- верхняя status bar карточки организации вынесена в `components/organization/OrganizationStatusBar.tsx`;
+- бейджи видимости, признака менеджера, района, типа, статуса, флага и состояния сохранения теперь изолированы от основного workspace;
+- `OrganizationRecordWorkspace` передает в status bar только готовые значения и больше не содержит JSX этого блока;
+- добавлены компонентные тесты на полный набор бейджей, скрытие необязательных бейджей и dirty-состояние формы.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - summary сопровождения организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:

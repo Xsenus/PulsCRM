@@ -17,6 +17,7 @@ import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
+import { OrganizationStatusBar } from './organization/OrganizationStatusBar';
 import { OrganizationSupportSummary, type OrganizationSupportSummaryItem } from './organization/OrganizationSupportSummary';
 import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
 import { RelationPreviewCard, type PreviewCardItem } from './organization/RelationPreviewCard';
@@ -763,21 +764,15 @@ export function OrganizationRecordWorkspace({
 
   return (
     <div className="organization-record-shell">
-      <section className="panel organization-record-status-bar">
-        <div className="organization-card-chip-row">
-          <span className={`organization-chip${draft.visible ? ' accent' : ''}`}>
-            {draft.visible ? 'Видима' : 'Скрыта'}
-          </span>
-          {draft.isManager ? <span className="organization-chip accent">Для менеджера</span> : null}
-          {resolvedRaionName ? <span className="organization-chip">{resolvedRaionName}</span> : null}
-          {resolvedOrgTypeName ? <span className="organization-chip">{resolvedOrgTypeName}</span> : null}
-          {details?.statusName ? <span className="organization-chip">{details.statusName}</span> : null}
-          {details?.flagName ? <span className="organization-chip">{details.flagName}</span> : null}
-        </div>
-        <span className={`organization-status-pill organization-status-pill--${isDirty ? 'warn' : 'ok'}`}>
-          {isDirty ? 'Черновик изменен' : 'Все изменения сохранены'}
-        </span>
-      </section>
+      <OrganizationStatusBar
+        visible={draft.visible}
+        isManager={draft.isManager}
+        isDirty={isDirty}
+        raionName={resolvedRaionName}
+        orgTypeName={resolvedOrgTypeName}
+        statusName={details?.statusName}
+        flagName={details?.flagName}
+      />
 
       <OrganizationViewTabs activeTab={viewTab} onChange={setViewTab} />
 
