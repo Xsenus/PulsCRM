@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-11 - sidebar карточки организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- блок `organization-record-sidebar` вынесен в отдельный компонент `components/organization/OrganizationSidebar.tsx`;
+- паспорт организации, статусы, финансовые метрики, быстрые переходы, почтовые адреса, задачи и контекст карточки теперь изолированы от координатора вкладок;
+- `OrganizationRecordWorkspace` передает в sidebar только данные, email-чипы и обработчики переходов к связанным данным/истории;
+- добавлены компонентные тесты sidebar на паспортные поля, нормализацию ссылок `tel`/`https`, email-чипы, быстрые действия и пустые состояния.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - preview-карточка связей организации
 
 Начат инкремент roadmap 3.3 по разделению большого `OrganizationRecordWorkspace`:
