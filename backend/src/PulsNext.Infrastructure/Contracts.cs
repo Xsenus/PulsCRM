@@ -1080,6 +1080,11 @@ public sealed class StorageDiagnosticsDto
     public StoragePathDiagnosticsDto Uploads { get; set; } = new();
 
     /// <summary>
+    /// Data Protection secret round-trip diagnostics.
+    /// </summary>
+    public StorageSecretDiagnosticsDto Secrets { get; set; } = new();
+
+    /// <summary>
     /// Operational notes for administrators.
     /// </summary>
     public IReadOnlyCollection<string> Notes { get; set; } = Array.Empty<string>();
@@ -1114,6 +1119,22 @@ public sealed class StoragePathDiagnosticsDto
     /// Whether probe write, read and delete operations succeeded.
     /// </summary>
     public bool CanWrite { get; set; }
+
+    /// <summary>
+    /// Short technical diagnostics message.
+    /// </summary>
+    public string Message { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Diagnostics result for Data Protection-backed secret encryption.
+/// </summary>
+public sealed class StorageSecretDiagnosticsDto
+{
+    /// <summary>
+    /// Whether protect/unprotect round-trip succeeded.
+    /// </summary>
+    public bool CanProtectAndUnprotect { get; set; }
 
     /// <summary>
     /// Short technical diagnostics message.

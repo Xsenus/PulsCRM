@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-11 - проверка Data Protection для SMTP-секретов
+
+Закрыт следующий инкремент roadmap 5.5 по Data Protection и секретам:
+
+- `GET /api/diagnostics/storage` теперь возвращает блок `Secrets` с результатом protect/unprotect round-trip через текущий Data Protection provider;
+- общий статус диагностики становится `error`, если каталог ключей/загрузок доступен, но Data Protection не может корректно зашифровать и расшифровать probe-секрет;
+- добавлен backend unit-тест, который защищает SMTP-пароль одним provider, пересоздает provider на той же папке ключей и проверяет расшифровку после условного restart/deploy.
+
+Проверки этого этапа включают backend-тесты, frontend-тесты, Playwright smoke-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - recovery очереди без полного чтения dispatch items
 
 Продолжена работа над roadmap 5.4 и оптимизацией очереди рассылок:

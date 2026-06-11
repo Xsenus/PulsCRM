@@ -1,4 +1,5 @@
 using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using PulsNext.Infrastructure;
@@ -58,14 +59,45 @@ public sealed class StorageDiagnosticsServiceTests
                     RootPath = "storage",
                     KeysPath = "keys",
                     UploadsPath = "uploads"
-                }));
+                }),
+                new PassthroughSecretProtector());
 
             var result = await service.CheckAsync(CancellationToken.None);
 
             Assert.Equal("ok", result.Status);
             Assert.True(result.Keys.CanWrite);
             Assert.True(result.Uploads.CanWrite);
+            Assert.True(result.Secrets.CanProtectAndUnprotect);
             Assert.Contains("Data Protection keys must survive deploy and app pool restart.", result.Notes);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void CheckSecretProtection_ConfirmsDataProtectionKeyRingSurvivesProviderRestart()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "pulscrm-dp-tests", Guid.NewGuid().ToString("N"));
+        var keysDirectory = new DirectoryInfo(Path.Combine(tempRoot, "keys"));
+
+        try
+        {
+            keysDirectory.Create();
+            var firstProtector = new DataProtectionSecretProtector(DataProtectionProvider.Create(keysDirectory));
+            var protectedPassword = firstProtector.Protect("smtp-password");
+
+            var secondProtector = new DataProtectionSecretProtector(DataProtectionProvider.Create(keysDirectory));
+            var unprotectedPassword = secondProtector.Unprotect(protectedPassword);
+            var diagnostics = StorageDiagnosticsService.CheckSecretProtection(secondProtector);
+
+            Assert.NotEqual("smtp-password", protectedPassword);
+            Assert.Equal("smtp-password", unprotectedPassword);
+            Assert.True(diagnostics.CanProtectAndUnprotect);
         }
         finally
         {
@@ -82,5 +114,12 @@ public sealed class StorageDiagnosticsServiceTests
         public string ApplicationName { get; set; } = "PulsNext.Infrastructure.Tests";
         public string ContentRootPath { get; set; } = string.Empty;
         public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
+    private sealed class PassthroughSecretProtector : ISecretProtector
+    {
+        public string Protect(string value) => $"protected:{value}";
+
+        public string Unprotect(string? protectedValue) => protectedValue?.Replace("protected:", string.Empty, StringComparison.Ordinal) ?? string.Empty;
     }
 }

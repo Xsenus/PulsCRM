@@ -107,6 +107,7 @@ Frontend использует эти маршруты на странице `/di
 
 - `Keys` — каталог ключей Data Protection из настроек `Storage:RootPath` + `Storage:KeysPath`;
 - `Uploads` — каталог пользовательских файлов из настроек `Storage:RootPath` + `Storage:UploadsPath`;
+- `Secrets` — проверка protect/unprotect round-trip через текущий Data Protection provider, чтобы подтвердить пригодность key-ring для SMTP-паролей;
 - для каждого каталога API пытается создать директорию, записать временный probe-файл, прочитать его и удалить.
 
-Маршрут требует Bearer JWT и не добавлен в публичный `/health`, потому что возвращает абсолютные пути на сервере. Если `Keys.CanWrite=false`, нужно проверить права учетной записи IIS application pool или службы runner на каталог `C:\PulsCRMData\keys`. Потеря или недоступность ключей Data Protection может сделать уже сохраненные SMTP-пароли нечитаемыми.
+Маршрут требует Bearer JWT и не добавлен в публичный `/health`, потому что возвращает абсолютные пути на сервере. Если `Keys.CanWrite=false` или `Secrets.CanProtectAndUnprotect=false`, нужно проверить права учетной записи IIS application pool или службы runner на каталог `C:\PulsCRMData\keys`. Потеря или недоступность ключей Data Protection может сделать уже сохраненные SMTP-пароли нечитаемыми.

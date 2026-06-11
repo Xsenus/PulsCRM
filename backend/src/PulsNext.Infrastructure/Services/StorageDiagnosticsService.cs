@@ -18,7 +18,8 @@ public static class StoragePathHelper
 
 public sealed class StorageDiagnosticsService(
     IHostEnvironment hostEnvironment,
-    IOptions<StorageOptions> storageOptions) : IStorageDiagnosticsService
+    IOptions<StorageOptions> storageOptions,
+    ISecretProtector secretProtector) : IStorageDiagnosticsService
 {
     public async Task<StorageDiagnosticsDto> CheckAsync(CancellationToken cancellationToken)
     {
@@ -28,13 +29,15 @@ public sealed class StorageDiagnosticsService(
 
         var keys = await CheckPathAsync("DataProtectionKeys", keysPath, required: true, cancellationToken);
         var uploads = await CheckPathAsync("Uploads", uploadsPath, required: true, cancellationToken);
+        var secrets = CheckSecretProtection(secretProtector);
 
         return new StorageDiagnosticsDto
         {
-            Status = keys.CanWrite && uploads.CanWrite ? "ok" : "error",
+            Status = keys.CanWrite && uploads.CanWrite && secrets.CanProtectAndUnprotect ? "ok" : "error",
             CheckedAtUtc = DateTime.UtcNow,
             Keys = keys,
             Uploads = uploads,
+            Secrets = secrets,
             Notes = [
                 "Data Protection keys must survive deploy and app pool restart.",
                 "If keys are lost or unreadable, saved SMTP passwords may become impossible to decrypt."
@@ -81,5 +84,33 @@ public sealed class StorageDiagnosticsService(
         }
 
         return result;
+    }
+
+    public static StorageSecretDiagnosticsDto CheckSecretProtection(ISecretProtector secretProtector)
+    {
+        try
+        {
+            var probeValue = $"pulscrm-secret-probe-{Guid.NewGuid():N}";
+            var protectedValue = secretProtector.Protect(probeValue);
+            var unprotectedValue = secretProtector.Unprotect(protectedValue);
+            var success = string.Equals(probeValue, unprotectedValue, StringComparison.Ordinal)
+                && !string.Equals(protectedValue, probeValue, StringComparison.Ordinal);
+
+            return new StorageSecretDiagnosticsDto
+            {
+                CanProtectAndUnprotect = success,
+                Message = success
+                    ? "Data Protection secret protect/unprotect round-trip succeeded."
+                    : "Data Protection secret round-trip returned an unexpected value."
+            };
+        }
+        catch (Exception ex)
+        {
+            return new StorageSecretDiagnosticsDto
+            {
+                CanProtectAndUnprotect = false,
+                Message = ex.Message
+            };
+        }
     }
 }
