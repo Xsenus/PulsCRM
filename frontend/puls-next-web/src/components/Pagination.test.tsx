@@ -85,4 +85,26 @@ describe('Pagination', () => {
     expect(onPageSizeChange).toHaveBeenCalledWith(50);
     expect(view.querySelector('.pagination-size-menu')).toBeNull();
   });
+
+  it('renders compact navigation without page number buttons', () => {
+    const onPageChange = vi.fn();
+    const view = render(
+      <Pagination
+        page={3}
+        pageSize={25}
+        totalCount={125}
+        onPageChange={onPageChange}
+      />
+    );
+
+    const compactActions = view.querySelector('.pagination-actions-compact')!;
+    expect(compactActions.querySelector('.pagination-page-button')).toBeNull();
+    expect(compactActions.querySelector('.pagination-compact-page')?.textContent).toBe('3 из 5');
+
+    click(compactActions.querySelector('button[aria-label="Назад"]')!);
+    click(compactActions.querySelector('button[aria-label="Вперед"]')!);
+
+    expect(onPageChange).toHaveBeenNthCalledWith(1, 2);
+    expect(onPageChange).toHaveBeenNthCalledWith(2, 4);
+  });
 });

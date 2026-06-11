@@ -163,7 +163,7 @@ export function Pagination({
         ) : null}
       </div>
 
-      <div className="pagination-actions">
+      <div className="pagination-actions pagination-actions-desktop">
         <button
           type="button"
           className="secondary-button button-inline icon-button pagination-nav-button"
@@ -224,6 +224,34 @@ export function Pagination({
           onClick={() => onPageChange(totalPages)}
         >
           <ActionIcon kind="last" />
+        </button>
+      </div>
+
+      <div className="pagination-actions pagination-actions-compact" aria-label="Компактная навигация по страницам">
+        <button
+          type="button"
+          className="secondary-button button-inline pagination-compact-button"
+          aria-label="Назад"
+          disabled={safePage <= 1}
+          onClick={() => onPageChange(safePage - 1)}
+        >
+          <ActionIcon kind="previous" />
+          <span>Назад</span>
+        </button>
+
+        <div className="pagination-compact-page" aria-live="polite">
+          {safePage} из {totalPages}
+        </div>
+
+        <button
+          type="button"
+          className="secondary-button button-inline pagination-compact-button"
+          aria-label="Вперед"
+          disabled={safePage >= totalPages}
+          onClick={() => onPageChange(safePage + 1)}
+        >
+          <span>Вперед</span>
+          <ActionIcon kind="next" />
         </button>
       </div>
     </div>
