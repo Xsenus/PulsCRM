@@ -1,5 +1,18 @@
 # Что нового
 
+## 2026-06-11 - ручной smoke-чеклист после deploy
+
+Добавлен `docs/manual-smoke-test.md` - единый ручной checklist для проверки PulsCRM после локального запуска, IIS deploy или rollback:
+
+- зафиксированы фактические URL frontend/API, SQL Server, БД, commit и итог проверки;
+- описаны шаги для healthcheck, логина, dashboard, сотрудников, организаций, SMTP-профилей, кампаний, очереди рассылок и адаптивности;
+- добавлены команды для `smoke-iis.ps1`, `check-mailing-db.ps1` и `smoke-mailing-e2e.ps1`;
+- отдельный блок проверяет desktop/tablet/mobile ширины и типовые проблемы верстки: горизонтальный скролл, наезд текста, меню действий и пагинацию;
+- Playwright smoke больше не переиспользует случайный локальный сервер на тестовом порту и запускает собственный Vite с `--strictPort`;
+- `docs/README.md` дополнен ссылкой на новый checklist.
+
+Проверки этого этапа включают backend-тесты, frontend-тесты, Playwright smoke-тесты, production-сборку, parser-проверку PowerShell-скриптов, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальный E2E smoke против API и SQL-БД.
+
 ## 2026-06-11 - E2E smoke реальной отправки рассылки
 
 Добавлен проверяемый сценарий ручной end-to-end приемки рассылок:
