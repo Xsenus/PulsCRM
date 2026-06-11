@@ -254,13 +254,14 @@ public sealed class DispatchService(
     {
         var now = DateTime.UtcNow;
         var queueBatchSize = Math.Max(1, dispatchOptions.Value.QueueBatchSize);
+        var sqlMinDateUtc = new DateTime(1753, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         var dueItems = new XPQuery<MailDispatchItem>(mailingUnitOfWork)
-            .ToList()
-            .Where(x => x.Status is DispatchStatus.Queued or DispatchStatus.Deferred)
-            .Where(x => DateTimeHelper.NullIfMin(x.NextAttemptAtUtc) is DateTime nextAttempt && nextAttempt <= now)
-            .Where(x => DateTimeHelper.NullIfMin(x.ChannelQueuedAtUtc) is null)
+            .Where(x => x.Status == DispatchStatus.Queued || x.Status == DispatchStatus.Deferred)
+            .Where(x => x.NextAttemptAtUtc > sqlMinDateUtc && x.NextAttemptAtUtc <= now)
             .OrderBy(x => x.NextAttemptAtUtc)
+            .ToList()
+            .Where(x => DateTimeHelper.NullIfMin(x.ChannelQueuedAtUtc) is null)
             .Take(queueBatchSize)
             .ToList();
 
@@ -361,9 +362,19 @@ public sealed class DispatchService(
         var recovered = 0;
         var processingTimeoutMinutes = dispatchOptions.Value.ProcessingTimeoutMinutes;
         var queueReservationTimeoutMinutes = dispatchOptions.Value.QueueReservationTimeoutMinutes;
-        var items = new XPQuery<MailDispatchItem>(mailingUnitOfWork).ToList();
+        var processingTimeoutAtUtc = now - TimeSpan.FromMinutes(Math.Max(1, processingTimeoutMinutes));
+        var queueReservationTimeoutAtUtc = now - TimeSpan.FromMinutes(Math.Max(1, queueReservationTimeoutMinutes));
+        var sqlMinDateUtc = new DateTime(1753, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var processingItems = new XPQuery<MailDispatchItem>(mailingUnitOfWork)
+            .Where(x => x.Status == DispatchStatus.Processing)
+            .Where(x => x.StartedAtUtc > sqlMinDateUtc && x.StartedAtUtc <= processingTimeoutAtUtc)
+            .ToList();
+        var reservedItems = new XPQuery<MailDispatchItem>(mailingUnitOfWork)
+            .Where(x => x.Status == DispatchStatus.Queued || x.Status == DispatchStatus.Deferred)
+            .Where(x => x.ChannelQueuedAtUtc > sqlMinDateUtc && x.ChannelQueuedAtUtc <= queueReservationTimeoutAtUtc)
+            .ToList();
 
-        foreach (var item in items.Where(x => x.Status == DispatchStatus.Processing && DispatchRecoveryPolicy.ShouldRecoverProcessing(now, x.StartedAtUtc, processingTimeoutMinutes)))
+        foreach (var item in processingItems)
         {
             item.Status = DispatchStatus.Deferred;
             item.NextAttemptAtUtc = now.AddMinutes(Math.Max(1, dispatchOptions.Value.RetryBaseDelayMinutes));
@@ -373,8 +384,7 @@ public sealed class DispatchService(
             RefreshBatchCounters(item.Batch?.Oid);
         }
 
-        foreach (var item in items.Where(x => x.Status is DispatchStatus.Queued or DispatchStatus.Deferred)
-                     .Where(x => DispatchRecoveryPolicy.ShouldReleaseQueueReservation(now, x.ChannelQueuedAtUtc, queueReservationTimeoutMinutes)))
+        foreach (var item in reservedItems)
         {
             item.ChannelQueuedAtUtc = DateTime.MinValue;
             recovered++;

@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-11 - recovery очереди без полного чтения dispatch items
+
+Продолжена работа над roadmap 5.4 и оптимизацией очереди рассылок:
+
+- `RecoverStuckItemsAsync` больше не читает всю таблицу `MailDispatchItem`: зависшие `Processing` и просроченные queue reservations выбираются через `XPQuery` по статусам и временным порогам;
+- `QueueDueItemsAsync` переносит фильтр статуса и due-date ближе к БД, сохраняя in-memory проверку `ChannelQueuedAtUtc` только для sentinel-значения `DateTime.MinValue`;
+- добавлен backend unit-тест `DispatchServiceRecoveryTests` на возврат зависшего `Processing`, освобождение просроченной reservation и постановку due items в in-memory channel без повторной резервации свежих/будущих элементов.
+
+Проверки этого этапа включают backend-тесты, frontend-тесты, Playwright smoke-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - проверки удаления без полного чтения таблиц
 
 Продолжена оптимизация backend-запросов из roadmap 5.2:
