@@ -140,27 +140,39 @@ public sealed class CampaignService(
     public Task<PagedResult<CampaignListItemDto>> GetAsync(string? search, CampaignStatus? status, int skip, int take, CancellationToken cancellationToken)
     {
         var term = TextHelper.NullIfWhiteSpace(search);
-        IEnumerable<MailCampaign> query = new XPQuery<MailCampaign>(mailingUnitOfWork).ToList();
-
-        if (status is not null)
-        {
-            query = query.Where(x => x.Status == status.Value);
-        }
+        var campaignQuery = ApplyCampaignQueryFilters(new XPQuery<MailCampaign>(mailingUnitOfWork), status);
 
         if (!string.IsNullOrWhiteSpace(term))
         {
-            query = query.Where(x => Contains(x.Name, term)
+            var filtered = campaignQuery.ToList()
+                .Where(x => Contains(x.Name, term)
                 || Contains(x.Subject, term)
                 || Contains(x.TransportProfile?.Name, term)
-                || Contains(x.CronExpression, term));
+                || Contains(x.CronExpression, term))
+                .OrderByDescending(x => x.UpdatedAtUtc)
+                .ThenByDescending(x => x.Oid)
+                .ToList();
+
+            var searchedItems = filtered
+                .Skip(Math.Max(0, skip))
+                .Take(NormalizeTake(take))
+                .Select(MappingHelper.ToCampaignListItemDto)
+                .ToArray();
+
+            return Task.FromResult(new PagedResult<CampaignListItemDto>(searchedItems, filtered.Count));
         }
 
-        var ordered = query.OrderByDescending(x => DateTimeHelper.NullIfMin(x.UpdatedAtUtc) ?? DateTime.MinValue)
+        var totalCount = campaignQuery.Count();
+        var items = campaignQuery
+            .OrderByDescending(x => x.UpdatedAtUtc)
             .ThenByDescending(x => x.Oid)
+            .Skip(Math.Max(0, skip))
+            .Take(NormalizeTake(take))
             .ToList();
-        var totalCount = ordered.Count;
-        var items = ordered.Skip(Math.Max(0, skip)).Take(NormalizeTake(take)).Select(MappingHelper.ToCampaignListItemDto).ToArray();
-        return Task.FromResult(new PagedResult<CampaignListItemDto>(items, totalCount));
+
+        return Task.FromResult(new PagedResult<CampaignListItemDto>(
+            items.Select(MappingHelper.ToCampaignListItemDto).ToArray(),
+            totalCount));
     }
 
     public Task<CampaignDetailsDto?> GetByIdAsync(int id, CancellationToken cancellationToken)
@@ -562,6 +574,16 @@ public sealed class CampaignService(
     }
 
     private static int NormalizeTake(int take) => take <= 0 ? 100 : Math.Min(take, 500);
+
+    private static IQueryable<MailCampaign> ApplyCampaignQueryFilters(IQueryable<MailCampaign> query, CampaignStatus? status)
+    {
+        if (status is CampaignStatus value)
+        {
+            query = query.Where(x => x.Status == value);
+        }
+
+        return query;
+    }
 
     private static bool Contains(string? source, string term)
         => !string.IsNullOrWhiteSpace(source) && source.Contains(term, StringComparison.OrdinalIgnoreCase);
