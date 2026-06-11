@@ -3847,6 +3847,18 @@ body.is-dragging-column {
     grid-column: auto;
   }
 
+  .dispatch-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dispatch-filter-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .dispatch-filter-panel .toolbar-button {
+    width: 100%;
+  }
+
   .employee-image-grid,
   .employee-access-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3932,6 +3944,10 @@ body.is-dragging-column {
 
   .content {
     padding: 22px;
+  }
+
+  .dispatch-filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
