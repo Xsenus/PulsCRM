@@ -1,0 +1,29 @@
+import React from 'react';
+
+export type OrganizationSupportTone = 'ok' | 'warn' | 'danger' | 'muted';
+
+export interface OrganizationSupportSummaryItem {
+  key: string;
+  title: string;
+  tone: OrganizationSupportTone;
+  value: string;
+  hint: string;
+}
+
+export function OrganizationSupportSummary({
+  items
+}: {
+  items: OrganizationSupportSummaryItem[];
+}) {
+  return (
+    <div className="organization-support-summary-grid">
+      {items.map((item) => (
+        <div key={item.key} className="detail-card organization-support-summary-card">
+          <strong>{item.title}</strong>
+          <span className={`organization-status-pill organization-status-pill--${item.tone}`}>{item.value}</span>
+          <span className="field-hint">{item.hint}</span>
+        </div>
+      ))}
+    </div>
+  );
+}

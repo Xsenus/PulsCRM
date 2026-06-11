@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-11 - summary сопровождения организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- summary-карточки раздела `Сопровождение` вынесены в `components/organization/OrganizationSupportSummary.tsx`;
+- добавлен тип `OrganizationSupportSummaryItem` для UI-контракта карточек сопровождения;
+- `OrganizationRecordWorkspace` оставляет расчет `supportCards`, но больше не содержит JSX summary-сетки;
+- добавлены компонентные тесты на tone-классы, тексты карточек и пустой список summary.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - навигация вкладок карточки организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:

@@ -17,6 +17,7 @@ import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
+import { OrganizationSupportSummary, type OrganizationSupportSummaryItem } from './organization/OrganizationSupportSummary';
 import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
 import { RelationPreviewCard, type PreviewCardItem } from './organization/RelationPreviewCard';
 
@@ -368,7 +369,7 @@ export function OrganizationRecordWorkspace({
     return { knownItems, extraItems };
   }, [details?.programInfos]);
   const activeSnapshot = details?.oneCSnapshots.find((item) => item.key === snapshotKey) ?? details?.oneCSnapshots[0];
-  const supportCards = useMemo(() => ([
+  const supportCards = useMemo<OrganizationSupportSummaryItem[]>(() => ([
     {
       key: 'ecp',
       title: 'ЭЦП',
@@ -857,15 +858,7 @@ export function OrganizationRecordWorkspace({
           {viewTab === 'support' ? (
             <section className="panel organization-card-panel">
               <div className="organization-tab-stack">
-                <div className="organization-support-summary-grid">
-                  {supportCards.map((item) => (
-                    <div key={item.key} className="detail-card organization-support-summary-card">
-                      <strong>{item.title}</strong>
-                      <span className={`organization-status-pill organization-status-pill--${item.tone}`}>{item.value}</span>
-                      <span className="field-hint">{item.hint}</span>
-                    </div>
-                  ))}
-                </div>
+                <OrganizationSupportSummary items={supportCards} />
 
                 <OrganizationEditorForm value={draft} lookups={lookups} section="programs" disabled={disabled} onChange={onDraftChange} />
 
