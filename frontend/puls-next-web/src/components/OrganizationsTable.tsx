@@ -1,6 +1,7 @@
 import React from 'react';
 import type { OrganizationListItemDto } from '../app/types';
 import { DataTable, type DataTableColumn } from './DataTable';
+import { StatusBadge } from './StatusBadge';
 
 interface OrganizationsTableProps {
   rows: OrganizationListItemDto[];
@@ -17,6 +18,22 @@ interface OrganizationsTableProps {
 
 const EMPTY_VALUE = '—';
 
+function renderVisibilityBadge(row: OrganizationListItemDto) {
+  return (
+    <StatusBadge tone={row.visible ? 'success' : 'neutral'}>
+      {row.visible ? 'Видима' : 'Скрыта'}
+    </StatusBadge>
+  );
+}
+
+function renderManagerBadge(row: OrganizationListItemDto) {
+  return (
+    <StatusBadge tone={row.isManager ? 'info' : 'neutral'}>
+      {row.isManager ? 'Да' : 'Нет'}
+    </StatusBadge>
+  );
+}
+
 const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
   {
     key: 'name',
@@ -32,6 +49,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'ИНН',
     width: 150,
     minWidth: 130,
+    mobileLabel: 'ИНН',
     priority: 2,
     render: (row) => row.inn || EMPTY_VALUE
   },
@@ -40,6 +58,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'Район',
     width: 220,
     minWidth: 180,
+    mobileLabel: 'Район',
     priority: 3,
     render: (row) => row.raion || EMPTY_VALUE
   },
@@ -48,6 +67,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'Тип',
     width: 220,
     minWidth: 180,
+    mobileLabel: 'Тип',
     priority: 4,
     render: (row) => row.orgType || EMPTY_VALUE
   },
@@ -69,6 +89,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     minWidth: 96,
     headerClassName: 'organization-cell-right',
     className: 'organization-cell-right',
+    mobileLabel: 'Email',
     priority: 6,
     render: (row) => row.emailCount
   },
@@ -79,6 +100,7 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     minWidth: 100,
     headerClassName: 'organization-cell-right',
     className: 'organization-cell-right',
+    mobileLabel: 'Контакты',
     priority: 7,
     render: (row) => row.contactCount
   },
@@ -96,7 +118,8 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     width: 130,
     minWidth: 110,
     visible: false,
-    render: (row) => row.visible ? 'Видима' : 'Скрыта'
+    mobileVisible: false,
+    render: renderVisibilityBadge
   },
   {
     key: 'isManager',
@@ -104,7 +127,8 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     width: 150,
     minWidth: 130,
     visible: false,
-    render: (row) => row.isManager ? 'Да' : 'Нет'
+    mobileVisible: false,
+    render: renderManagerBadge
   }
 ];
 
