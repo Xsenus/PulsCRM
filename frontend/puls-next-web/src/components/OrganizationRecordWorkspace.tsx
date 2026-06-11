@@ -17,6 +17,7 @@ import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
+import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
 import { RelationPreviewCard, type PreviewCardItem } from './organization/RelationPreviewCard';
 
 const EMPTY_VALUE = '-';
@@ -35,7 +36,6 @@ const PROGRAM_VARIANTS = [
 const PROGRAM_VARIANT_SET = new Set<number>(PROGRAM_VARIANTS.map((item) => item.variant));
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-type OrganizationViewTab = 'profile' | 'support' | 'relations' | 'history';
 type OrganizationRelationTab = 'contacts' | 'documents' | 'contracts' | 'realizations' | 'licenses' | 'orders';
 type OrganizationHistoryTab = 'events' | 'snapshots' | 'audit';
 type OrganizationEventViewMode = 'timeline' | 'table';
@@ -778,20 +778,7 @@ export function OrganizationRecordWorkspace({
         </span>
       </section>
 
-      <div className="settings-tabs organization-card-tabs">
-        <button type="button" className={`settings-tab${viewTab === 'profile' ? ' active' : ''}`} onClick={() => setViewTab('profile')}>
-          Карточка
-        </button>
-        <button type="button" className={`settings-tab${viewTab === 'support' ? ' active' : ''}`} onClick={() => setViewTab('support')}>
-          Сопровождение
-        </button>
-        <button type="button" className={`settings-tab${viewTab === 'relations' ? ' active' : ''}`} onClick={() => setViewTab('relations')}>
-          Связи
-        </button>
-        <button type="button" className={`settings-tab${viewTab === 'history' ? ' active' : ''}`} onClick={() => setViewTab('history')}>
-          История
-        </button>
-      </div>
+      <OrganizationViewTabs activeTab={viewTab} onChange={setViewTab} />
 
       <div className="organization-record-layout">
         <div className="organization-record-main">

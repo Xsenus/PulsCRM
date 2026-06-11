@@ -289,7 +289,9 @@ try {
         subject = "PulsCRM smoke mailing $stamp"
         htmlBody = "<p>PulsCRM smoke mailing $stamp</p>"
         plainTextBody = "PulsCRM smoke mailing $stamp"
-        status = 1
+        # Keep the smoke campaign out of the automatic scheduler; this script
+        # validates the explicit manual run below.
+        status = 2
         transportProfileId = $profileId
         scheduleKind = 0
         timeZoneId = "UTC"
