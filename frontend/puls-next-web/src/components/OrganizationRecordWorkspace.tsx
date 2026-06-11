@@ -16,6 +16,7 @@ import type {
 } from '../app/types';
 import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
+import { RelationPreviewCard, type PreviewCardItem } from './organization/RelationPreviewCard';
 
 const EMPTY_VALUE = '-';
 const PROGRAM_VARIANTS = [
@@ -57,12 +58,6 @@ interface OrganizationRecordWorkspaceProps {
     licenses: string;
     orders: string;
   };
-}
-
-interface PreviewCardItem {
-  key: string;
-  title: string;
-  caption?: string;
 }
 
 function getLookupName(items: OrganizationLookupItemDto[] | undefined, id?: number) {
@@ -349,46 +344,6 @@ function EventTimeline({
         );
       })}
     </div>
-  );
-}
-
-function RelationPreviewCard({
-  title,
-  count,
-  description,
-  items,
-  active,
-  onClick
-}: {
-  title: string;
-  count: number;
-  description: string;
-  items: PreviewCardItem[];
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button type="button" className={`organization-preview-card${active ? ' active' : ''}`} onClick={onClick}>
-      <div className="organization-preview-card-head">
-        <div>
-          <strong>{title}</strong>
-          <div className="field-hint">{description}</div>
-        </div>
-        <span className="organization-preview-card-count">{formatCount(count)}</span>
-      </div>
-      {items.length ? (
-        <div className="organization-preview-card-list">
-          {items.map((item) => (
-            <div key={item.key} className="organization-preview-card-item">
-              <span>{item.title}</span>
-              {item.caption ? <span className="field-hint">{item.caption}</span> : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="field-hint">Пока пусто.</div>
-      )}
-    </button>
   );
 }
 

@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-11 - preview-карточка связей организации
+
+Начат инкремент roadmap 3.3 по разделению большого `OrganizationRecordWorkspace`:
+
+- `RelationPreviewCard` вынесен в отдельный компонент `components/organization/RelationPreviewCard.tsx`;
+- тип `PreviewCardItem` переехал вместе с компонентом, чтобы workspace не хранил локальный UI-контракт;
+- `OrganizationRecordWorkspace` остался координатором вкладок и использует новый компонент без изменения поведения карточек связей;
+- добавлены компонентные тесты на активное состояние, формат счетчика, click-handler и пустое состояние preview-карточки.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - badges и мобильные поля OrganizationsTable
 
 Закрыт инкремент roadmap 3.2 по читаемости таблицы организаций:
