@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 import { getLoginUsers } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { formatDateTime } from '../app/format';
 import { loadLastLoginProfile } from '../app/lastLoginProfile';
 import type { LoginUserOptionDto } from '../app/types';
@@ -149,12 +150,12 @@ export function LoginPage() {
 
         setUsers(items.sort(compareLoginUsers));
         setUsersError('');
-      } catch (error: any) {
+      } catch (error) {
         if (cancelled) {
           return;
         }
 
-        setUsersError(error.message || 'Не удалось загрузить список пользователей.');
+        setUsersError(getApiErrorMessage(error, 'Не удалось загрузить список пользователей.'));
       } finally {
         if (!cancelled) {
           setUsersLoading(false);
@@ -262,8 +263,8 @@ export function LoginPage() {
       await login(normalizedLogin, password);
       const destination = (location.state as any)?.from?.pathname || '/';
       navigate(destination, { replace: true });
-    } catch (error: any) {
-      setErrorMessage(error.message || 'Не удалось войти.');
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error, 'Не удалось войти.'));
     } finally {
       setLoading(false);
     }

@@ -34,6 +34,7 @@ import type {
   CurrentUserDto,
   LoginUserOptionDto
 } from './types';
+import { throwApiError } from './apiErrors';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 const TOKEN_KEY = 'puls-next-token';
@@ -69,16 +70,7 @@ api.interceptors.response.use(
 );
 
 function unwrapError(error: any): never {
-  if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
-    throw new Error('API недоступен. Проверьте адрес сервера, CORS и подключение к сети.');
-  }
-
-  if (!error?.response && error?.code === 'ECONNABORTED') {
-    throw new Error('API не ответил вовремя. Повторите запрос или проверьте сервер.');
-  }
-
-  const message = error?.response?.data?.message || error?.message || 'Неизвестная ошибка';
-  throw new Error(message);
+  throwApiError(error);
 }
 
 export function setToken(token: string | null) {

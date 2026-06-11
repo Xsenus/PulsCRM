@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-11 - понятная ошибка недоступности API на входе
+
+Закрыта задача `UX: улучшить Network Error на LoginPage`:
+
+- добавлен общий formatter API-ошибок `getApiErrorMessage`;
+- `api.ts` и `LoginPage` используют единые тексты для сетевой недоступности, timeout и сообщений backend;
+- форма входа больше не показывает технический `Network Error`, если API недоступен или запрос оборвался;
+- добавлены unit-тесты formatter и Playwright smoke-сценарий для сетевой ошибки логина.
+
+Проверки этого этапа включают backend-тесты, frontend-тесты, Playwright smoke-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - единые иконки действий
 
 Закрыт следующий инкремент roadmap 7.3 по унификации action controls:

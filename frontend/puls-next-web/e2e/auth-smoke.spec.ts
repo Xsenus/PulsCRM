@@ -34,3 +34,19 @@ test('login error is shown when API rejects credentials', async ({ page }) => {
 
   await expect(page.locator('.login-alert')).toContainText('Bad credentials');
 });
+
+test('login network error is shown as a user-facing API availability message', async ({ page }) => {
+  await mockLoginUsers(page);
+  await page.route('**/api/auth/login', async (route) => {
+    await route.abort('failed');
+  });
+
+  await page.goto('/login');
+  await page.locator('#login-value').fill('demo');
+  await page.locator('#password-value').fill('correct-password');
+  await page.locator('button[type="submit"]').click();
+
+  const alert = page.locator('.login-alert');
+  await expect(alert).toContainText('API недоступен');
+  await expect(alert).not.toContainText('Network Error');
+});
