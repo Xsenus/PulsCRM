@@ -801,18 +801,18 @@ public sealed class OverviewService(LegacyUnitOfWork legacyUnitOfWork, MailingUn
         var employeeCount = new XPQuery<LegacyUser>(legacyUnitOfWork)
             .ToList()
             .Count(x => !string.Equals(x.UserGroup?.Name, "Уволенные", StringComparison.OrdinalIgnoreCase));
-        var organizationCount = new XPQuery<LegacyOrg>(legacyUnitOfWork).ToList().Count;
-        var activeCampaignCount = new XPQuery<MailCampaign>(mailingUnitOfWork).ToList().Count(x => x.Status == CampaignStatus.Active);
-        var items = new XPQuery<MailDispatchItem>(mailingUnitOfWork).ToList();
+        var organizationCount = new XPQuery<LegacyOrg>(legacyUnitOfWork).Count();
+        var activeCampaignCount = new XPQuery<MailCampaign>(mailingUnitOfWork).Count(x => x.Status == CampaignStatus.Active);
+        var dispatchItems = new XPQuery<MailDispatchItem>(mailingUnitOfWork);
 
         var dto = new DashboardDto
         {
             Employees = employeeCount,
             Organizations = organizationCount,
             ActiveCampaigns = activeCampaignCount,
-            QueueDepth = items.Count(x => x.Status is DispatchStatus.Queued or DispatchStatus.Processing or DispatchStatus.Deferred),
-            SentLast24Hours = items.Count(x => x.Status == DispatchStatus.Sent && DateTimeHelper.NullIfMin(x.SentAtUtc) is DateTime sentAt && sentAt >= since),
-            FailedLast24Hours = items.Count(x => x.Status == DispatchStatus.Failed && DateTimeHelper.NullIfMin(x.FailedAtUtc) is DateTime failedAt && failedAt >= since)
+            QueueDepth = dispatchItems.Count(x => x.Status == DispatchStatus.Queued || x.Status == DispatchStatus.Processing || x.Status == DispatchStatus.Deferred),
+            SentLast24Hours = dispatchItems.Count(x => x.Status == DispatchStatus.Sent && x.SentAtUtc >= since),
+            FailedLast24Hours = dispatchItems.Count(x => x.Status == DispatchStatus.Failed && x.FailedAtUtc >= since)
         };
 
         return Task.FromResult(dto);
