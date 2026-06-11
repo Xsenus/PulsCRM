@@ -39,22 +39,8 @@ public sealed class DispatchDiagnosticsService(MailingUnitOfWork mailingUnitOfWo
         var skip = DispatchDiagnosticsQuery.NormalizeSkip(query.Skip);
         var take = DispatchDiagnosticsQuery.NormalizeTake(query.Take);
         var search = TextHelper.NullIfWhiteSpace(query.Search);
-        IEnumerable<MailDispatchItem> items = new XPQuery<MailDispatchItem>(mailingUnitOfWork).ToList();
-
-        if (query.Status is DispatchStatus status)
-        {
-            items = items.Where(x => x.Status == status);
-        }
-
-        if (query.CampaignId is > 0)
-        {
-            items = items.Where(x => x.Campaign?.Oid == query.CampaignId.Value);
-        }
-
-        if (query.BatchId is > 0)
-        {
-            items = items.Where(x => x.Batch?.Oid == query.BatchId.Value);
-        }
+        var itemQuery = ApplyItemQueryFilters(new XPQuery<MailDispatchItem>(mailingUnitOfWork), query);
+        IEnumerable<MailDispatchItem> items = itemQuery.ToList();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -84,21 +70,19 @@ public sealed class DispatchDiagnosticsService(MailingUnitOfWork mailingUnitOfWo
 
         var skip = DispatchDiagnosticsQuery.NormalizeSkip(query.Skip);
         var take = DispatchDiagnosticsQuery.NormalizeTake(query.Take);
-        IEnumerable<MailDispatchBatch> batches = new XPQuery<MailDispatchBatch>(mailingUnitOfWork).ToList();
+        var batchQuery = ApplyBatchQueryFilters(new XPQuery<MailDispatchBatch>(mailingUnitOfWork), query);
+        var totalCount = batchQuery.Count();
 
-        if (query.CampaignId is > 0)
-        {
-            batches = batches.Where(x => x.Campaign?.Oid == query.CampaignId.Value);
-        }
-
-        var filtered = batches
-            .OrderByDescending(x => DateTimeHelper.ForceUtc(x.CreatedAtUtc))
+        var items = batchQuery
+            .OrderByDescending(x => x.CreatedAtUtc)
             .ThenByDescending(x => x.Oid)
+            .Skip(skip)
+            .Take(take)
             .ToList();
 
         var result = new PagedResult<DispatchBatchDto>(
-            filtered.Skip(skip).Take(take).Select(MappingHelper.ToDispatchBatchDto).ToArray(),
-            filtered.Count);
+            items.Select(MappingHelper.ToDispatchBatchDto).ToArray(),
+            totalCount);
 
         return Task.FromResult(result);
     }
@@ -154,6 +138,39 @@ public sealed class DispatchDiagnosticsService(MailingUnitOfWork mailingUnitOfWo
     {
         return mailingUnitOfWork.GetObjectByKey<MailDispatchItem>(id)
             ?? throw new KeyNotFoundException($"Запись очереди #{id} не найдена.");
+    }
+
+    private static IQueryable<MailDispatchItem> ApplyItemQueryFilters(IQueryable<MailDispatchItem> query, DispatchItemListQuery request)
+    {
+        if (request.Status is DispatchStatus status)
+        {
+            query = query.Where(x => x.Status == status);
+        }
+
+        if (request.CampaignId is > 0)
+        {
+            var campaignId = request.CampaignId.Value;
+            query = query.Where(x => x.Campaign != null && x.Campaign.Oid == campaignId);
+        }
+
+        if (request.BatchId is > 0)
+        {
+            var batchId = request.BatchId.Value;
+            query = query.Where(x => x.Batch != null && x.Batch.Oid == batchId);
+        }
+
+        return query;
+    }
+
+    private static IQueryable<MailDispatchBatch> ApplyBatchQueryFilters(IQueryable<MailDispatchBatch> query, DispatchBatchListQuery request)
+    {
+        if (request.CampaignId is > 0)
+        {
+            var campaignId = request.CampaignId.Value;
+            query = query.Where(x => x.Campaign != null && x.Campaign.Oid == campaignId);
+        }
+
+        return query;
     }
 
     private void RefreshBatchCounters(int? batchId)

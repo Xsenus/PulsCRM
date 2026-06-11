@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-11 - фильтры диагностики очереди ближе к БД
+
+Продолжена работа по снижению риска `ToList()` до фильтрации и пагинации:
+
+- `/api/dispatch/items` теперь применяет простые фильтры по статусу, кампании и партии на `XPQuery` до материализации списка;
+- `/api/dispatch/batches` применяет фильтр кампании, сортировку, `Skip/Take` и подсчет `totalCount` на запросе к хранилищу;
+- текстовый поиск элементов очереди оставлен in-memory, чтобы сохранить case-insensitive поиск по нескольким nullable-полям без риска сломать SQL-трансляцию;
+- добавлены backend unit-тесты `DispatchDiagnosticsServiceTests` на фильтрацию, paging и корректный `totalCount`.
+
+Проверки этого этапа включают backend-тесты, frontend-тесты, Playwright smoke-тесты, production-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную проверку API против SQL-БД.
+
 ## 2026-06-11 - ручной smoke-чеклист после deploy
 
 Добавлен `docs/manual-smoke-test.md` - единый ручной checklist для проверки PulsCRM после локального запуска, IIS deploy или rollback:
