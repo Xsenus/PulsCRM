@@ -26,6 +26,7 @@ import {
   type OrganizationRelationTab,
   type OrganizationRelationsOverviewItem
 } from './organization/OrganizationRelationsOverview';
+import { OrganizationSalaryDetails } from './organization/OrganizationSalaryDetails';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
 import { OrganizationSnapshotDetails } from './organization/OrganizationSnapshotDetails';
 import { OrganizationSnapshotTabs } from './organization/OrganizationSnapshotTabs';
@@ -678,89 +679,7 @@ export function OrganizationRecordWorkspace({
 
                 <OrganizationBankDetails details={details} />
 
-                <div className="panel-subsection">
-                  <h4>Зарплата</h4>
-                  <div className="detail-grid">
-                    <div className="detail-card">
-                      <strong>Работают</strong>
-                      <span>{boolLabel(details?.salaryEnabled)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Метка</strong>
-                      <span>{textValue(details?.salaryLabel)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Телефон</strong>
-                      <span>{renderPhone(details?.salaryContactPhone)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Email</strong>
-                      <span>{renderMail(details?.salaryEmail)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Ответственный</strong>
-                      <span>{textValue(details?.salaryLeadName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Номер ЛО</strong>
-                      <span>{textValue(details?.salaryLicenseNumber)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Ручной номер ЛО</strong>
-                      <span>{textValue(details?.salaryManualLicenseNumber)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Организация-источник ЛО</strong>
-                      <span>{textValue(details?.salaryLicenseOrganizationName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Файл лицензии</strong>
-                      <span>{textValue(details?.salaryLicenseFileName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Платформа</strong>
-                      <span>{textValue(details?.salaryPlatform)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Конфигурация</strong>
-                      <span>{textValue(details?.salaryConfiguration)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Оценка</strong>
-                      <span>{textValue(details?.salaryRating)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Баз</strong>
-                      <span>{textValue(details?.salaryDatabaseCount)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Организаций в базах</strong>
-                      <span>{textValue(details?.salaryOrganizationCount)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Доп. мест</strong>
-                      <span>{textValue(details?.salaryExtraWorkplaces)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Начало работы</strong>
-                      <span>{formatDateTime(details?.salaryWorkBeginUtc) || EMPTY_VALUE}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Конец работы</strong>
-                      <span>{formatDateTime(details?.salaryWorkEndUtc) || EMPTY_VALUE}</span>
-                    </div>
-                  </div>
-                  <div className="detail-list">
-                    <div>
-                      <strong>Состав лицензии</strong>
-                      <div className="field-hint">{textValue(details?.salaryLicenseComposition)}</div>
-                    </div>
-                    <div>
-                      <strong>Комментарий ЗП</strong>
-                      <div className="field-hint">{textValue(details?.salaryComment)}</div>
-                    </div>
-                  </div>
-                </div>
+                <OrganizationSalaryDetails details={details} />
 
                 <div className="panel-subsection">
                   <h4>1С</h4>

@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-12 - зарплатный блок организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- блок `Зарплата` вынесен в `components/organization/OrganizationSalaryDetails.tsx`;
+- основной workspace больше не содержит JSX зарплатных реквизитов, контактных ссылок и комментариев;
+- добавлены компонентные тесты на заполненные данные, пустое состояние, boolean-значения и нулевые счетчики.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - банковские реквизиты организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
