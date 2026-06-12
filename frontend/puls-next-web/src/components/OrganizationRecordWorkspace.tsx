@@ -6,26 +6,17 @@ import type {
   OrganizationUpsertRequest
 } from '../app/types';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
-import { OrganizationBankDetails } from './organization/OrganizationBankDetails';
 import { OrganizationDirectorDetails } from './organization/OrganizationDirectorDetails';
 import { OrganizationHistoryWorkspace } from './organization/OrganizationHistoryWorkspace';
 import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
 import { OrganizationLegacyNotes } from './organization/OrganizationLegacyNotes';
-import { OrganizationOneCDetails } from './organization/OrganizationOneCDetails';
-import { OrganizationProgramBlocks } from './organization/OrganizationProgramBlocks';
 import type { OrganizationRelationTab } from './organization/OrganizationRelationsOverview';
 import { OrganizationRelationsSection } from './organization/OrganizationRelationsSection';
 import type { OrganizationRelationsTableSettings } from './organization/OrganizationRelationsWorkspace';
-import { OrganizationSalaryDetails } from './organization/OrganizationSalaryDetails';
-import { OrganizationSiteDetails } from './organization/OrganizationSiteDetails';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
 import { OrganizationStatusBar } from './organization/OrganizationStatusBar';
-import { OrganizationSupportSummary, type OrganizationSupportSummaryItem } from './organization/OrganizationSupportSummary';
+import { OrganizationSupportSection } from './organization/OrganizationSupportSection';
 import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
-
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
-
-type LicenseStatusTone = 'ok' | 'warn' | 'danger' | 'muted';
 
 interface OrganizationRecordWorkspaceProps {
   details: OrganizationDetailsDto | null;
@@ -49,87 +40,6 @@ function uniqueDefined(values: Array<string | undefined>) {
   return Array.from(new Set(values
     .map((value) => value?.trim())
     .filter((value): value is string => !!value)));
-}
-
-function formatDateOnly(value?: string | null) {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat('ru-RU').format(date);
-}
-
-function getDaysUntil(value?: string | null) {
-  if (!value) {
-    return undefined;
-  }
-
-  const targetDate = new Date(value);
-  if (Number.isNaN(targetDate.getTime())) {
-    return undefined;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  targetDate.setHours(0, 0, 0, 0);
-  return Math.round((targetDate.getTime() - today.getTime()) / DAY_IN_MS);
-}
-
-function getLicenseStatus(
-  dateFrom: string | undefined,
-  dateTo: string | undefined,
-  labels: {
-    active: string;
-    warning: string;
-    expired: string;
-  }
-): { tone: LicenseStatusTone; label: string; hint: string } {
-  const fromLabel = formatDateOnly(dateFrom);
-  const toLabel = formatDateOnly(dateTo);
-  if (!fromLabel || !toLabel) {
-    return {
-      tone: 'muted',
-      label: 'Данные не заполнены',
-      hint: 'В legacy не найден актуальный период лицензии.'
-    };
-  }
-
-  const daysLeft = getDaysUntil(dateTo);
-  const periodLabel = `с ${fromLabel} по ${toLabel}`;
-  if (daysLeft === undefined) {
-    return {
-      tone: 'muted',
-      label: 'Данные не заполнены',
-      hint: periodLabel
-    };
-  }
-
-  if (daysLeft < 0) {
-    return {
-      tone: 'danger',
-      label: labels.expired,
-      hint: `${periodLabel}, истекла ${Math.abs(daysLeft)} дн. назад.`
-    };
-  }
-
-  if (daysLeft <= 30) {
-    return {
-      tone: 'warn',
-      label: labels.warning,
-      hint: `${periodLabel}, осталось ${daysLeft} дн.`
-    };
-  }
-
-  return {
-    tone: 'ok',
-    label: labels.active,
-    hint: `${periodLabel}, запас ${daysLeft} дн.`
-  };
 }
 
 export function OrganizationRecordWorkspace({
@@ -166,52 +76,6 @@ export function OrganizationRecordWorkspace({
     ]),
     [details?.emails, draft.directorEmail, draft.oneCEmail, draft.primaryEmail, draft.salaryEmail, draft.siteEmail]
   );
-  const oneCLicenseStatus = useMemo(
-    () => getLicenseStatus(details?.oneCItsDateFromUtc, details?.oneCItsDateToUtc, {
-      active: 'Лицензия актуальна',
-      warning: 'Срок скоро закончится',
-      expired: 'Срок лицензионного сопровождения истек'
-    }),
-    [details?.oneCItsDateFromUtc, details?.oneCItsDateToUtc]
-  );
-  const siteLicenseStatus = useMemo(
-    () => getLicenseStatus(details?.siteLicenseDateFromUtc, details?.siteLicenseDateToUtc, {
-      active: 'Домен делегирован',
-      warning: 'Делегирование скоро закончится',
-      expired: 'Срок делегирования домена истек'
-    }),
-    [details?.siteLicenseDateFromUtc, details?.siteLicenseDateToUtc]
-  );
-  const supportCards = useMemo<OrganizationSupportSummaryItem[]>(() => ([
-    {
-      key: 'ecp',
-      title: 'ЭЦП',
-      tone: details?.bankName ? 'ok' : 'muted',
-      value: details?.bankName || 'Реквизиты не заполнены',
-      hint: details?.pfrAgreementNumber ? `Соглашение ПФР №${details.pfrAgreementNumber}` : 'Банк и соглашение ПФР'
-    },
-    {
-      key: 'salary',
-      title: 'Зарплата',
-      tone: details?.salaryEnabled ? 'ok' : 'muted',
-      value: details?.salaryLeadName || (details?.salaryEnabled ? 'Модуль активен' : 'Не используется'),
-      hint: details?.salaryLicenseNumber ? `ЛО ${details.salaryLicenseNumber}` : 'Контакт и лицензия'
-    },
-    {
-      key: 'onec',
-      title: '1С',
-      tone: oneCLicenseStatus.tone,
-      value: oneCLicenseStatus.label,
-      hint: oneCLicenseStatus.hint
-    },
-    {
-      key: 'site',
-      title: 'Сайт',
-      tone: siteLicenseStatus.tone,
-      value: siteLicenseStatus.label,
-      hint: siteLicenseStatus.hint
-    }
-  ]), [details?.bankName, details?.pfrAgreementNumber, details?.salaryEnabled, details?.salaryLeadName, details?.salaryLicenseNumber, oneCLicenseStatus, siteLicenseStatus]);
   const openRelations = (tab: OrganizationRelationTab) => {
     setViewTab('relations');
     setRelationTab(tab);
@@ -254,19 +118,13 @@ export function OrganizationRecordWorkspace({
           {viewTab === 'support' ? (
             <section className="panel organization-card-panel">
               <div className="organization-tab-stack">
-                <OrganizationSupportSummary items={supportCards} />
-
-                <OrganizationEditorForm value={draft} lookups={lookups} section="programs" disabled={disabled} onChange={onDraftChange} />
-
-                <OrganizationBankDetails details={details} />
-
-                <OrganizationSalaryDetails details={details} />
-
-                <OrganizationOneCDetails details={details} licenseStatus={oneCLicenseStatus} />
-
-                <OrganizationSiteDetails details={details} licenseStatus={siteLicenseStatus} />
-
-                <OrganizationProgramBlocks items={details?.programInfos} />
+                <OrganizationSupportSection
+                  details={details}
+                  draft={draft}
+                  lookups={lookups}
+                  disabled={disabled}
+                  onDraftChange={onDraftChange}
+                />
               </div>
             </section>
           ) : null}

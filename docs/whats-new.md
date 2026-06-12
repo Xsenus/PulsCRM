@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-12 - секция поддержки организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- support-вкладка вынесена в `components/organization/OrganizationSupportSection.tsx`;
+- вычисление статусов лицензий 1С/сайта и summary-карточек поддержки больше не находится в основном workspace;
+- `OrganizationRecordWorkspace` больше не содержит JSX support-блоков и связанных helper'ов дат/лицензий;
+- добавлены компонентные тесты на summary-карточки, статусы лицензий, все support-блоки и пустое состояние без сохранённых деталей.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - секция связей организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
