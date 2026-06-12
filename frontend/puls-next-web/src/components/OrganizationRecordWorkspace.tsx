@@ -15,6 +15,7 @@ import type {
 import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationAuditSummary } from './organization/OrganizationAuditSummary';
+import { OrganizationBankDetails } from './organization/OrganizationBankDetails';
 import { OrganizationDirectorDetails } from './organization/OrganizationDirectorDetails';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
 import { OrganizationEventViewModeTabs, type OrganizationEventViewMode } from './organization/OrganizationEventViewModeTabs';
@@ -675,69 +676,7 @@ export function OrganizationRecordWorkspace({
 
                 <OrganizationEditorForm value={draft} lookups={lookups} section="programs" disabled={disabled} onChange={onDraftChange} />
 
-                <div className="panel-subsection">
-                  <h4>ЭЦП и банковские реквизиты</h4>
-                  <div className="detail-grid">
-                    <div className="detail-card">
-                      <strong>ОКВЭД</strong>
-                      <span>{textValue(details?.okved)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ОКПО</strong>
-                      <span>{textValue(details?.okpo)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ПФР</strong>
-                      <span>{textValue(details?.pfrNumber)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ФСС</strong>
-                      <span>{textValue(details?.fssNumber)}</span>
-                    </div>
-                    <div className="detail-card detail-card-wide">
-                      <strong>Банк</strong>
-                      <span>{textValue(details?.bankName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>БИК</strong>
-                      <span>{textValue(details?.bankBik)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Город банка</strong>
-                      <span>{textValue(details?.bankCity)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Расчетный счет</strong>
-                      <span>{textValue(details?.bankAccount)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Лицевой счет</strong>
-                      <span>{textValue(details?.personalAccount)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Корр. счет</strong>
-                      <span>{textValue(details?.bankCorrespondentAccount)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Соглашение с ПФР</strong>
-                      <span>{textValue(details?.pfrAgreementNumber)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Дата соглашения</strong>
-                      <span>{formatDateTime(details?.pfrAgreementDateUtc) || EMPTY_VALUE}</span>
-                    </div>
-                  </div>
-                  <div className="detail-list">
-                    <div>
-                      <strong>Комментарий ЭЦП</strong>
-                      <div className="field-hint">{textValue(details?.ecpComment)}</div>
-                    </div>
-                    <div>
-                      <strong>Комментарий ЭЦП в договор</strong>
-                      <div className="field-hint">{textValue(details?.ecpContractComment)}</div>
-                    </div>
-                  </div>
-                </div>
+                <OrganizationBankDetails details={details} />
 
                 <div className="panel-subsection">
                   <h4>Зарплата</h4>

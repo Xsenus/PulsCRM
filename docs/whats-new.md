@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-12 - банковские реквизиты организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- блок `ЭЦП и банковские реквизиты` вынесен в `components/organization/OrganizationBankDetails.tsx`;
+- основной workspace больше не содержит JSX сетки банковских реквизитов и комментариев ЭЦП;
+- добавлены компонентные тесты на заполненные реквизиты, пустое состояние и trim whitespace-only значений.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - legacy-заметки организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
