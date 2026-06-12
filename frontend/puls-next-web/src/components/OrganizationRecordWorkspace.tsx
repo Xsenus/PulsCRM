@@ -16,6 +16,7 @@ import type {
 import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
+import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
 import {
   OrganizationRelationsOverview,
   type OrganizationRelationTab,
@@ -43,7 +44,6 @@ const PROGRAM_VARIANTS = [
 const PROGRAM_VARIANT_SET = new Set<number>(PROGRAM_VARIANTS.map((item) => item.variant));
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-type OrganizationHistoryTab = 'events' | 'snapshots' | 'audit';
 type OrganizationEventViewMode = 'timeline' | 'table';
 type LicenseStatusTone = 'ok' | 'warn' | 'danger' | 'muted';
 
@@ -1280,17 +1280,7 @@ export function OrganizationRecordWorkspace({
             <section className="panel organization-card-panel">
               {details ? (
                 <div className="organization-tab-stack">
-                  <div className="settings-tabs organization-card-tabs organization-card-tabs-inline">
-                    <button type="button" className={`settings-tab${historyTab === 'events' ? ' active' : ''}`} onClick={() => setHistoryTab('events')}>
-                      События
-                    </button>
-                    <button type="button" className={`settings-tab${historyTab === 'snapshots' ? ' active' : ''}`} onClick={() => setHistoryTab('snapshots')}>
-                      Снимки 1С
-                    </button>
-                    <button type="button" className={`settings-tab${historyTab === 'audit' ? ' active' : ''}`} onClick={() => setHistoryTab('audit')}>
-                      Аудит
-                    </button>
-                  </div>
+                  <OrganizationHistoryTabs activeTab={historyTab} onChange={setHistoryTab} />
                   {renderHistoryContent()}
                 </div>
               ) : (

@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-12 - вкладки истории организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- переключатель `События / Снимки 1С / Аудит` вынесен в `components/organization/OrganizationHistoryTabs.tsx`;
+- тип `OrganizationHistoryTab` переехал рядом с компонентом вкладок истории;
+- `OrganizationRecordWorkspace` больше не содержит JSX верхнего переключателя истории и только передает активную вкладку;
+- добавлены компонентные тесты на полный набор вкладок, активное состояние и callback выбора вкладки истории.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - overview связанных данных организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
