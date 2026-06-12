@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-12 - overview связанных данных организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- блок preview-карточек и tab-переключателя раздела `Связи` вынесен в `components/organization/OrganizationRelationsOverview.tsx`;
+- тип `OrganizationRelationTab` переехал рядом с UI-контрактом связанных данных;
+- `OrganizationRecordWorkspace` больше не содержит JSX сетки preview-карточек и inline tab-кнопок связанных записей;
+- добавлены компонентные тесты на активное состояние, пустые preview-данные и callback выбора раздела через карточки и вкладки.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-11 - status bar карточки организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:

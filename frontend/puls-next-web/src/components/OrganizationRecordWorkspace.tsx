@@ -16,11 +16,16 @@ import type {
 import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
+import {
+  OrganizationRelationsOverview,
+  type OrganizationRelationTab,
+  type OrganizationRelationsOverviewItem
+} from './organization/OrganizationRelationsOverview';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
 import { OrganizationStatusBar } from './organization/OrganizationStatusBar';
 import { OrganizationSupportSummary, type OrganizationSupportSummaryItem } from './organization/OrganizationSupportSummary';
 import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
-import { RelationPreviewCard, type PreviewCardItem } from './organization/RelationPreviewCard';
+import type { PreviewCardItem } from './organization/RelationPreviewCard';
 
 const EMPTY_VALUE = '-';
 const PROGRAM_VARIANTS = [
@@ -38,7 +43,6 @@ const PROGRAM_VARIANTS = [
 const PROGRAM_VARIANT_SET = new Set<number>(PROGRAM_VARIANTS.map((item) => item.variant));
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-type OrganizationRelationTab = 'contacts' | 'documents' | 'contracts' | 'realizations' | 'licenses' | 'orders';
 type OrganizationHistoryTab = 'events' | 'snapshots' | 'audit';
 type OrganizationEventViewMode = 'timeline' | 'table';
 type LicenseStatusTone = 'ok' | 'warn' | 'danger' | 'muted';
@@ -400,7 +404,7 @@ export function OrganizationRecordWorkspace({
       hint: siteLicenseStatus.hint
     }
   ]), [details?.bankName, details?.pfrAgreementNumber, details?.salaryEnabled, details?.salaryLeadName, details?.salaryLicenseNumber, oneCLicenseStatus, siteLicenseStatus]);
-  const relationCards = useMemo(() => ([
+  const relationCards = useMemo<OrganizationRelationsOverviewItem[]>(() => ([
     {
       key: 'contacts' as const,
       title: 'Контакты',
@@ -1262,37 +1266,7 @@ export function OrganizationRecordWorkspace({
             <section className="panel organization-card-panel">
               {details ? (
                 <div className="organization-tab-stack">
-                  <div className="section-header-inline">
-                    <h4>Связанные записи</h4>
-                    <span className="field-hint">Быстрые карточки и полный список по каждому разделу</span>
-                  </div>
-
-                  <div className="organization-relations-grid">
-                    {relationCards.map((card) => (
-                      <RelationPreviewCard
-                        key={card.key}
-                        title={card.title}
-                        count={card.count}
-                        description={card.description}
-                        items={card.items}
-                        active={relationTab === card.key}
-                        onClick={() => setRelationTab(card.key)}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="settings-tabs organization-card-tabs organization-card-tabs-inline">
-                    {relationCards.map((card) => (
-                      <button
-                        key={card.key}
-                        type="button"
-                        className={`settings-tab${relationTab === card.key ? ' active' : ''}`}
-                        onClick={() => setRelationTab(card.key)}
-                      >
-                        {card.title}
-                      </button>
-                    ))}
-                  </div>
+                  <OrganizationRelationsOverview cards={relationCards} activeTab={relationTab} onChange={setRelationTab} />
 
                   {renderRelationsWorkspace()}
                 </div>
