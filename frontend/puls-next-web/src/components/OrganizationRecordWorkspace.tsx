@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { formatDateTime } from '../app/format';
 import type {
   OrganizationAttachmentDto,
   OrganizationContactDto,
@@ -12,13 +11,10 @@ import type {
   OrganizationRealizationDto,
   OrganizationUpsertRequest
 } from '../app/types';
-import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
-import { OrganizationAuditSummary } from './organization/OrganizationAuditSummary';
 import { OrganizationBankDetails } from './organization/OrganizationBankDetails';
 import { OrganizationDirectorDetails } from './organization/OrganizationDirectorDetails';
-import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
-import { OrganizationEventViewModeTabs, type OrganizationEventViewMode } from './organization/OrganizationEventViewModeTabs';
+import { OrganizationHistoryWorkspace } from './organization/OrganizationHistoryWorkspace';
 import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
 import { OrganizationLegacyNotes } from './organization/OrganizationLegacyNotes';
 import { OrganizationOneCDetails } from './organization/OrganizationOneCDetails';
@@ -32,14 +28,11 @@ import { OrganizationRelationsWorkspace, type OrganizationRelationsTableSettings
 import { OrganizationSalaryDetails } from './organization/OrganizationSalaryDetails';
 import { OrganizationSiteDetails } from './organization/OrganizationSiteDetails';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
-import { OrganizationSnapshotDetails } from './organization/OrganizationSnapshotDetails';
-import { OrganizationSnapshotTabs } from './organization/OrganizationSnapshotTabs';
 import { OrganizationStatusBar } from './organization/OrganizationStatusBar';
 import { OrganizationSupportSummary, type OrganizationSupportSummaryItem } from './organization/OrganizationSupportSummary';
 import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
 import type { PreviewCardItem } from './organization/RelationPreviewCard';
 
-const EMPTY_VALUE = '-';
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 type LicenseStatusTone = 'ok' | 'warn' | 'danger' | 'muted';
@@ -67,10 +60,6 @@ function formatMoney(value?: number | null) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(value ?? 0);
-}
-
-function formatCount(value?: number | null) {
-  return new Intl.NumberFormat('ru-RU').format(value ?? 0);
 }
 
 function uniqueDefined(values: Array<string | undefined>) {
@@ -235,25 +224,12 @@ export function OrganizationRecordWorkspace({
   const [viewTab, setViewTab] = useState<OrganizationViewTab>('profile');
   const [relationTab, setRelationTab] = useState<OrganizationRelationTab>('contacts');
   const [historyTab, setHistoryTab] = useState<OrganizationHistoryTab>('events');
-  const [eventViewMode, setEventViewMode] = useState<OrganizationEventViewMode>('timeline');
-  const [snapshotKey, setSnapshotKey] = useState('');
 
   useEffect(() => {
     setViewTab('profile');
     setRelationTab('contacts');
     setHistoryTab('events');
-    setEventViewMode('timeline');
   }, [details?.id]);
-
-  useEffect(() => {
-    const firstSnapshot = details?.oneCSnapshots[0];
-    if (!firstSnapshot) {
-      setSnapshotKey('');
-      return;
-    }
-
-    setSnapshotKey((current) => (current && details?.oneCSnapshots.some((item) => item.key === current) ? current : firstSnapshot.key));
-  }, [details?.oneCSnapshots]);
 
   const resolvedRaionName = details?.raion ?? raionName ?? getLookupName(lookups?.raions, draft.raionId);
   const resolvedOrgTypeName = details?.orgType ?? orgTypeName ?? getLookupName(lookups?.orgTypes, draft.orgTypeId);
@@ -284,7 +260,6 @@ export function OrganizationRecordWorkspace({
     }),
     [details?.siteLicenseDateFromUtc, details?.siteLicenseDateToUtc]
   );
-  const activeSnapshot = details?.oneCSnapshots.find((item) => item.key === snapshotKey) ?? details?.oneCSnapshots[0];
   const supportCards = useMemo<OrganizationSupportSummaryItem[]>(() => ([
     {
       key: 'ecp',
@@ -370,62 +345,6 @@ export function OrganizationRecordWorkspace({
     setHistoryTab(tab);
   };
 
-  const renderHistoryContent = () => {
-    if (historyTab === 'events') {
-      return (
-        <div className="organization-tab-stack">
-          <div className="organization-history-toolbar">
-            <div className="section-header-inline">
-              <h4>События организации</h4>
-              <span className="field-hint">{formatCount(details?.events.length ?? 0)} записей</span>
-            </div>
-            <OrganizationEventViewModeTabs activeMode={eventViewMode} onChange={setEventViewMode} />
-          </div>
-          {eventViewMode === 'timeline' ? (
-            <OrganizationEventTimeline events={details?.events ?? []} />
-          ) : (
-            <DataTable
-              rows={details?.events ?? []}
-              getRowKey={(row) => row.id}
-              settingsKey={tableSettings.events}
-              emptyText="Событий пока нет"
-              columns={[
-                { key: 'eventDateUtc', title: 'Дата', width: 160, minWidth: 140, render: (row) => formatDateTime(row.eventDateUtc) || EMPTY_VALUE },
-                { key: 'userName', title: 'Сотрудник', width: 190, minWidth: 160, render: (row) => row.userName || EMPTY_VALUE },
-                { key: 'categoryName', title: 'Категория', width: 170, minWidth: 140, render: (row) => row.categoryName || row.categoryFullName || EMPTY_VALUE },
-                { key: 'taskName', title: 'Задача', width: 180, minWidth: 150, render: (row) => row.taskName || EMPTY_VALUE },
-                { key: 'name', title: 'Наименование', width: 220, minWidth: 180, render: (row) => row.name || EMPTY_VALUE },
-                { key: 'comment', title: 'Комментарий', width: 300, minWidth: 240, render: (row) => row.comment || EMPTY_VALUE },
-                { key: 'dateFromUtc', title: 'Дата с', width: 160, minWidth: 140, render: (row) => formatDateTime(row.dateFromUtc) || EMPTY_VALUE },
-                { key: 'dateToUtc', title: 'Дата по', width: 160, minWidth: 140, render: (row) => formatDateTime(row.dateToUtc) || EMPTY_VALUE },
-                { key: 'isInProcess', title: 'В процессе', width: 120, minWidth: 110, render: (row) => (row.isInProcess ? 'Да' : 'Нет') },
-                { key: 'isCompleted', title: 'Завершено', width: 120, minWidth: 110, render: (row) => row.isCompleted === undefined ? EMPTY_VALUE : row.isCompleted ? 'Да' : 'Нет' }
-              ]}
-            />
-          )}
-        </div>
-      );
-    }
-
-    if (historyTab === 'snapshots') {
-      return details?.oneCSnapshots.length ? (
-        <div className="organization-tab-stack">
-          <OrganizationSnapshotTabs
-            snapshots={details.oneCSnapshots}
-            activeKey={activeSnapshot?.key}
-            onChange={setSnapshotKey}
-          />
-
-          <OrganizationSnapshotDetails snapshot={activeSnapshot} />
-        </div>
-      ) : (
-        <div className="empty-state organization-record-inline-empty">Снимки 1С по организации не найдены.</div>
-      );
-    }
-
-    return <OrganizationAuditSummary details={details} emailCount={emailChips.length} />;
-  };
-
   return (
     <div className="organization-record-shell">
       <OrganizationStatusBar
@@ -494,7 +413,12 @@ export function OrganizationRecordWorkspace({
               {details ? (
                 <div className="organization-tab-stack">
                   <OrganizationHistoryTabs activeTab={historyTab} onChange={setHistoryTab} />
-                  {renderHistoryContent()}
+                  <OrganizationHistoryWorkspace
+                    activeTab={historyTab}
+                    details={details}
+                    emailCount={emailChips.length}
+                    eventsSettingsKey={tableSettings.events}
+                  />
                 </div>
               ) : (
                 <div className="empty-state organization-record-inline-empty">История станет доступна после первого сохранения карточки.</div>
