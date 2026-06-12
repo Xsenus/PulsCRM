@@ -19,6 +19,7 @@ import { OrganizationDirectorDetails } from './organization/OrganizationDirector
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
 import { OrganizationEventViewModeTabs, type OrganizationEventViewMode } from './organization/OrganizationEventViewModeTabs';
 import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
+import { OrganizationLegacyNotes } from './organization/OrganizationLegacyNotes';
 import {
   OrganizationRelationsOverview,
   type OrganizationRelationTab,
@@ -662,23 +663,7 @@ export function OrganizationRecordWorkspace({
 
                 <OrganizationDirectorDetails details={details} />
 
-                <div className="panel-subsection">
-                  <h4>Legacy-заметки</h4>
-                  <div className="detail-list">
-                    <div>
-                      <strong>Дополнительный комментарий</strong>
-                      <div className="field-hint">{textValue(details?.additionalComment)}</div>
-                    </div>
-                    <div>
-                      <strong>Техника</strong>
-                      <div className="field-hint">{textValue(details?.technicsComment)}</div>
-                    </div>
-                    <div>
-                      <strong>Закупки</strong>
-                      <div className="field-hint">{textValue(details?.procurementComment)}</div>
-                    </div>
-                  </div>
-                </div>
+                <OrganizationLegacyNotes details={details} />
               </div>
             </section>
           ) : null}
