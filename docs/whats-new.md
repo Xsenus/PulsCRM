@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-12 - реквизиты руководителя организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- блок `Руководитель и служебные реквизиты` вынесен в `components/organization/OrganizationDirectorDetails.tsx`;
+- основной workspace больше не содержит JSX карточек руководителя и только передает детали организации в профильную вкладку;
+- добавлены компонентные тесты на заполненные реквизиты, fallback-значения, кликабельный телефон и email-ссылку.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - аудит карточки организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:

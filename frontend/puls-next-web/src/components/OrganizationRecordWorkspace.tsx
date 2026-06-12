@@ -15,6 +15,7 @@ import type {
 import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationAuditSummary } from './organization/OrganizationAuditSummary';
+import { OrganizationDirectorDetails } from './organization/OrganizationDirectorDetails';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
 import { OrganizationEventViewModeTabs, type OrganizationEventViewMode } from './organization/OrganizationEventViewModeTabs';
 import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
@@ -659,50 +660,7 @@ export function OrganizationRecordWorkspace({
                 <OrganizationEditorForm value={draft} lookups={lookups} section="main" disabled={disabled} onChange={onDraftChange} />
                 <OrganizationEditorForm value={draft} lookups={lookups} section="contacts" disabled={disabled} onChange={onDraftChange} />
 
-                <div className="panel-subsection">
-                  <div className="section-header-inline">
-                    <h4>Руководитель и служебные реквизиты</h4>
-                    <span className="field-hint">Данные из legacy-карточки организации</span>
-                  </div>
-                  <div className="detail-grid">
-                    <div className="detail-card">
-                      <strong>Руководитель</strong>
-                      <span>{textValue(details?.directorFullName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Кратко</strong>
-                      <span>{textValue(details?.directorShortName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ФИО в родительном</strong>
-                      <span>{textValue(details?.directorGenitiveName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Должность</strong>
-                      <span>{textValue(details?.directorPosition)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Должность в родительном</strong>
-                      <span>{textValue(details?.directorPositionGenitive)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Основание</strong>
-                      <span>{textValue(details?.authorityDocument)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Телефон</strong>
-                      <span>{renderPhone(details?.directorPhone)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Email</strong>
-                      <span>{renderMail(details?.directorEmail)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>СНИЛС</strong>
-                      <span>{textValue(details?.directorSnils)}</span>
-                    </div>
-                  </div>
-                </div>
+                <OrganizationDirectorDetails details={details} />
 
                 <div className="panel-subsection">
                   <h4>Legacy-заметки</h4>
