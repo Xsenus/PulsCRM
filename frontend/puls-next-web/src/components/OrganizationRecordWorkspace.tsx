@@ -7,7 +7,6 @@ import type {
   OrganizationDetailsDto,
   OrganizationEditorLookupsDto,
   OrganizationLookupItemDto,
-  OrganizationOneCSnapshotDto,
   OrganizationParusLicenseDto,
   OrganizationParusOrderDto,
   OrganizationRealizationDto,
@@ -24,6 +23,7 @@ import {
   type OrganizationRelationsOverviewItem
 } from './organization/OrganizationRelationsOverview';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
+import { OrganizationSnapshotDetails } from './organization/OrganizationSnapshotDetails';
 import { OrganizationSnapshotTabs } from './organization/OrganizationSnapshotTabs';
 import { OrganizationStatusBar } from './organization/OrganizationStatusBar';
 import { OrganizationSupportSummary, type OrganizationSupportSummaryItem } from './organization/OrganizationSupportSummary';
@@ -128,14 +128,6 @@ function renderLink(value?: string | null) {
 
 function renderMail(value?: string | null) {
   return value?.trim() ? <a href={`mailto:${value.trim()}`}>{value.trim()}</a> : EMPTY_VALUE;
-}
-
-function hasSnapshotData(snapshot: OrganizationOneCSnapshotDto | undefined) {
-  if (!snapshot) {
-    return false;
-  }
-
-  return Boolean(snapshot.code || snapshot.raion || snapshot.name || snapshot.fullName || snapshot.inn || snapshot.phone || snapshot.otherInfo || snapshot.comment || snapshot.addressLegal || snapshot.addressActual);
 }
 
 function formatDateOnly(value?: string | null) {
@@ -634,52 +626,7 @@ export function OrganizationRecordWorkspace({
             onChange={setSnapshotKey}
           />
 
-          {hasSnapshotData(activeSnapshot) ? (
-            <div className="detail-grid">
-              <div className="detail-card">
-                <strong>Код</strong>
-                <span>{textValue(activeSnapshot?.code)}</span>
-              </div>
-              <div className="detail-card">
-                <strong>Район</strong>
-                <span>{textValue(activeSnapshot?.raion)}</span>
-              </div>
-              <div className="detail-card">
-                <strong>ИНН</strong>
-                <span>{textValue(activeSnapshot?.inn)}</span>
-              </div>
-              <div className="detail-card detail-card-wide">
-                <strong>Наименование</strong>
-                <span>{textValue(activeSnapshot?.name)}</span>
-              </div>
-              <div className="detail-card detail-card-wide">
-                <strong>Полное наименование</strong>
-                <span>{textValue(activeSnapshot?.fullName)}</span>
-              </div>
-              <div className="detail-card">
-                <strong>Телефон</strong>
-                <span>{renderPhone(activeSnapshot?.phone)}</span>
-              </div>
-              <div className="detail-card detail-card-wide">
-                <strong>Другая информация</strong>
-                <span>{textValue(activeSnapshot?.otherInfo)}</span>
-              </div>
-              <div className="detail-card detail-card-wide">
-                <strong>Комментарий</strong>
-                <span>{textValue(activeSnapshot?.comment)}</span>
-              </div>
-              <div className="detail-card detail-card-wide">
-                <strong>Юридический адрес</strong>
-                <span>{textValue(activeSnapshot?.addressLegal)}</span>
-              </div>
-              <div className="detail-card detail-card-wide">
-                <strong>Фактический адрес</strong>
-                <span>{textValue(activeSnapshot?.addressActual)}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="empty-state organization-record-inline-empty">В выбранном снимке нет данных.</div>
-          )}
+          <OrganizationSnapshotDetails snapshot={activeSnapshot} />
         </div>
       ) : (
         <div className="empty-state organization-record-inline-empty">Снимки 1С по организации не найдены.</div>
