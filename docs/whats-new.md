@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-12 - секция связей организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- overview-карточки и таблица связанных записей объединены в `components/organization/OrganizationRelationsSection.tsx`;
+- построение preview-данных контактов, документов, договоров, реализаций, лицензий и заказов вынесено из основного workspace;
+- `OrganizationRecordWorkspace` больше не содержит helper'ы форматирования сумм и preview-элементов связей;
+- добавлены компонентные тесты на preview-карточки, активную таблицу, переключение вкладок и пустое состояние.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - история организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
