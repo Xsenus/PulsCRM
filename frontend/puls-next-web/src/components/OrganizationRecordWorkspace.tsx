@@ -24,6 +24,7 @@ import {
   type OrganizationRelationsOverviewItem
 } from './organization/OrganizationRelationsOverview';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
+import { OrganizationSnapshotTabs } from './organization/OrganizationSnapshotTabs';
 import { OrganizationStatusBar } from './organization/OrganizationStatusBar';
 import { OrganizationSupportSummary, type OrganizationSupportSummaryItem } from './organization/OrganizationSupportSummary';
 import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
@@ -627,18 +628,11 @@ export function OrganizationRecordWorkspace({
     if (historyTab === 'snapshots') {
       return details?.oneCSnapshots.length ? (
         <div className="organization-tab-stack">
-          <div className="settings-tabs organization-card-tabs organization-card-tabs-inline">
-            {details.oneCSnapshots.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={`settings-tab${activeSnapshot?.key === item.key ? ' active' : ''}`}
-                onClick={() => setSnapshotKey(item.key)}
-              >
-                {item.title}
-              </button>
-            ))}
-          </div>
+          <OrganizationSnapshotTabs
+            snapshots={details.oneCSnapshots}
+            activeKey={activeSnapshot?.key}
+            onChange={setSnapshotKey}
+          />
 
           {hasSnapshotData(activeSnapshot) ? (
             <div className="detail-grid">

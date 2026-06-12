@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-12 - вкладки снимков 1С организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- переключатель снимков 1С вынесен в `components/organization/OrganizationSnapshotTabs.tsx`;
+- для вкладок снимков добавлен отдельный UI-контракт `OrganizationSnapshotTabItem`;
+- `OrganizationRecordWorkspace` больше не содержит JSX tab-кнопок снимков и только передает список, активный ключ и callback выбора;
+- добавлены компонентные тесты на активное состояние, callback выбора снимка и пустой список вкладок.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - режим просмотра событий организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
