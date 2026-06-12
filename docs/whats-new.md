@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-12 - режим просмотра событий организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- переключатель режима событий `Лента / Таблица` вынесен в `components/organization/OrganizationEventViewModeTabs.tsx`;
+- тип `OrganizationEventViewMode` переехал рядом с UI-компонентом режима просмотра;
+- `OrganizationRecordWorkspace` больше не содержит JSX tab-кнопок режима событий и только передает активный режим;
+- добавлены компонентные тесты на активное состояние и callback выбора режима просмотра событий.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - вкладки истории организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:

@@ -16,6 +16,7 @@ import type {
 import { DataTable } from './DataTable';
 import { OrganizationEditorForm } from './OrganizationEditorForm';
 import { OrganizationEventTimeline } from './organization/OrganizationEventTimeline';
+import { OrganizationEventViewModeTabs, type OrganizationEventViewMode } from './organization/OrganizationEventViewModeTabs';
 import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
 import {
   OrganizationRelationsOverview,
@@ -44,7 +45,6 @@ const PROGRAM_VARIANTS = [
 const PROGRAM_VARIANT_SET = new Set<number>(PROGRAM_VARIANTS.map((item) => item.variant));
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
-type OrganizationEventViewMode = 'timeline' | 'table';
 type LicenseStatusTone = 'ok' | 'warn' | 'danger' | 'muted';
 
 interface OrganizationRecordWorkspaceProps {
@@ -596,22 +596,7 @@ export function OrganizationRecordWorkspace({
               <h4>События организации</h4>
               <span className="field-hint">{formatCount(details?.events.length ?? 0)} записей</span>
             </div>
-            <div className="settings-tabs organization-card-tabs organization-card-tabs-inline">
-              <button
-                type="button"
-                className={`settings-tab${eventViewMode === 'timeline' ? ' active' : ''}`}
-                onClick={() => setEventViewMode('timeline')}
-              >
-                Лента
-              </button>
-              <button
-                type="button"
-                className={`settings-tab${eventViewMode === 'table' ? ' active' : ''}`}
-                onClick={() => setEventViewMode('table')}
-              >
-                Таблица
-              </button>
-            </div>
+            <OrganizationEventViewModeTabs activeMode={eventViewMode} onChange={setEventViewMode} />
           </div>
           {eventViewMode === 'timeline' ? (
             <OrganizationEventTimeline events={details?.events ?? []} />
