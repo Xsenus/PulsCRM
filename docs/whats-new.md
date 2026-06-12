@@ -1,5 +1,17 @@
 # Что нового
 
+## 2026-06-12 - поддержка 1С, сайта и программных блоков организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- блок `1С` вынесен в `components/organization/OrganizationOneCDetails.tsx`;
+- блок `Сайт` вынесен в `components/organization/OrganizationSiteDetails.tsx`;
+- блок `Блоки программ` вынесен в `components/organization/OrganizationProgramBlocks.tsx`;
+- основной workspace больше не содержит JSX этих support-секций, их ссылочных helper'ов и вычисления programCards;
+- добавлены компонентные тесты на заполненные данные, пустые состояния, boolean/zero-значения, статус лицензий и нестандартные программные блоки.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - зарплатный блок организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:

@@ -21,12 +21,15 @@ import { OrganizationEventTimeline } from './organization/OrganizationEventTimel
 import { OrganizationEventViewModeTabs, type OrganizationEventViewMode } from './organization/OrganizationEventViewModeTabs';
 import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
 import { OrganizationLegacyNotes } from './organization/OrganizationLegacyNotes';
+import { OrganizationOneCDetails } from './organization/OrganizationOneCDetails';
+import { OrganizationProgramBlocks } from './organization/OrganizationProgramBlocks';
 import {
   OrganizationRelationsOverview,
   type OrganizationRelationTab,
   type OrganizationRelationsOverviewItem
 } from './organization/OrganizationRelationsOverview';
 import { OrganizationSalaryDetails } from './organization/OrganizationSalaryDetails';
+import { OrganizationSiteDetails } from './organization/OrganizationSiteDetails';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
 import { OrganizationSnapshotDetails } from './organization/OrganizationSnapshotDetails';
 import { OrganizationSnapshotTabs } from './organization/OrganizationSnapshotTabs';
@@ -36,19 +39,6 @@ import { OrganizationViewTabs, type OrganizationViewTab } from './organization/O
 import type { PreviewCardItem } from './organization/RelationPreviewCard';
 
 const EMPTY_VALUE = '-';
-const PROGRAM_VARIANTS = [
-  { variant: 0, shortLabel: 'Бух', title: 'Бухгалтерия' },
-  { variant: 1, shortLabel: 'ЗП', title: 'Зарплата' },
-  { variant: 2, shortLabel: 'ПХУ', title: 'Похозяйственный учет' },
-  { variant: 3, shortLabel: 'РМИ', title: 'Реестр муниципального имущества' },
-  { variant: 4, shortLabel: 'ЗУМО', title: 'Реестр земельных участков' },
-  { variant: 5, shortLabel: 'ЖКХ', title: 'Жилищно-коммунальное хозяйство' },
-  { variant: 6, shortLabel: 'Сайт', title: 'Представительство в интернете' },
-  { variant: 7, shortLabel: 'ЭЦП', title: 'Сдача отчетности' },
-  { variant: 8, shortLabel: 'ГМЗ', title: 'Государственное муниципальное задание' },
-  { variant: 9, shortLabel: 'БО', title: 'Бюджетная отчетность' }
-] as const;
-const PROGRAM_VARIANT_SET = new Set<number>(PROGRAM_VARIANTS.map((item) => item.variant));
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 type LicenseStatusTone = 'ok' | 'warn' | 'danger' | 'muted';
@@ -88,51 +78,10 @@ function formatCount(value?: number | null) {
   return new Intl.NumberFormat('ru-RU').format(value ?? 0);
 }
 
-function formatAuditValue(date?: string, author?: string) {
-  const value = [formatDateTime(date), author].filter(Boolean).join(' • ');
-  return value || EMPTY_VALUE;
-}
-
-function normalizeHref(url?: string) {
-  const value = url?.trim();
-  if (!value) {
-    return undefined;
-  }
-
-  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
-}
-
-function normalizePhoneHref(phone?: string) {
-  const value = phone?.replace(/[^\d+]/g, '');
-  return value ? `tel:${value}` : undefined;
-}
-
 function uniqueDefined(values: Array<string | undefined>) {
   return Array.from(new Set(values
     .map((value) => value?.trim())
     .filter((value): value is string => !!value)));
-}
-
-function textValue(value?: string | number | null) {
-  if (typeof value === 'number') {
-    return String(value);
-  }
-
-  return value?.toString().trim() || EMPTY_VALUE;
-}
-
-function renderPhone(value?: string | null) {
-  const href = normalizePhoneHref(value ?? undefined);
-  return href ? <a href={href}>{value}</a> : textValue(value);
-}
-
-function renderLink(value?: string | null) {
-  const href = normalizeHref(value ?? undefined);
-  return href ? <a href={href} target="_blank" rel="noreferrer">{value}</a> : textValue(value);
-}
-
-function renderMail(value?: string | null) {
-  return value?.trim() ? <a href={`mailto:${value.trim()}`}>{value.trim()}</a> : EMPTY_VALUE;
 }
 
 function formatDateOnly(value?: string | null) {
@@ -216,10 +165,6 @@ function getLicenseStatus(
   };
 }
 
-function getProgramVariantMeta(variant: number) {
-  return PROGRAM_VARIANTS.find((item) => item.variant === variant);
-}
-
 function formatContractOneCState(value: number) {
   switch (value) {
     case 1:
@@ -244,10 +189,6 @@ function shortText(value?: string | null, maxLength = 92) {
   }
 
   return `${normalized.slice(0, maxLength - 1)}…`;
-}
-
-function boolLabel(value?: boolean | null) {
-  return value ? 'Да' : 'Нет';
 }
 
 function buildContactPreviewItems(items: OrganizationContactDto[]): PreviewCardItem[] {
@@ -361,16 +302,6 @@ export function OrganizationRecordWorkspace({
     }),
     [details?.siteLicenseDateFromUtc, details?.siteLicenseDateToUtc]
   );
-  const programCards = useMemo(() => {
-    const items = details?.programInfos ?? [];
-    const itemByVariant = new Map(items.map((item) => [item.variant, item] as const));
-    const knownItems = PROGRAM_VARIANTS.map((meta) => ({
-      meta,
-      item: itemByVariant.get(meta.variant)
-    }));
-    const extraItems = items.filter((item) => !PROGRAM_VARIANT_SET.has(item.variant));
-    return { knownItems, extraItems };
-  }, [details?.programInfos]);
   const activeSnapshot = details?.oneCSnapshots.find((item) => item.key === snapshotKey) ?? details?.oneCSnapshots[0];
   const supportCards = useMemo<OrganizationSupportSummaryItem[]>(() => ([
     {
@@ -681,255 +612,11 @@ export function OrganizationRecordWorkspace({
 
                 <OrganizationSalaryDetails details={details} />
 
-                <div className="panel-subsection">
-                  <h4>1С</h4>
-                  <div className="detail-grid">
-                    <div className="detail-card">
-                      <strong>Контакт</strong>
-                      <span>{textValue(details?.oneCContactName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Телефон</strong>
-                      <span>{renderPhone(details?.oneCContactPhone)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Email</strong>
-                      <span>{renderMail(details?.oneCEmail)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>1С Бухгалтерия</strong>
-                      <span>{boolLabel(details?.oneCAccountingEnabled)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>1С Зарплата</strong>
-                      <span>{boolLabel(details?.oneCSalaryEnabled)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>1С ЖКХ</strong>
-                      <span>{boolLabel(details?.oneCHousingEnabled)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Ведущий Бух</strong>
-                      <span>{textValue(details?.oneCLeadAccountingName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Ведущий ЗП</strong>
-                      <span>{textValue(details?.oneCLeadSalaryName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Базовый договор</strong>
-                      <span>{boolLabel(details?.oneCBaseContract)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Рег. номер Бух</strong>
-                      <span>{textValue(details?.oneCRegNumberAccounting)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Рег. номер ЗП</strong>
-                      <span>{textValue(details?.oneCRegNumberSalary)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Платформа Бух</strong>
-                      <span>{textValue(details?.oneCPlatformAccounting)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Платформа ЗП</strong>
-                      <span>{textValue(details?.oneCPlatformSalary)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Конфигурация Бух</strong>
-                      <span>{textValue(details?.oneCConfigurationAccounting)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Конфигурация ЗП</strong>
-                      <span>{textValue(details?.oneCConfigurationSalary)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Вариант договора</strong>
-                      <span>{textValue(details?.oneCContractVariant)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ИТС вариант</strong>
-                      <span>{textValue(details?.oneCItsVariant)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Номер ИТС</strong>
-                      <span>{textValue(details?.oneCItsLicenseNumber)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ИТС с</strong>
-                      <span>{formatDateTime(details?.oneCItsDateFromUtc) || EMPTY_VALUE}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ИТС по</strong>
-                      <span>{formatDateTime(details?.oneCItsDateToUtc) || EMPTY_VALUE}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ИТС завершено</strong>
-                      <span>{boolLabel(details?.oneCItsCompleted)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Статус ИТС</strong>
-                      <span className={`organization-status-pill organization-status-pill--${oneCLicenseStatus.tone}`}>{oneCLicenseStatus.label}</span>
-                      <span className="field-hint">{oneCLicenseStatus.hint}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Сумма ИТС</strong>
-                      <span>{details?.oneCItsAmount === undefined || details?.oneCItsAmount === null ? EMPTY_VALUE : formatMoney(details.oneCItsAmount)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Комментарий суммы</strong>
-                      <span>{textValue(details?.oneCItsAmountComment)}</span>
-                    </div>
-                  </div>
-                  <div className="detail-list">
-                    <div>
-                      <strong>Комментарий Бух</strong>
-                      <div className="field-hint">{textValue(details?.oneCComment)}</div>
-                    </div>
-                    <div>
-                      <strong>Комментарий ЗП</strong>
-                      <div className="field-hint">{textValue(details?.oneCSalaryComment)}</div>
-                    </div>
-                    <div>
-                      <strong>Доработки Бух</strong>
-                      <div className="field-hint">{textValue(details?.oneCAccountingChanges)}</div>
-                    </div>
-                    <div>
-                      <strong>Доработки ЗП</strong>
-                      <div className="field-hint">{textValue(details?.oneCSalaryChanges)}</div>
-                    </div>
-                    <div>
-                      <strong>Комментарий ИТС</strong>
-                      <div className="field-hint">{textValue(details?.oneCItsComment)}</div>
-                    </div>
-                    <div>
-                      <strong>Состав ИТС</strong>
-                      <div className="field-hint">{textValue(details?.oneCItsComposition)}</div>
-                    </div>
-                  </div>
-                </div>
+                <OrganizationOneCDetails details={details} licenseStatus={oneCLicenseStatus} />
 
-                <div className="panel-subsection">
-                  <h4>Сайт</h4>
-                  <div className="detail-grid">
-                    <div className="detail-card">
-                      <strong>Сайт</strong>
-                      <span>{renderLink(details?.site)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Alias</strong>
-                      <span>{textValue(details?.siteAlias)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Контакт</strong>
-                      <span>{textValue(details?.siteContactName)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Телефон</strong>
-                      <span>{renderPhone(details?.siteContactPhone)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Email</strong>
-                      <span>{renderMail(details?.siteEmail)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Состояние</strong>
-                      <span>{textValue(details?.siteState)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>На сопровождении</strong>
-                      <span>{boolLabel(details?.siteOnSupport)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Шаблон</strong>
-                      <span>{textValue(details?.siteTemplate)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>ID Base</strong>
-                      <span>{textValue(details?.siteBaseId)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Создание</strong>
-                      <span>{formatDateTime(details?.siteReadyAtUtc) || EMPTY_VALUE}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Лицензия с</strong>
-                      <span>{formatDateTime(details?.siteLicenseDateFromUtc) || EMPTY_VALUE}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Лицензия по</strong>
-                      <span>{formatDateTime(details?.siteLicenseDateToUtc) || EMPTY_VALUE}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Лицензия завершена</strong>
-                      <span>{boolLabel(details?.siteLicenseCompleted)}</span>
-                    </div>
-                    <div className="detail-card">
-                      <strong>Статус домена</strong>
-                      <span className={`organization-status-pill organization-status-pill--${siteLicenseStatus.tone}`}>{siteLicenseStatus.label}</span>
-                      <span className="field-hint">{siteLicenseStatus.hint}</span>
-                    </div>
-                  </div>
-                  <div className="detail-list">
-                    <div>
-                      <strong>Комментарий по сайту</strong>
-                      <div className="field-hint">{textValue(details?.siteComment)}</div>
-                    </div>
-                  </div>
-                </div>
+                <OrganizationSiteDetails details={details} licenseStatus={siteLicenseStatus} />
 
-                <div className="panel-subsection">
-                  <div className="section-header-inline">
-                    <h4>Блоки программ</h4>
-                    <span className="field-hint">{formatCount(details?.programInfos.length ?? 0)} записей</span>
-                  </div>
-                  <div className="detail-grid organization-program-grid">
-                    {programCards.knownItems.map(({ meta, item }) => (
-                      <div
-                        key={meta.variant}
-                        className={`detail-card organization-program-card${item ? '' : ' organization-program-card-empty'}`}
-                      >
-                        <div className="organization-program-card-heading">
-                          <strong>{meta.shortLabel}</strong>
-                          <span>{item?.fullName || item?.name || meta.title}</span>
-                        </div>
-                        <span>{item?.organizationCreatorName || 'Производитель не указан'}</span>
-                        <span className="field-hint">Рабочих мест: {formatCount(item?.places ?? 0)}</span>
-                        <span className="field-hint">
-                          {item?.updatedAtUtc
-                            ? `Обновлено: ${formatAuditValue(item.updatedAtUtc, item.updatedByName)}`
-                            : item?.updatedByName
-                              ? `Автор: ${item.updatedByName}`
-                              : 'Запись пока не заполнена'}
-                        </span>
-                        <span>{item?.comment?.trim() || 'Комментарий не заполнен'}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {programCards.extraItems.length ? (
-                    <div className="detail-grid organization-program-grid">
-                      {programCards.extraItems.map((item) => {
-                        const meta = getProgramVariantMeta(item.variant);
-                        return (
-                          <div key={item.id} className="detail-card organization-program-card">
-                            <div className="organization-program-card-heading">
-                              <strong>{meta?.shortLabel || `#${item.variant}`}</strong>
-                              <span>{item.fullName || item.name || `Блок #${item.id}`}</span>
-                            </div>
-                            <span>{item.organizationCreatorName || 'Производитель не указан'}</span>
-                            <span className="field-hint">Рабочих мест: {formatCount(item.places)}</span>
-                            <span className="field-hint">
-                              {item.updatedAtUtc ? `Обновлено: ${formatAuditValue(item.updatedAtUtc, item.updatedByName)}` : `Автор: ${item.updatedByName || EMPTY_VALUE}`}
-                            </span>
-                            <span>{item.comment?.trim() || 'Комментарий не заполнен'}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : null}
-                </div>
+                <OrganizationProgramBlocks items={details?.programInfos} />
               </div>
             </section>
           ) : null}
