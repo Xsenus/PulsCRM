@@ -5,11 +5,9 @@ import type {
   OrganizationLookupItemDto,
   OrganizationUpsertRequest
 } from '../app/types';
-import { OrganizationEditorForm } from './OrganizationEditorForm';
-import { OrganizationDirectorDetails } from './organization/OrganizationDirectorDetails';
 import { OrganizationHistoryWorkspace } from './organization/OrganizationHistoryWorkspace';
 import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
-import { OrganizationLegacyNotes } from './organization/OrganizationLegacyNotes';
+import { OrganizationProfileSection } from './organization/OrganizationProfileSection';
 import type { OrganizationRelationTab } from './organization/OrganizationRelationsOverview';
 import { OrganizationRelationsSection } from './organization/OrganizationRelationsSection';
 import type { OrganizationRelationsTableSettings } from './organization/OrganizationRelationsWorkspace';
@@ -105,12 +103,13 @@ export function OrganizationRecordWorkspace({
           {viewTab === 'profile' ? (
             <section className="panel organization-card-panel">
               <div className="organization-tab-stack">
-                <OrganizationEditorForm value={draft} lookups={lookups} section="main" disabled={disabled} onChange={onDraftChange} />
-                <OrganizationEditorForm value={draft} lookups={lookups} section="contacts" disabled={disabled} onChange={onDraftChange} />
-
-                <OrganizationDirectorDetails details={details} />
-
-                <OrganizationLegacyNotes details={details} />
+                <OrganizationProfileSection
+                  details={details}
+                  draft={draft}
+                  lookups={lookups}
+                  disabled={disabled}
+                  onDraftChange={onDraftChange}
+                />
               </div>
             </section>
           ) : null}

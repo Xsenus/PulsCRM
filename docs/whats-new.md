@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-13 - профиль организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- profile-вкладка вынесена в `components/organization/OrganizationProfileSection.tsx`;
+- основные реквизиты, контакты, данные руководителя и legacy-заметки больше не собираются напрямую в основном workspace;
+- `OrganizationRecordWorkspace` оставлен композиционным слоем для переключения вкладок и боковой панели;
+- добавлены компонентные тесты на рендер profile-вкладки и проброс изменений формы в родительский draft-handler.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-12 - секция поддержки организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
