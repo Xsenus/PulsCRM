@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-13 - центральная область карточки организации
+
+Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:
+
+- центральная область вкладок вынесена в `components/organization/OrganizationRecordMain.tsx`;
+- profile, support, relations и history теперь выбираются в controlled-компоненте, а workspace только передает активные вкладки и callbacks;
+- пустые состояния для связей и истории до сохранения организации перенесены из workspace в новый компонент;
+- добавлены компонентные тесты на рендер profile/support-вкладок и пустые состояния relations/history.
+
+Проверки этого этапа включают frontend-тесты, Playwright responsive smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-13 - профиль организации
 
 Продолжен инкремент roadmap 3.3 по разделению `OrganizationRecordWorkspace`:

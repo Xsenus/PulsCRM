@@ -5,15 +5,12 @@ import type {
   OrganizationLookupItemDto,
   OrganizationUpsertRequest
 } from '../app/types';
-import { OrganizationHistoryWorkspace } from './organization/OrganizationHistoryWorkspace';
-import { OrganizationHistoryTabs, type OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
-import { OrganizationProfileSection } from './organization/OrganizationProfileSection';
+import type { OrganizationHistoryTab } from './organization/OrganizationHistoryTabs';
 import type { OrganizationRelationTab } from './organization/OrganizationRelationsOverview';
-import { OrganizationRelationsSection } from './organization/OrganizationRelationsSection';
 import type { OrganizationRelationsTableSettings } from './organization/OrganizationRelationsWorkspace';
+import { OrganizationRecordMain } from './organization/OrganizationRecordMain';
 import { OrganizationSidebar } from './organization/OrganizationSidebar';
 import { OrganizationStatusBar } from './organization/OrganizationStatusBar';
-import { OrganizationSupportSection } from './organization/OrganizationSupportSection';
 import { OrganizationViewTabs, type OrganizationViewTab } from './organization/OrganizationViewTabs';
 
 interface OrganizationRecordWorkspaceProps {
@@ -99,70 +96,20 @@ export function OrganizationRecordWorkspace({
       <OrganizationViewTabs activeTab={viewTab} onChange={setViewTab} />
 
       <div className="organization-record-layout">
-        <div className="organization-record-main">
-          {viewTab === 'profile' ? (
-            <section className="panel organization-card-panel">
-              <div className="organization-tab-stack">
-                <OrganizationProfileSection
-                  details={details}
-                  draft={draft}
-                  lookups={lookups}
-                  disabled={disabled}
-                  onDraftChange={onDraftChange}
-                />
-              </div>
-            </section>
-          ) : null}
-
-          {viewTab === 'support' ? (
-            <section className="panel organization-card-panel">
-              <div className="organization-tab-stack">
-                <OrganizationSupportSection
-                  details={details}
-                  draft={draft}
-                  lookups={lookups}
-                  disabled={disabled}
-                  onDraftChange={onDraftChange}
-                />
-              </div>
-            </section>
-          ) : null}
-
-          {viewTab === 'relations' ? (
-            <section className="panel organization-card-panel">
-              {details ? (
-                <div className="organization-tab-stack">
-                  <OrganizationRelationsSection
-                    activeTab={relationTab}
-                    details={details}
-                    onChange={setRelationTab}
-                    tableSettings={tableSettings}
-                  />
-                </div>
-              ) : (
-                <div className="empty-state organization-record-inline-empty">Связанные данные появятся после сохранения организации.</div>
-              )}
-            </section>
-          ) : null}
-
-          {viewTab === 'history' ? (
-            <section className="panel organization-card-panel">
-              {details ? (
-                <div className="organization-tab-stack">
-                  <OrganizationHistoryTabs activeTab={historyTab} onChange={setHistoryTab} />
-                  <OrganizationHistoryWorkspace
-                    activeTab={historyTab}
-                    details={details}
-                    emailCount={emailChips.length}
-                    eventsSettingsKey={tableSettings.events}
-                  />
-                </div>
-              ) : (
-                <div className="empty-state organization-record-inline-empty">История станет доступна после первого сохранения карточки.</div>
-              )}
-            </section>
-          ) : null}
-        </div>
+        <OrganizationRecordMain
+          activeTab={viewTab}
+          details={details}
+          draft={draft}
+          lookups={lookups}
+          disabled={disabled}
+          relationTab={relationTab}
+          historyTab={historyTab}
+          emailCount={emailChips.length}
+          tableSettings={tableSettings}
+          onDraftChange={onDraftChange}
+          onRelationTabChange={setRelationTab}
+          onHistoryTabChange={setHistoryTab}
+        />
 
         <OrganizationSidebar
           details={details}
