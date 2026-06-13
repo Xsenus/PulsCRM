@@ -219,6 +219,24 @@ function Start-LocalSmtpCatcher {
     } -ArgumentList $Port, $OutputPath, $WaitSeconds
 }
 
+function Stop-LocalSmtpCatcherJob {
+    param(
+        [AllowNull()]
+        [System.Management.Automation.Job]$Job
+    )
+
+    if ($null -eq $Job) {
+        return
+    }
+
+    if ($Job.State -eq "Running") {
+        Stop-Job -Job $Job -ErrorAction SilentlyContinue
+    }
+
+    Receive-Job -Job $Job -ErrorAction SilentlyContinue | Out-Null
+    Remove-Job -Job $Job -Force -ErrorAction SilentlyContinue
+}
+
 function Wait-Until {
     param(
         [Parameter(Mandatory = $true)]
@@ -244,6 +262,7 @@ function Wait-Until {
 }
 
 $smtpOutputPath = Join-Path ([System.IO.Path]::GetTempPath()) ("pulscrm-smoke-mail-" + [Guid]::NewGuid().ToString("N") + ".eml")
+$smtpTestJob = $null
 $smtpJob = $null
 $profileId = $null
 $campaignId = $null
@@ -257,14 +276,6 @@ try {
     }
 
     $token = Get-ApiAccessToken
-    $smtpJob = Start-LocalSmtpCatcher -Port $SmtpPort -OutputPath $smtpOutputPath -WaitSeconds $TimeoutSeconds
-
-    Start-Sleep -Milliseconds 500
-    if ($smtpJob.State -eq "Failed") {
-        Receive-Job -Job $smtpJob -ErrorAction SilentlyContinue | Out-Host
-        throw "SMTP catcher failed to start."
-    }
-
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
     $profile = Invoke-Api -Method Post -Path "api/transport-profiles" -Token $token -Body @{
         name = "Smoke SMTP $stamp"
@@ -283,6 +294,30 @@ try {
     }
     $profileId = [int]$profile.id
     Write-Host "Created temporary SMTP profile: $profileId"
+
+    $smtpTestJob = Start-LocalSmtpCatcher -Port $SmtpPort -OutputPath $smtpOutputPath -WaitSeconds $TimeoutSeconds
+    Start-Sleep -Milliseconds 500
+    if ($smtpTestJob.State -eq "Failed") {
+        Receive-Job -Job $smtpTestJob -ErrorAction SilentlyContinue | Out-Host
+        throw "SMTP catcher failed to start for profile test."
+    }
+
+    $profileTest = Invoke-Api -Method Post -Path "api/transport-profiles/$profileId/test" -Token $token
+    if (-not $profileTest.success) {
+        throw "SMTP profile test failed: $($profileTest.message)"
+    }
+
+    Write-Host "SMTP profile test passed: $($profileTest.message)"
+    Wait-Job -Job $smtpTestJob -Timeout 5 | Out-Null
+    Stop-LocalSmtpCatcherJob -Job $smtpTestJob
+    $smtpTestJob = $null
+
+    $smtpJob = Start-LocalSmtpCatcher -Port $SmtpPort -OutputPath $smtpOutputPath -WaitSeconds $TimeoutSeconds
+    Start-Sleep -Milliseconds 500
+    if ($smtpJob.State -eq "Failed") {
+        Receive-Job -Job $smtpJob -ErrorAction SilentlyContinue | Out-Host
+        throw "SMTP catcher failed to start."
+    }
 
     $campaignBody = @{
         name = "Smoke mailing E2E $stamp"
@@ -358,13 +393,10 @@ try {
     } | ConvertTo-Json -Depth 5
 }
 finally {
-    if ($smtpJob -ne $null) {
-        if ($smtpJob.State -eq "Running") {
-            Stop-Job -Job $smtpJob -ErrorAction SilentlyContinue
-        }
+    Stop-LocalSmtpCatcherJob -Job $smtpTestJob
 
-        Receive-Job -Job $smtpJob -ErrorAction SilentlyContinue | Out-Null
-        Remove-Job -Job $smtpJob -Force -ErrorAction SilentlyContinue
+    if ($smtpJob -ne $null) {
+        Stop-LocalSmtpCatcherJob -Job $smtpJob
     }
 
     if (-not $KeepArtifacts -and -not [string]::IsNullOrWhiteSpace($token)) {
