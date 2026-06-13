@@ -93,23 +93,25 @@ export function OrganizationRecordWorkspace({
         flagName={details?.flagName}
       />
 
-      <OrganizationViewTabs activeTab={viewTab} onChange={setViewTab} />
-
       <div className="organization-record-layout">
-        <OrganizationRecordMain
-          activeTab={viewTab}
-          details={details}
-          draft={draft}
-          lookups={lookups}
-          disabled={disabled}
-          relationTab={relationTab}
-          historyTab={historyTab}
-          emailCount={emailChips.length}
-          tableSettings={tableSettings}
-          onDraftChange={onDraftChange}
-          onRelationTabChange={setRelationTab}
-          onHistoryTabChange={setHistoryTab}
-        />
+        <div className="organization-record-content">
+          <OrganizationViewTabs activeTab={viewTab} onChange={setViewTab} />
+
+          <OrganizationRecordMain
+            activeTab={viewTab}
+            details={details}
+            draft={draft}
+            lookups={lookups}
+            disabled={disabled}
+            relationTab={relationTab}
+            historyTab={historyTab}
+            emailCount={emailChips.length}
+            tableSettings={tableSettings}
+            onDraftChange={onDraftChange}
+            onRelationTabChange={setRelationTab}
+            onHistoryTabChange={setHistoryTab}
+          />
+        </div>
 
         <OrganizationSidebar
           details={details}

@@ -1968,12 +1968,13 @@ body.is-dragging-column {
 
 .organization-record-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
   gap: 18px;
   align-items: start;
 }
 
 .organization-record-main,
+.organization-record-content,
 .organization-record-sidebar {
   display: grid;
   gap: 18px;
@@ -2150,13 +2151,37 @@ body.is-dragging-column {
   color: var(--text);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1100px) {
   .organization-record-layout {
     grid-template-columns: 1fr;
   }
 
+  .organization-record-content {
+    order: 2;
+  }
+
   .organization-record-sidebar {
+    order: 1;
     position: static;
+  }
+
+  .organization-sidebar-facts,
+  .organization-sidebar-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .organization-card-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .organization-record-layout,
+  .organization-record-main,
+  .organization-record-content,
+  .organization-record-sidebar,
+  .organization-tab-stack {
+    gap: 14px;
   }
 
   .organization-sidebar-facts,
@@ -2164,8 +2189,8 @@ body.is-dragging-column {
     grid-template-columns: 1fr;
   }
 
-  .organization-card-summary-grid {
-    grid-template-columns: 1fr;
+  .organization-record-status-bar {
+    align-items: stretch;
   }
 }
 
