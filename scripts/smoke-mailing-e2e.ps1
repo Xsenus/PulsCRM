@@ -9,6 +9,7 @@ param(
     [string]$RecipientEmail = "pulscrm-smoke@example.test",
     [int]$SmtpPort = 2525,
     [int]$TimeoutSeconds = 60,
+    [switch]$SkipSmtpFailureCheck,
     [switch]$KeepArtifacts
 )
 
@@ -237,6 +238,18 @@ function Stop-LocalSmtpCatcherJob {
     Remove-Job -Job $Job -Force -ErrorAction SilentlyContinue
 }
 
+function Get-UnusedLoopbackPort {
+    $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
+    $listener.Start()
+
+    try {
+        return [int]([System.Net.IPEndPoint]$listener.LocalEndpoint).Port
+    }
+    finally {
+        $listener.Stop()
+    }
+}
+
 function Wait-Until {
     param(
         [Parameter(Mandatory = $true)]
@@ -264,6 +277,7 @@ function Wait-Until {
 $smtpOutputPath = Join-Path ([System.IO.Path]::GetTempPath()) ("pulscrm-smoke-mail-" + [Guid]::NewGuid().ToString("N") + ".eml")
 $smtpTestJob = $null
 $smtpJob = $null
+$failureProfileId = $null
 $profileId = $null
 $campaignId = $null
 $token = $null
@@ -277,6 +291,38 @@ try {
 
     $token = Get-ApiAccessToken
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+
+    if (-not $SkipSmtpFailureCheck) {
+        $failurePort = Get-UnusedLoopbackPort
+        $failureProfile = Invoke-Api -Method Post -Path "api/transport-profiles" -Token $token -Body @{
+            name = "Smoke SMTP failure $stamp"
+            host = "127.0.0.1"
+            port = $failurePort
+            useSsl = $false
+            username = $null
+            password = $null
+            senderEmail = "smoke@pulscrm.local"
+            senderName = "PulsCRM Smoke"
+            replyToEmail = "smoke@pulscrm.local"
+            maxConnections = 1
+            messagesPerMinute = 60
+            isDefault = $false
+            isEnabled = $true
+        }
+        $failureProfileId = [int]$failureProfile.id
+        Write-Host "Created temporary failing SMTP profile: $failureProfileId"
+
+        $failureTest = Invoke-Api -Method Post -Path "api/transport-profiles/$failureProfileId/test" -Token $token
+        if ($failureTest.success) {
+            throw "SMTP failure scenario unexpectedly passed for unused local port $failurePort."
+        }
+
+        Write-Host "SMTP failure scenario passed: $($failureTest.message)"
+        Invoke-Api -Method Delete -Path "api/transport-profiles/$failureProfileId" -Token $token | Out-Null
+        Write-Host "Deleted temporary failing SMTP profile: $failureProfileId"
+        $failureProfileId = $null
+    }
+
     $profile = Invoke-Api -Method Post -Path "api/transport-profiles" -Token $token -Body @{
         name = "Smoke SMTP $stamp"
         host = "127.0.0.1"
@@ -389,6 +435,7 @@ try {
         RecipientEmail = $RecipientEmail
         Sent = $finalStats.sent
         Failed = $finalStats.failed
+        SmtpFailureChecked = -not $SkipSmtpFailureCheck
         CapturedMessagePath = $smtpOutputPath
     } | ConvertTo-Json -Depth 5
 }
@@ -417,6 +464,16 @@ finally {
             }
             catch {
                 Write-Warning "Failed to delete temporary SMTP profile ${profileId}: $($_.Exception.Message)"
+            }
+        }
+
+        if ($failureProfileId -ne $null) {
+            try {
+                Invoke-Api -Method Delete -Path "api/transport-profiles/$failureProfileId" -Token $token | Out-Null
+                Write-Host "Deleted temporary failing SMTP profile: $failureProfileId"
+            }
+            catch {
+                Write-Warning "Failed to delete temporary failing SMTP profile ${failureProfileId}: $($_.Exception.Message)"
             }
         }
 
