@@ -10,6 +10,7 @@ import type {
 } from '../app/types';
 import { ActionIcon } from '../components/ActionIcon';
 import { AppLoader, LoadingButtonLabel } from '../components/AppLoader';
+import { Modal } from '../components/Modal';
 import { OrganizationRecordWorkspace } from '../components/OrganizationRecordWorkspace';
 import { PageHeader } from '../components/PageHeader';
 
@@ -120,6 +121,7 @@ export function OrganizationEditPage() {
   const [draft, setDraft] = useState<OrganizationUpsertRequest>(createEmptyOrganizationRequest());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,6 +199,35 @@ export function OrganizationEditPage() {
     () => !requestsEqual(baselineRequest, draft),
     [baselineRequest, draft]
   );
+  const hasUnsavedChanges = isDirty && !loading && !saving;
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  const requestNavigateToList = () => {
+    if (hasUnsavedChanges) {
+      setLeaveConfirmOpen(true);
+      return;
+    }
+
+    navigate('/organizations');
+  };
+
+  const confirmNavigateToList = () => {
+    setLeaveConfirmOpen(false);
+    navigate('/organizations');
+  };
 
   return (
     <div className="page">
@@ -207,7 +238,7 @@ export function OrganizationEditPage() {
           <button
             type="button"
             className="button-inline icon-button page-back-button"
-            onClick={() => navigate('/organizations')}
+            onClick={requestNavigateToList}
             disabled={disabled}
             aria-label="К списку организаций"
             title="К списку организаций"
@@ -251,6 +282,27 @@ export function OrganizationEditPage() {
           }}
         />
       )}
+
+      <Modal
+        open={leaveConfirmOpen}
+        title="Есть несохраненные изменения"
+        onClose={() => setLeaveConfirmOpen(false)}
+        maxWidth={520}
+        actions={(
+          <>
+            <button type="button" className="primary-button danger-button" onClick={confirmNavigateToList}>
+              Выйти без сохранения
+            </button>
+            <button type="button" className="secondary-button" onClick={() => setLeaveConfirmOpen(false)}>
+              Остаться
+            </button>
+          </>
+        )}
+      >
+        <div className="confirmation-copy">
+          В карточке организации есть несохраненные изменения. Если выйти сейчас, правки будут потеряны.
+        </div>
+      </Modal>
     </div>
   );
 }

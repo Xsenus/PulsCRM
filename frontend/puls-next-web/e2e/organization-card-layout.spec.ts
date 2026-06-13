@@ -65,8 +65,43 @@ const organizationLookups = {
   orgTypes: [{ id: 401, name: 'Учреждение' }]
 };
 
+const organizationsResponse = {
+  items: [
+    {
+      id: organizationDetails.id,
+      name: organizationDetails.name,
+      smallName: organizationDetails.smallName,
+      fullName: organizationDetails.fullName,
+      inn: organizationDetails.inn,
+      raionId: organizationDetails.raionId,
+      raion: organizationDetails.raion,
+      orgTypeId: organizationDetails.orgTypeId,
+      orgType: organizationDetails.orgType,
+      visible: organizationDetails.visible,
+      isManager: organizationDetails.isManager,
+      emails: organizationDetails.emails,
+      emailCount: organizationDetails.emailCount,
+      contactCount: organizationDetails.contactCount,
+      openWorkItems: organizationDetails.openWorkItems
+    }
+  ],
+  totalCount: 1
+};
+
+const organizationRaionsResponse = [
+  {
+    id: organizationDetails.raionId,
+    name: organizationDetails.raion,
+    count: 1
+  }
+];
+
 test.beforeEach(async ({ page }) => {
   await setupAuthenticatedSession(page);
+
+  await page.route(/\/api\/organizations\/raions(?:\?.*)?$/, async (route) => {
+    await fulfillJson(route, organizationRaionsResponse);
+  });
 
   await page.route(/\/api\/organizations\/lookups(?:\?.*)?$/, async (route) => {
     await fulfillJson(route, organizationLookups);
@@ -74,6 +109,10 @@ test.beforeEach(async ({ page }) => {
 
   await page.route(/\/api\/organizations\/201(?:\?.*)?$/, async (route) => {
     await fulfillJson(route, organizationDetails);
+  });
+
+  await page.route(/\/api\/organizations(?:\?.*)?$/, async (route) => {
+    await fulfillJson(route, organizationsResponse);
   });
 });
 
@@ -127,3 +166,29 @@ for (const viewport of [
     await expect.poll(() => expectNoDocumentHorizontalOverflow(page)).toBe(true);
   });
 }
+
+test('organization card confirms leaving with unsaved changes', async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto('/organizations/201/edit');
+
+  await expect(page.getByRole('heading', { name: organizationDetails.name })).toBeVisible();
+
+  const nameInput = page.getByRole('textbox', { name: 'Название', exact: true });
+  await nameInput.fill('Измененное название');
+  await expect(page.getByText('Черновик изменен')).toBeVisible();
+
+  await page.getByLabel('К списку организаций').click();
+  await expect(page.getByRole('dialog', { name: 'Есть несохраненные изменения' })).toBeVisible();
+  await expect(page.getByText('правки будут потеряны')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Остаться' }).click();
+  await expect(page.getByRole('dialog', { name: 'Есть несохраненные изменения' })).toBeHidden();
+  await expect(page).toHaveURL(/\/organizations\/201\/edit$/);
+  await expect(nameInput).toHaveValue('Измененное название');
+
+  await page.getByLabel('К списку организаций').click();
+  await page.getByRole('button', { name: 'Выйти без сохранения' }).click();
+
+  await expect(page).toHaveURL(/\/organizations$/);
+  await expect(page.getByRole('heading', { name: 'Организации' })).toBeVisible();
+});
