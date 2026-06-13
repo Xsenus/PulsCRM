@@ -3345,6 +3345,38 @@ body.is-dragging-column {
   overflow-wrap: anywhere;
 }
 
+.recipient-source-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+.recipient-source-summary-item {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(219, 228, 240, 0.9);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.recipient-source-summary-item span {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.recipient-source-summary-item strong {
+  color: var(--text);
+  font-size: 1.08rem;
+  line-height: 1;
+}
+
 .campaign-dispatch-filters {
   justify-content: flex-end;
 }

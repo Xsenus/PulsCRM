@@ -8,15 +8,29 @@ import {
 } from './helpers';
 
 const recipientPreview = {
-  organizationCount: 0,
-  recipientCount: 1,
+  organizationCount: 1,
+  recipientCount: 3,
   items: [
     {
       legacyOrgId: 0,
       legacyOrgName: 'Manual recipients',
       email: 'manual@example.test',
       displayName: 'Manual Recipient',
-      sourceKind: 7
+      sourceKind: 0
+    },
+    {
+      legacyOrgId: 201,
+      legacyOrgName: 'Mobile Org',
+      email: 'primary@example.test',
+      displayName: 'Mobile Org',
+      sourceKind: 1
+    },
+    {
+      legacyOrgId: 201,
+      legacyOrgName: 'Mobile Org',
+      email: 'contact@example.test',
+      displayName: 'Contact Person',
+      sourceKind: 2
     }
   ]
 };
@@ -91,6 +105,9 @@ test('new campaign editor previews recipients, readiness and schedule', async ({
 
   await expect(page.getByText('manual@example.test').first()).toBeVisible();
   await expect(page.getByText('Manual Recipient').first()).toBeVisible();
+  await expect(page.locator('.recipient-source-summary')).toContainText('Вручную');
+  await expect(page.locator('.recipient-source-summary')).toContainText('Основной адрес организации');
+  await expect(page.locator('.recipient-source-summary')).toContainText('Контактное лицо');
 
   await page.locator('.page-header-actions .secondary-button').nth(1).click();
 

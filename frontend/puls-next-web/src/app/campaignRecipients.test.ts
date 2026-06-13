@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildOrganizationSelectionSummary } from './campaignRecipients';
-import type { OrganizationListItemDto } from './types';
+import { buildOrganizationSelectionSummary, buildRecipientSourceSummary } from './campaignRecipients';
+import type { CampaignRecipientPreviewItemDto, OrganizationListItemDto } from './types';
 
 function organization(overrides: Partial<OrganizationListItemDto>): OrganizationListItemDto {
   return {
@@ -13,6 +13,16 @@ function organization(overrides: Partial<OrganizationListItemDto>): Organization
     contactCount: overrides.contactCount ?? 0,
     openWorkItems: 0,
     ...overrides
+  };
+}
+
+function recipient(overrides: Partial<CampaignRecipientPreviewItemDto>): CampaignRecipientPreviewItemDto {
+  return {
+    legacyOrgId: overrides.legacyOrgId ?? 0,
+    legacyOrgName: overrides.legacyOrgName,
+    email: overrides.email ?? 'recipient@example.test',
+    displayName: overrides.displayName,
+    sourceKind: overrides.sourceKind ?? 0
   };
 }
 
@@ -41,5 +51,37 @@ describe('buildOrganizationSelectionSummary', () => {
       organizationsWithoutEmail: 0,
       contactCount: 0
     });
+  });
+});
+
+describe('buildRecipientSourceSummary', () => {
+  const sourceOptions = [
+    { value: 0, label: 'Вручную' },
+    { value: 1, label: 'Основной адрес организации' },
+    { value: 2, label: 'Контактное лицо' }
+  ];
+
+  it('groups preview recipients by source and keeps lookup order', () => {
+    const summary = buildRecipientSourceSummary(
+      [
+        recipient({ email: 'contact-1@example.test', sourceKind: 2 }),
+        recipient({ email: 'manual@example.test', sourceKind: 0 }),
+        recipient({ email: 'contact-2@example.test', sourceKind: 2 }),
+        recipient({ email: 'primary@example.test', sourceKind: 1 })
+      ],
+      sourceOptions
+    );
+
+    expect(summary).toEqual([
+      { sourceKind: 0, label: 'Вручную', count: 1 },
+      { sourceKind: 1, label: 'Основной адрес организации', count: 1 },
+      { sourceKind: 2, label: 'Контактное лицо', count: 2 }
+    ]);
+  });
+
+  it('renders unknown recipient sources after known options', () => {
+    expect(buildRecipientSourceSummary([recipient({ sourceKind: 9 })], sourceOptions)).toEqual([
+      { sourceKind: 9, label: 'Источник 9', count: 1 }
+    ]);
   });
 });

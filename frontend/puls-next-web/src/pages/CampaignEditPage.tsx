@@ -12,6 +12,7 @@ import {
   uploadFile
 } from '../app/api';
 import { createCampaignDraftSnapshot } from '../app/campaignDraft';
+import { buildRecipientSourceSummary } from '../app/campaignRecipients';
 import { buildProblemItems, filterDispatchItems, findLatestProblemItem, type DispatchStatusFilter } from '../app/campaignStats';
 import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaignReadiness';
 import { useAuth } from '../app/AuthContext';
@@ -217,6 +218,10 @@ export function CampaignEditPage() {
   const messageValidationIssues = useMemo(
     () => validateMessageContent(model.htmlBody, model.plainTextBody, attachments),
     [attachments, model.htmlBody, model.plainTextBody]
+  );
+  const recipientSourceSummary = useMemo(
+    () => buildRecipientSourceSummary(recipientPreviewData?.items ?? [], recipientSourceOptions),
+    [recipientPreviewData]
   );
   const filteredRecentItems = useMemo(
     () => stats ? filterDispatchItems(stats.recentItems, dispatchStatusFilter) : [],
@@ -662,6 +667,17 @@ export function CampaignEditPage() {
                   { label: 'Показано', value: recipientPreviewData.items.length, hint: 'Предел отображения в интерфейсе' }
                 ]}
               />
+
+              {recipientSourceSummary.length > 0 ? (
+                <div className="recipient-source-summary" aria-label="Источники найденных адресов">
+                  {recipientSourceSummary.map((item) => (
+                    <div key={item.sourceKind} className="recipient-source-summary-item">
+                      <span>{item.label}</span>
+                      <strong>{item.count}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
 
               <DataTable
                 rows={recipientPreviewData.items}

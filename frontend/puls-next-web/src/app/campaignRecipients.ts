@@ -1,4 +1,4 @@
-import type { OrganizationListItemDto } from './types';
+import type { CampaignRecipientPreviewItemDto, OrganizationListItemDto } from './types';
 
 export interface OrganizationSelectionSummary {
   organizationCount: number;
@@ -6,6 +6,12 @@ export interface OrganizationSelectionSummary {
   organizationsWithEmail: number;
   organizationsWithoutEmail: number;
   contactCount: number;
+}
+
+export interface RecipientSourceSummaryItem {
+  sourceKind: number;
+  label: string;
+  count: number;
 }
 
 export function buildOrganizationSelectionSummary(items: OrganizationListItemDto[]): OrganizationSelectionSummary {
@@ -34,4 +40,33 @@ export function buildOrganizationSelectionSummary(items: OrganizationListItemDto
       contactCount: 0
     }
   );
+}
+
+export function buildRecipientSourceSummary(
+  items: CampaignRecipientPreviewItemDto[],
+  sourceOptions: Array<{ value: number; label: string }>
+): RecipientSourceSummaryItem[] {
+  const sourceOrder = new Map(sourceOptions.map((option, index) => [option.value, index]));
+  const sourceLabels = new Map(sourceOptions.map((option) => [option.value, option.label]));
+  const counts = items.reduce<Map<number, number>>((summary, item) => {
+    summary.set(item.sourceKind, (summary.get(item.sourceKind) ?? 0) + 1);
+    return summary;
+  }, new Map<number, number>());
+
+  return Array.from(counts.entries())
+    .map(([sourceKind, count]) => ({
+      sourceKind,
+      count,
+      label: sourceLabels.get(sourceKind) ?? `Источник ${sourceKind}`
+    }))
+    .sort((left, right) => {
+      const leftOrder = sourceOrder.get(left.sourceKind) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = sourceOrder.get(right.sourceKind) ?? Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return left.label.localeCompare(right.label, 'ru');
+    });
 }
