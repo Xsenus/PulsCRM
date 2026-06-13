@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { buildProblemItems, filterDispatchItems, findLatestProblemItem, type DispatchStatusFilter } from '../app/campaignStats';
+import { canRetryDispatchItem } from '../app/dispatchDiagnostics';
 import { formatDateTime } from '../app/format';
 import { dispatchStatusOptions, labelOf } from '../app/lookups';
-import type { CampaignStatisticsDto } from '../app/types';
+import type { CampaignStatisticsDto, DispatchItemDto } from '../app/types';
 import { LoadingButtonLabel } from './AppLoader';
 import { DataTable } from './DataTable';
 import { StatsCards } from './StatsCards';
@@ -12,6 +13,7 @@ interface CampaignStatsPanelProps {
   stats: CampaignStatisticsDto | null;
   loading?: boolean;
   onRefresh: () => Promise<void> | void;
+  onRetryItem?: (itemId: number) => Promise<void> | void;
   batchesTableSettingsKey: string;
   itemsTableSettingsKey: string;
 }
@@ -45,8 +47,9 @@ function dispatchStatusTone(status: number): StatusBadgeTone {
   return 'neutral';
 }
 
-export function CampaignStatsPanel({ stats, loading = false, onRefresh, batchesTableSettingsKey, itemsTableSettingsKey }: CampaignStatsPanelProps) {
+export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryItem, batchesTableSettingsKey, itemsTableSettingsKey }: CampaignStatsPanelProps) {
   const [dispatchStatusFilter, setDispatchStatusFilter] = useState<DispatchStatusFilter>('all');
+  const [retryingItemId, setRetryingItemId] = useState<number | null>(null);
   const filteredRecentItems = useMemo(
     () => stats ? filterDispatchItems(stats.recentItems, dispatchStatusFilter) : [],
     [dispatchStatusFilter, stats]
@@ -59,6 +62,19 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, batchesT
     () => stats ? buildProblemItems(stats.failedItems, stats.deferredItems, 8) : [],
     [stats]
   );
+
+  const retryProblemItem = async (item: DispatchItemDto) => {
+    if (!onRetryItem || !canRetryDispatchItem(item)) {
+      return;
+    }
+
+    setRetryingItemId(item.id);
+    try {
+      await onRetryItem(item.id);
+    } finally {
+      setRetryingItemId((current) => current === item.id ? null : current);
+    }
+  };
 
   if (!stats) {
     return (
@@ -101,9 +117,21 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, batchesT
                 <strong>{item.recipientEmail || 'Получатель не указан'}</strong>
                 <span>{item.errorMessage || item.smtpResponse || 'Сообщение ожидает повторной обработки.'}</span>
               </div>
-              <StatusBadge tone={dispatchStatusTone(item.status)}>
-                {labelOf(dispatchStatusOptions, item.status)}
-              </StatusBadge>
+              <div className="campaign-problem-actions">
+                <StatusBadge tone={dispatchStatusTone(item.status)}>
+                  {labelOf(dispatchStatusOptions, item.status)}
+                </StatusBadge>
+                {onRetryItem && canRetryDispatchItem(item) ? (
+                  <button
+                    type="button"
+                    className="secondary-button button-inline"
+                    disabled={loading || retryingItemId === item.id}
+                    onClick={() => void retryProblemItem(item)}
+                  >
+                    {retryingItemId === item.id ? <LoadingButtonLabel label="Возвращаем" /> : 'Повторить'}
+                  </button>
+                ) : null}
+              </div>
             </div>
           ))}
         </div>

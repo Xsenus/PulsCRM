@@ -3401,6 +3401,15 @@ body.is-dragging-column {
   overflow-wrap: anywhere;
 }
 
+.campaign-problem-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
 .recipient-source-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -4347,6 +4356,10 @@ body.is-dragging-column {
 
   .campaign-problem-item {
     flex-direction: column;
+  }
+
+  .campaign-problem-actions {
+    justify-content: flex-start;
   }
 
   .campaign-dispatch-filters {

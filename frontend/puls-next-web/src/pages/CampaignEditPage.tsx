@@ -8,6 +8,7 @@ import {
   getTransportProfiles,
   previewRecipients,
   previewSchedule,
+  retryDispatchItem,
   runCampaign,
   saveCampaign,
   uploadFile
@@ -299,6 +300,16 @@ export function CampaignEditPage() {
       showToast(error.message || 'Не удалось обновить статистику', 'error', 4000);
     } finally {
       setStatsLoading(false);
+    }
+  };
+
+  const retryCampaignDispatchItem = async (itemId: number) => {
+    try {
+      await retryDispatchItem(itemId);
+      showToast('Сообщение возвращено в очередь', 'success');
+      await refreshStats();
+    } catch (error: any) {
+      showToast(error.message || 'Не удалось вернуть сообщение в очередь', 'error', 4000);
     }
   };
 
@@ -762,6 +773,7 @@ export function CampaignEditPage() {
               stats={stats}
               loading={statsLoading}
               onRefresh={refreshStats}
+              onRetryItem={retryCampaignDispatchItem}
               batchesTableSettingsKey={batchesTableSettingsKey}
               itemsTableSettingsKey={itemsTableSettingsKey}
             />

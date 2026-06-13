@@ -91,12 +91,13 @@ function render(ui: React.ReactElement) {
   return container;
 }
 
-function panel(stats: CampaignStatisticsDto | null, onRefresh = vi.fn()) {
+function panel(stats: CampaignStatisticsDto | null, onRefresh = vi.fn(), onRetryItem?: (itemId: number) => Promise<void> | void) {
   return (
     <CampaignStatsPanel
       stats={stats}
       loading={false}
       onRefresh={onRefresh}
+      onRetryItem={onRetryItem}
       batchesTableSettingsKey="test-campaign-batches"
       itemsTableSettingsKey="test-campaign-items"
     />
@@ -145,5 +146,17 @@ describe('CampaignStatsPanel', () => {
 
     expect(view.textContent).not.toContain('sent@example.test');
     expect(view.textContent).toContain('failed@example.test');
+  });
+
+  it('retries failed items from the problem list', async () => {
+    const onRetryItem = vi.fn(async () => {});
+    const view = render(panel(statistics(), vi.fn(), onRetryItem));
+    const retryButton = Array.from(view.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent === 'Повторить');
+
+    await act(async () => {
+      retryButton?.click();
+    });
+
+    expect(onRetryItem).toHaveBeenCalledWith(22);
   });
 });
