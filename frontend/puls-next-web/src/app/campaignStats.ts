@@ -41,3 +41,23 @@ export function buildProblemItems(failedItems: DispatchItemDto[], deferredItems:
     })
     .slice(0, limit);
 }
+
+export function formatAttemptCount(value?: number | null): string {
+  const count = Math.max(0, value ?? 0);
+  const lastTwoDigits = count % 100;
+  const lastDigit = count % 10;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return `${count} попыток`;
+  }
+
+  if (lastDigit === 1) {
+    return `${count} попытка`;
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return `${count} попытки`;
+  }
+
+  return `${count} попыток`;
+}

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { buildProblemItems, filterDispatchItems, findLatestProblemItem, type DispatchStatusFilter } from '../app/campaignStats';
+import { buildProblemItems, filterDispatchItems, findLatestProblemItem, formatAttemptCount, type DispatchStatusFilter } from '../app/campaignStats';
 import { canRetryDispatchItem } from '../app/dispatchDiagnostics';
 import { formatDateTime } from '../app/format';
 import { dispatchStatusOptions, labelOf } from '../app/lookups';
@@ -113,9 +113,15 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryI
         <div className="campaign-problem-list">
           {problemItems.map((item) => (
             <div key={item.id} className="campaign-problem-item">
-              <div>
+              <div className="campaign-problem-body">
                 <strong>{item.recipientEmail || 'Получатель не указан'}</strong>
                 <span>{item.errorMessage || item.smtpResponse || 'Сообщение ожидает повторной обработки.'}</span>
+                <div className="campaign-problem-meta">
+                  <span>{formatAttemptCount(item.attemptCount)}</span>
+                  {item.failedAtUtc ? <span>Ошибка: {formatDateTime(item.failedAtUtc)}</span> : null}
+                  {item.nextAttemptAtUtc ? <span>Следующая попытка: {formatDateTime(item.nextAttemptAtUtc)}</span> : null}
+                  {item.smtpResponse && item.errorMessage ? <span>SMTP: {item.smtpResponse}</span> : null}
+                </div>
               </div>
               <div className="campaign-problem-actions">
                 <StatusBadge tone={dispatchStatusTone(item.status)}>

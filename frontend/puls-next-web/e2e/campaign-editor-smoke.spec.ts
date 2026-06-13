@@ -68,6 +68,93 @@ const schedulePreview = [
   }
 ];
 
+const existingCampaign = {
+  id: 301,
+  name: 'Monthly Digest',
+  subject: 'June CRM digest',
+  htmlBody: '<p>Monthly update</p>',
+  plainTextBody: 'Monthly update',
+  status: 1,
+  transportProfileId: mainTransportProfile.id,
+  transportProfileName: mainTransportProfile.name,
+  scheduleKind: 2,
+  cronExpression: '',
+  timeZoneId: 'Asia/Novosibirsk',
+  startAtUtc: '2026-06-10T12:00:00Z',
+  endAtUtc: null,
+  intervalMinutes: 15,
+  randomIntervalMinMinutes: 1,
+  randomIntervalMaxMinutes: 5,
+  nextRunAtUtc: '2026-06-11T03:00:00Z',
+  lastRunAtUtc: '2026-06-09T03:00:00Z',
+  lastRunStartedAtUtc: '2026-06-09T03:00:00Z',
+  lastRunFinishedAtUtc: '2026-06-09T03:05:00Z',
+  maxRecipientsPerRun: 0,
+  maxAttempts: 3,
+  useOrgPrimaryEmail: true,
+  useContactEmails: false,
+  useSalaryEmail: false,
+  useOneCEmail: false,
+  useSiteEmail: false,
+  useDirectorEmail: false,
+  manualRecipientsCsv: 'recipient@example.test',
+  targets: [],
+  attachments: [],
+  createdAtUtc: '2026-06-10T12:00:00Z',
+  updatedAtUtc: '2026-06-10T12:00:00Z'
+};
+
+const failedDispatchItem = {
+  id: 401,
+  legacyOrgId: 201,
+  legacyOrgName: 'Mobile Org',
+  recipientEmail: 'recipient@example.test',
+  recipientDisplayName: 'Recipient One',
+  sourceKind: 1,
+  status: 3,
+  attemptCount: 2,
+  queuedAtUtc: '2026-06-10T10:00:00Z',
+  startedAtUtc: '2026-06-10T10:01:00Z',
+  failedAtUtc: '2026-06-10T10:02:00Z',
+  nextAttemptAtUtc: '2026-06-10T10:10:00Z',
+  errorMessage: 'SMTP timeout',
+  smtpResponse: '421 Timeout',
+  messageId: 'message-401'
+};
+
+const campaignStats = {
+  campaignId: 301,
+  totalItems: 1,
+  queued: 0,
+  processing: 0,
+  sent: 0,
+  failed: 1,
+  deferred: 0,
+  cancelled: 0,
+  lastBatchScheduledAtUtc: '2026-06-10T10:00:00Z',
+  lastBatchCompletedAtUtc: null,
+  recentBatches: [
+    {
+      id: 501,
+      triggerKind: 1,
+      triggerComment: 'Manual smoke batch',
+      scheduledAtUtc: '2026-06-10T10:00:00Z',
+      createdAtUtc: '2026-06-10T10:00:10Z',
+      completedAtUtc: null,
+      totalRecipients: 1,
+      queuedCount: 0,
+      processingCount: 0,
+      sentCount: 0,
+      failedCount: 1,
+      cancelledCount: 0,
+      correlationId: 'batch-501'
+    }
+  ],
+  recentItems: [failedDispatchItem],
+  failedItems: [failedDispatchItem],
+  deferredItems: []
+};
+
 test.beforeEach(async ({ page }) => {
   await setupAuthenticatedSession(page);
   await mockTransportProfiles(page);
@@ -82,6 +169,14 @@ test.beforeEach(async ({ page }) => {
 
   await page.route(/\/api\/campaigns\/preview-schedule$/, async (route) => {
     await fulfillJson(route, schedulePreview);
+  });
+
+  await page.route(/\/api\/campaigns\/301$/, async (route) => {
+    await fulfillJson(route, existingCampaign);
+  });
+
+  await page.route(/\/api\/campaigns\/301\/stats$/, async (route) => {
+    await fulfillJson(route, campaignStats);
   });
 });
 
@@ -122,5 +217,20 @@ test('new campaign editor previews recipients, readiness and schedule', async ({
   await page.locator('.row-actions .secondary-button').click();
 
   await expect(page.locator('.schedule-preview-item')).toHaveCount(2);
+  await expect.poll(() => expectNoDocumentHorizontalOverflow(page)).toBe(true);
+});
+
+test('existing campaign stats show problem attempt diagnostics', async ({ page }) => {
+  await page.goto('/campaigns/301');
+
+  await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('tab', { name: 'Статистика' }).click();
+
+  const problemList = page.locator('.campaign-problem-list');
+  await expect(problemList).toContainText('recipient@example.test');
+  await expect(problemList).toContainText('SMTP timeout');
+  await expect(problemList).toContainText('2 попытки');
+  await expect(problemList).toContainText('Следующая попытка');
+  await expect(problemList).toContainText('SMTP: 421 Timeout');
   await expect.poll(() => expectNoDocumentHorizontalOverflow(page)).toBe(true);
 });

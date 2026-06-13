@@ -3386,7 +3386,7 @@ body.is-dragging-column {
   background: #fff7f7;
 }
 
-.campaign-problem-item div {
+.campaign-problem-body {
   display: grid;
   gap: 4px;
   min-width: 0;
@@ -3399,6 +3399,27 @@ body.is-dragging-column {
 .campaign-problem-item span {
   color: var(--text-muted);
   overflow-wrap: anywhere;
+}
+
+.campaign-problem-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.campaign-problem-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #fff;
+  color: #7f1d1d;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .campaign-problem-actions {

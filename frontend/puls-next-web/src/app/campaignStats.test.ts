@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildProblemItems, filterDispatchItems, findLatestProblemItem } from './campaignStats';
+import { buildProblemItems, filterDispatchItems, findLatestProblemItem, formatAttemptCount } from './campaignStats';
 import type { DispatchItemDto } from './types';
 
 function item(patch: Partial<DispatchItemDto>): DispatchItemDto {
@@ -42,5 +42,15 @@ describe('campaign stats helpers', () => {
     );
 
     expect(result.map((value) => value.id)).toEqual([2, 3]);
+  });
+
+  it('formats attempt count with Russian plural forms', () => {
+    expect(formatAttemptCount(0)).toBe('0 попыток');
+    expect(formatAttemptCount(1)).toBe('1 попытка');
+    expect(formatAttemptCount(2)).toBe('2 попытки');
+    expect(formatAttemptCount(5)).toBe('5 попыток');
+    expect(formatAttemptCount(11)).toBe('11 попыток');
+    expect(formatAttemptCount(21)).toBe('21 попытка');
+    expect(formatAttemptCount(null)).toBe('0 попыток');
   });
 });

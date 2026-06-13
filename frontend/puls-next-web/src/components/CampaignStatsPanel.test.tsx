@@ -3,6 +3,7 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { formatDateTime } from '../app/format';
 import type { CampaignStatisticsDto, DispatchBatchDto, DispatchItemDto } from '../app/types';
 import { CampaignStatsPanel } from './CampaignStatsPanel';
 
@@ -58,6 +59,8 @@ function statistics(overrides: Partial<CampaignStatisticsDto> = {}): CampaignSta
     status: 3,
     attemptCount: 2,
     failedAtUtc: '2026-06-13T08:02:00.000Z',
+    nextAttemptAtUtc: '2026-06-13T08:10:00.000Z',
+    smtpResponse: '550 mailbox unavailable',
     errorMessage: 'SMTP rejected recipient'
   });
 
@@ -130,6 +133,9 @@ describe('CampaignStatsPanel', () => {
     expect(view.textContent).toContain('Всего записей');
     expect(view.textContent).toContain('SMTP rejected recipient');
     expect(view.textContent).toContain('failed@example.test');
+    expect(view.textContent).toContain('2 попытки');
+    expect(view.textContent).toContain(`Следующая попытка: ${formatDateTime('2026-06-13T08:10:00.000Z')}`);
+    expect(view.textContent).toContain('SMTP: 550 mailbox unavailable');
     expect(view.textContent).toContain('Пакет #10');
   });
 
