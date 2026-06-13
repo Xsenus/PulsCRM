@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getOrganizationRaions, getOrganizations } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { buildOrganizationSelectionSummary } from '../app/campaignRecipients';
 import { buildOrganizationPickerFilterSummary } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../app/table';
 import type { OrganizationListItemDto, OrganizationRaionDto } from '../app/types';
@@ -38,6 +39,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
     () => Object.values(draftSelection).sort((left, right) => left.name.localeCompare(right.name, 'ru')),
     [draftSelection]
   );
+  const selectionSummary = useMemo(() => buildOrganizationSelectionSummary(value), [value]);
 
   useEffect(() => {
     if (!modalOpen) {
@@ -127,8 +129,27 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
         </button>
       </div>
 
-      <div className="picker-summary">
-        Выбрано организаций: <strong>{value.length}</strong>
+      <div className="organization-recipient-summary" aria-label="Сводка выбранных организаций">
+        <div className="organization-recipient-summary-item">
+          <span>Организаций</span>
+          <strong>{selectionSummary.organizationCount}</strong>
+        </div>
+        <div className="organization-recipient-summary-item">
+          <span>Известных email</span>
+          <strong>{selectionSummary.knownEmailCount}</strong>
+        </div>
+        <div className="organization-recipient-summary-item">
+          <span>С email</span>
+          <strong>{selectionSummary.organizationsWithEmail}</strong>
+        </div>
+        <div className="organization-recipient-summary-item">
+          <span>Без email</span>
+          <strong>{selectionSummary.organizationsWithoutEmail}</strong>
+        </div>
+        <div className="organization-recipient-summary-item">
+          <span>Контактов</span>
+          <strong>{selectionSummary.contactCount}</strong>
+        </div>
       </div>
 
       <div className="selected-org-list">
