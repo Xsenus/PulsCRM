@@ -17,6 +17,10 @@ import { StatusBadge, type StatusBadgeTone } from '../components/StatusBadge';
 
 const EMPTY_VALUE = '—';
 const CAMPAIGNS_TABLE_STORAGE_ID = 'campaigns-list';
+const campaignStatusQuickFilters: Array<{ label: string; value?: number }> = [
+  { label: 'Все' },
+  ...campaignStatusOptions
+];
 
 function campaignStatusTone(status: number): StatusBadgeTone {
   if (status === 1) {
@@ -104,6 +108,12 @@ export function CampaignsPage() {
     setPage(1);
   };
 
+  const applyStatusFilter = (nextStatus?: number) => {
+    setStatus(nextStatus);
+    setAppliedStatus(nextStatus);
+    setPage(1);
+  };
+
   const clearSearch = () => {
     setSearch('');
     applySearchValue('');
@@ -157,15 +167,35 @@ export function CampaignsPage() {
         refreshSuccessMessage="Список кампаний обновлен."
       />
 
-      <div className="panel toolbar-panel toolbar-panel-grid">
-        <select className="form-select" value={status ?? ''} onChange={(event) => setStatus(event.target.value ? Number(event.target.value) : undefined)}>
-          <option value="">Статус</option>
-          {campaignStatusOptions.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
+      <div className="panel toolbar-panel campaigns-filter-panel">
+        <div className="campaign-status-filter-strip" aria-label="Быстрый фильтр рассылок по статусу">
+          {campaignStatusQuickFilters.map((option) => {
+            const isActive = appliedStatus === option.value;
 
-        <button type="button" className="primary-button toolbar-button" onClick={applyFilters}>Применить</button>
+            return (
+              <button
+                key={option.value ?? 'all'}
+                type="button"
+                className={`campaign-status-filter-button${isActive ? ' active' : ''}`}
+                onClick={() => applyStatusFilter(option.value)}
+                aria-pressed={isActive}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="campaign-filter-select-group">
+          <select className="form-select" value={status ?? ''} onChange={(event) => setStatus(event.target.value ? Number(event.target.value) : undefined)}>
+            <option value="">Статус</option>
+            {campaignStatusOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+
+          <button type="button" className="primary-button toolbar-button" onClick={applyFilters}>Применить</button>
+        </div>
       </div>
 
       <div className="panel">

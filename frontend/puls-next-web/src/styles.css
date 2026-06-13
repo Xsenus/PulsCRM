@@ -3326,6 +3326,60 @@ body.is-dragging-column {
   border-radius: 12px;
 }
 
+.campaigns-filter-panel {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.campaign-status-filter-strip {
+  min-width: 0;
+  display: flex;
+  flex: 1 1 420px;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.campaign-status-filter-button {
+  min-height: 36px;
+  width: auto;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.campaign-status-filter-button:hover {
+  border-color: rgba(37, 99, 235, 0.36);
+  color: var(--brand-2);
+}
+
+.campaign-status-filter-button.active {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--brand-2);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+}
+
+.campaign-filter-select-group {
+  display: flex;
+  flex: 0 1 320px;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.campaign-filter-select-group .form-select {
+  min-width: 160px;
+}
+
 .dispatch-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(160px, 1fr));
@@ -3936,6 +3990,19 @@ body.is-dragging-column {
     width: 100%;
   }
 
+  .campaigns-filter-panel {
+    align-items: stretch;
+  }
+
+  .campaign-status-filter-strip,
+  .campaign-filter-select-group {
+    flex-basis: 100%;
+  }
+
+  .campaign-filter-select-group {
+    justify-content: flex-start;
+  }
+
   .employee-image-grid,
   .employee-access-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4133,6 +4200,25 @@ body.is-dragging-column {
 
   .campaign-dispatch-filters .settings-tab {
     flex: 0 0 auto;
+  }
+
+  .campaign-status-filter-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .campaign-status-filter-button {
+    width: 100%;
+  }
+
+  .campaign-filter-select-group {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .campaign-filter-select-group .form-select,
+  .campaign-filter-select-group .toolbar-button {
+    width: 100%;
   }
 
   .dispatch-summary-grid {

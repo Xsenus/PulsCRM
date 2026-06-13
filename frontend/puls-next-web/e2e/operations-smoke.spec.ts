@@ -30,6 +30,8 @@ const campaignsResponse = {
   totalCount: 1
 };
 
+let campaignRequestUrls: string[] = [];
+
 const dispatchItemsResponse = {
   items: [
     {
@@ -77,8 +79,10 @@ const dispatchBatchesResponse = {
 test.beforeEach(async ({ page }) => {
   await setupAuthenticatedSession(page);
   await mockTransportProfiles(page);
+  campaignRequestUrls = [];
 
   await page.route(/\/api\/campaigns(?:\?.*)?$/, async (route) => {
+    campaignRequestUrls.push(route.request().url());
     await fulfillJson(route, campaignsResponse);
   });
 
@@ -100,6 +104,26 @@ test('campaigns list opens with campaign data', async ({ page }) => {
   await expect(page.getByText('Monthly Digest').first()).toBeVisible();
   await expect(page.getByText('June CRM digest').first()).toBeVisible();
   await expect(page.getByText('Main SMTP').first()).toBeVisible();
+});
+
+test('campaigns quick status filter reloads list with status parameter', async ({ page }) => {
+  await page.goto('/campaigns');
+
+  await expect(page.getByText('Monthly Digest').first()).toBeVisible();
+
+  await page.locator('.campaign-status-filter-button').filter({ hasText: 'Активна' }).click();
+
+  await expect.poll(() => {
+    const lastUrl = campaignRequestUrls.at(-1);
+    return lastUrl ? new URL(lastUrl).searchParams.get('status') : null;
+  }).toBe('1');
+
+  await page.locator('.campaign-status-filter-button').filter({ hasText: 'Все' }).click();
+
+  await expect.poll(() => {
+    const lastUrl = campaignRequestUrls.at(-1);
+    return lastUrl ? new URL(lastUrl).searchParams.get('status') : 'missing';
+  }).toBeNull();
 });
 
 test('dispatch diagnostics opens items and batches', async ({ page }) => {
