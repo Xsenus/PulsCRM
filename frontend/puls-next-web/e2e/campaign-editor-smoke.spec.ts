@@ -96,6 +96,9 @@ test('new campaign editor previews recipients, readiness and schedule', async ({
   await page.locator('.campaign-main-grid .form-select').nth(1).selectOption(String(mainTransportProfile.id));
 
   await page.getByRole('tab').nth(2).click();
+  await page.getByRole('button', { name: 'Вставить шаблон' }).click();
+  await expect(page.locator('.form-textarea-code')).toHaveValue(/Подготовили для вас важную информацию\./);
+  await expect(page.locator('textarea').last()).toHaveValue(/Подготовили для вас важную информацию\./);
   await page.locator('.form-textarea-code').fill('<p>Hello from smoke test</p>');
   await page.locator('textarea').last().fill('Hello from smoke test');
 

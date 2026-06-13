@@ -12,6 +12,7 @@ import {
   uploadFile
 } from '../app/api';
 import { createCampaignDraftSnapshot } from '../app/campaignDraft';
+import { canApplyDefaultCampaignMessageTemplate, createDefaultCampaignMessageTemplate } from '../app/campaignMessageTemplate';
 import { buildRecipientSourceSummary } from '../app/campaignRecipients';
 import { buildProblemItems, filterDispatchItems, findLatestProblemItem, type DispatchStatusFilter } from '../app/campaignStats';
 import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaignReadiness';
@@ -223,6 +224,7 @@ export function CampaignEditPage() {
     () => buildRecipientSourceSummary(recipientPreviewData?.items ?? [], recipientSourceOptions),
     [recipientPreviewData]
   );
+  const canApplyMessageTemplate = canApplyDefaultCampaignMessageTemplate(model.htmlBody, model.plainTextBody);
   const filteredRecentItems = useMemo(
     () => stats ? filterDispatchItems(stats.recentItems, dispatchStatusFilter) : [],
     [dispatchStatusFilter, stats]
@@ -364,6 +366,15 @@ export function CampaignEditPage() {
     } catch (error: any) {
       showToast(error.message || 'Не удалось получить список получателей', 'error', 4000);
     }
+  };
+
+  const applyMessageTemplate = () => {
+    if (!canApplyMessageTemplate) {
+      return;
+    }
+
+    const template = createDefaultCampaignMessageTemplate();
+    patchModel(template);
   };
 
   const uploadFiles = async (files: File[]) => {
@@ -707,9 +718,19 @@ export function CampaignEditPage() {
                 <h3>Шаблон письма</h3>
                 <div className="field-hint">HTML, текстовая версия и проверка встроенных изображений.</div>
               </div>
-              <StatusBadge tone={messageValidationIssues.some((issue) => issue.tone === 'danger') ? 'danger' : messageValidationIssues.length > 0 ? 'warning' : 'success'}>
-                {messageValidationIssues.length === 0 ? 'Письмо заполнено' : `Проверок: ${messageValidationIssues.length}`}
-              </StatusBadge>
+              <div className="message-template-actions">
+                <button
+                  type="button"
+                  className="secondary-button button-inline"
+                  disabled={!canApplyMessageTemplate}
+                  onClick={applyMessageTemplate}
+                >
+                  Вставить шаблон
+                </button>
+                <StatusBadge tone={messageValidationIssues.some((issue) => issue.tone === 'danger') ? 'danger' : messageValidationIssues.length > 0 ? 'warning' : 'success'}>
+                  {messageValidationIssues.length === 0 ? 'Письмо заполнено' : `Проверок: ${messageValidationIssues.length}`}
+                </StatusBadge>
+              </div>
             </div>
 
             {messageValidationIssues.length > 0 ? (

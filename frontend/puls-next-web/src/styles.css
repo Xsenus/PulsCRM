@@ -3281,6 +3281,14 @@ body.is-dragging-column {
   line-height: 1.45;
 }
 
+.message-template-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .attachment-warning-list {
   display: grid;
   gap: 6px;
