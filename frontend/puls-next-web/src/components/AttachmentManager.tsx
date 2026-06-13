@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getStoredFileDisplayExtension, isImageStoredFile } from '../app/campaignAttachments';
 import { formatFileSize } from '../app/format';
 import { attachmentKindOptions } from '../app/lookups';
 import { extractCidReferences } from '../app/messageValidation';
@@ -18,17 +19,67 @@ interface AttachmentManagerProps {
   htmlBody?: string;
   onChange: (attachments: EditableAttachment[]) => void;
   onUploadFiles: (files: File[]) => Promise<void>;
+  onLoadPreviewFile?: (file: StoredFileDto) => Promise<Blob>;
 }
 
 const MAX_UPLOAD_SIZE_BYTES = 26_214_400;
 const INLINE_IMAGE_KIND = 1;
 
-export function AttachmentManager({ attachments, htmlBody, onChange, onUploadFiles }: AttachmentManagerProps) {
+interface ImagePreviewState {
+  loading?: boolean;
+  url?: string;
+  error?: string;
+}
+
+export function AttachmentManager({ attachments, htmlBody, onChange, onUploadFiles, onLoadPreviewFile }: AttachmentManagerProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [copiedContentId, setCopiedContentId] = useState('');
+  const [imagePreviews, setImagePreviews] = useState<Record<number, ImagePreviewState>>({});
   const cidReferences = extractCidReferences(htmlBody);
+  const imageAttachments = useMemo(
+    () => attachments.filter((attachment) => isImageStoredFile(attachment.storedFile)),
+    [attachments]
+  );
+
+  useEffect(() => {
+    if (!onLoadPreviewFile || imageAttachments.length === 0 || typeof URL === 'undefined') {
+      setImagePreviews({});
+      return;
+    }
+
+    let cancelled = false;
+    const objectUrls: string[] = [];
+
+    setImagePreviews(Object.fromEntries(imageAttachments.map((attachment) => [attachment.storedFile.id, { loading: true }])));
+
+    void Promise.all(
+      imageAttachments.map(async (attachment) => {
+        try {
+          const blob = await onLoadPreviewFile(attachment.storedFile);
+          const url = URL.createObjectURL(blob);
+          objectUrls.push(url);
+
+          return [attachment.storedFile.id, { url }] as const;
+        } catch {
+          return [attachment.storedFile.id, { error: 'Не удалось загрузить предпросмотр изображения.' }] as const;
+        }
+      })
+    ).then((entries) => {
+      if (cancelled) {
+        objectUrls.forEach((url) => URL.revokeObjectURL(url));
+        return;
+      }
+
+      setImagePreviews(Object.fromEntries(entries));
+    });
+
+    return () => {
+      cancelled = true;
+      objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imageAttachments, onLoadPreviewFile]);
 
   const patchAttachment = (index: number, patch: Partial<EditableAttachment>) => {
     const next = [...attachments];
@@ -108,9 +159,11 @@ export function AttachmentManager({ attachments, htmlBody, onChange, onUploadFil
 
         {attachments.map((attachment, index) => {
           const isInlineImage = attachment.attachmentKind === INLINE_IMAGE_KIND;
+          const isImage = isImageStoredFile(attachment.storedFile);
           const contentId = attachment.contentId?.trim() || '';
           const cidToken = contentId ? `cid:${contentId}` : '';
           const cidUsed = contentId ? cidReferences.includes(contentId) : false;
+          const imagePreview = imagePreviews[attachment.storedFile.id];
 
           return (
             <div key={`${attachment.storedFile.id}-${index}`} className="attachment-card">
@@ -131,6 +184,24 @@ export function AttachmentManager({ attachments, htmlBody, onChange, onUploadFil
                   Удалить
                 </button>
               </div>
+
+              {isImage ? (
+                <div className="attachment-image-preview">
+                  <div className="attachment-image-preview-media">
+                    {imagePreview?.url ? (
+                      <img src={imagePreview.url} alt={`Предпросмотр ${attachment.displayName || attachment.storedFile.originalFileName}`} />
+                    ) : (
+                      <span>{getStoredFileDisplayExtension(attachment.storedFile)}</span>
+                    )}
+                  </div>
+                  <div className="attachment-image-preview-copy">
+                    <strong>{imagePreview?.loading ? 'Загружаем предпросмотр' : 'Изображение'}</strong>
+                    <span>
+                      {imagePreview?.error || `${attachment.storedFile.contentType || 'image/*'} • ${formatFileSize(attachment.storedFile.length)}`}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
 
               {isInlineImage && (!contentId || !cidUsed) ? (
                 <div className="attachment-warning-list">

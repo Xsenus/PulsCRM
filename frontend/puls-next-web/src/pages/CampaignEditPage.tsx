@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   checkCampaignReadiness,
+  downloadFileBlob,
   getCampaign,
   getCampaignStats,
   getTransportProfiles,
@@ -397,6 +398,8 @@ export function CampaignEditPage() {
     ]);
   };
 
+  const loadAttachmentPreviewFile = useCallback((file: StoredFileDto) => downloadFileBlob(file.id), []);
+
   const checkReadinessClick = async () => {
     setReadinessLoading(true);
     try {
@@ -778,7 +781,13 @@ export function CampaignEditPage() {
             </div>
           </section>
 
-          <AttachmentManager attachments={attachments} htmlBody={model.htmlBody} onChange={setAttachments} onUploadFiles={uploadFiles} />
+          <AttachmentManager
+            attachments={attachments}
+            htmlBody={model.htmlBody}
+            onChange={setAttachments}
+            onUploadFiles={uploadFiles}
+            onLoadPreviewFile={loadAttachmentPreviewFile}
+          />
           </>
           ) : null}
 

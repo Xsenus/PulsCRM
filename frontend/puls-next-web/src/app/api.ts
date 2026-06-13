@@ -315,6 +315,18 @@ export async function uploadFile(file: File, isPublic = false): Promise<StoredFi
   }
 }
 
+export async function downloadFileBlob(id: number): Promise<Blob> {
+  try {
+    const { data } = await api.get<Blob>(`/api/files/${id}/download`, {
+      responseType: 'blob'
+    });
+
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
 export async function getCampaigns(search = '', status?: number, skip = 0, take = 100): Promise<PagedResult<CampaignListItemDto>> {
   try {
     const { data } = await api.get<PagedResult<CampaignListItemDto>>('/api/campaigns', {
