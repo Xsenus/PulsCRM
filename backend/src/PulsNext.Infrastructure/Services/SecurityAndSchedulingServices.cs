@@ -291,7 +291,7 @@ public sealed class ScheduleCalculator : IScheduleCalculator
 
     private static TimeZoneInfo ResolveTimeZone(string? timeZoneId)
     {
-        var candidate = string.IsNullOrWhiteSpace(timeZoneId) ? "Europe/Amsterdam" : timeZoneId.Trim();
+        var candidate = string.IsNullOrWhiteSpace(timeZoneId) ? MailingDefaults.TimeZoneId : timeZoneId.Trim();
 
         try
         {

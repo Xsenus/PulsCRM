@@ -3691,13 +3691,41 @@ body.is-dragging-column {
 
 .schedule-preview-item {
   display: grid;
-  grid-template-columns: 70px 1fr auto;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
   border: 1px solid var(--border);
   background: var(--surface-muted);
   border-radius: 14px;
   padding: 12px 14px;
+}
+
+.schedule-preview-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 34px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.schedule-preview-time {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.schedule-preview-time strong {
+  color: var(--text);
+}
+
+.schedule-preview-time span {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
 }
 
 .schedule-preview-utc {

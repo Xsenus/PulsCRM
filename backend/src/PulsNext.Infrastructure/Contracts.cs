@@ -7,6 +7,11 @@ namespace PulsNext.Infrastructure;
 /// </summary>
 public sealed record PagedResult<T>(IReadOnlyCollection<T> Items, int TotalCount);
 
+public static class MailingDefaults
+{
+    public const string TimeZoneId = "Asia/Novosibirsk";
+}
+
 /// <summary>
 /// Данные для входа пользователя по логину и паролю.
 /// </summary>
@@ -750,7 +755,7 @@ public sealed class CampaignUpsertRequest
     public int? TransportProfileId { get; set; }
     public ScheduleKind ScheduleKind { get; set; } = ScheduleKind.OneTime;
     public string? CronExpression { get; set; }
-    public string? TimeZoneId { get; set; } = "Europe/Amsterdam";
+    public string? TimeZoneId { get; set; } = MailingDefaults.TimeZoneId;
     public DateTime? StartAtUtc { get; set; }
     public DateTime? EndAtUtc { get; set; }
     public int IntervalMinutes { get; set; } = 2;
@@ -854,7 +859,7 @@ public sealed class SchedulePreviewRequest
     /// <summary>
     /// Идентификатор часового пояса, в котором интерпретируется расписание.
     /// </summary>
-    public string? TimeZoneId { get; set; } = "Europe/Amsterdam";
+    public string? TimeZoneId { get; set; } = MailingDefaults.TimeZoneId;
 
     /// <summary>
     /// Начало действия расписания в UTC.

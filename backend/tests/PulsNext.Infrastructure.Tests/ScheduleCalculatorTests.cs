@@ -27,6 +27,24 @@ public sealed class ScheduleCalculatorTests
     }
 
     [Fact]
+    public void Preview_OneTime_UsesProjectDefaultTimeZoneWhenMissing()
+    {
+        var start = new DateTime(2026, 5, 22, 9, 0, 0, DateTimeKind.Utc);
+
+        var occurrences = _calculator.Preview(new SchedulePreviewRequest
+        {
+            ScheduleKind = ScheduleKind.OneTime,
+            StartAtUtc = start,
+            Count = 1,
+            TimeZoneId = null
+        });
+
+        var occurrence = Assert.Single(occurrences);
+        Assert.Equal(start, occurrence.Utc);
+        Assert.Equal(new DateTime(2026, 5, 22, 16, 0, 0), occurrence.Local);
+    }
+
+    [Fact]
     public void Preview_FixedInterval_UsesStableSpacing()
     {
         var start = new DateTime(2026, 5, 22, 9, 0, 0, DateTimeKind.Utc);

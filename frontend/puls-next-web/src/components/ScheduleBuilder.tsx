@@ -1,7 +1,12 @@
 import React from 'react';
 import { formatDateTime, fromDateTimeLocalValue, toDateTimeLocalValue } from '../app/format';
 import { scheduleKindOptions } from '../app/lookups';
-import { DEFAULT_CAMPAIGN_TIME_ZONE, validateScheduleBuilderValue } from '../app/scheduleValidation';
+import {
+  campaignTimeZoneOptions,
+  findCampaignTimeZoneOption,
+  normalizeCampaignTimeZoneId,
+  validateScheduleBuilderValue
+} from '../app/scheduleValidation';
 import type { ScheduleOccurrenceDto } from '../app/types';
 import { LoadingButtonLabel } from './AppLoader';
 
@@ -35,6 +40,8 @@ const scheduleDescriptions: Record<number, string> = {
 export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLoading = false, previewError }: ScheduleBuilderProps) {
   const validationIssues = validateScheduleBuilderValue(value);
   const canPreview = validationIssues.length === 0 && !previewLoading;
+  const timeZoneId = normalizeCampaignTimeZoneId(value.timeZoneId);
+  const selectedTimeZone = findCampaignTimeZoneOption(timeZoneId);
 
   return (
     <section className="panel">
@@ -63,11 +70,21 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
       <div className="form-grid">
         <div className="field">
           <label>Часовой пояс</label>
-          <input
-            className="form-input"
-            value={value.timeZoneId || DEFAULT_CAMPAIGN_TIME_ZONE}
+          <select
+            className="form-select"
+            value={timeZoneId}
             onChange={(event) => onChange({ timeZoneId: event.target.value })}
-          />
+          >
+            {selectedTimeZone ? null : (
+              <option value={timeZoneId}>Нестандартный: {timeZoneId}</option>
+            )}
+            {campaignTimeZoneOptions.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
+          <div className="field-hint">
+            {selectedTimeZone?.description || `Выбран нестандартный часовой пояс ${timeZoneId}.`}
+          </div>
         </div>
 
         <div className="field">
@@ -170,8 +187,11 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
         <div className="schedule-preview">
           {preview.map((item, index) => (
             <div key={`${item.utc}-${index}`} className="schedule-preview-item">
-              <div>#{index + 1}</div>
-              <div>{formatDateTime(item.local)}</div>
+              <div className="schedule-preview-number">#{index + 1}</div>
+              <div className="schedule-preview-time">
+                <strong>{formatDateTime(item.local)}</strong>
+                <span>{selectedTimeZone?.label || timeZoneId}</span>
+              </div>
               <div className="schedule-preview-utc">UTC: {formatDateTime(item.utc)}</div>
             </div>
           ))}

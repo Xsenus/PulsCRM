@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CAMPAIGN_TIME_ZONE, validateScheduleBuilderValue } from './scheduleValidation';
+import {
+  DEFAULT_CAMPAIGN_TIME_ZONE,
+  findCampaignTimeZoneOption,
+  normalizeCampaignTimeZoneId,
+  validateScheduleBuilderValue
+} from './scheduleValidation';
 import type { ScheduleBuilderValue } from '../components/ScheduleBuilder';
 
 function createSchedule(patch: Partial<ScheduleBuilderValue> = {}): ScheduleBuilderValue {
@@ -17,8 +22,20 @@ function createSchedule(patch: Partial<ScheduleBuilderValue> = {}): ScheduleBuil
 }
 
 describe('schedule validation', () => {
+  it('normalizes an empty timezone to the project default', () => {
+    expect(normalizeCampaignTimeZoneId('')).toBe(DEFAULT_CAMPAIGN_TIME_ZONE);
+    expect(findCampaignTimeZoneOption(undefined)?.id).toBe(DEFAULT_CAMPAIGN_TIME_ZONE);
+  });
+
   it('accepts a valid one-time schedule', () => {
     expect(validateScheduleBuilderValue(createSchedule())).toEqual([]);
+  });
+
+  it('rejects unsupported timezone ids', () => {
+    expect(validateScheduleBuilderValue(createSchedule({ timeZoneId: 'Europe/Amsterdam' }))).toContainEqual({
+      key: 'timezone-unknown',
+      message: 'Выберите поддерживаемый часовой пояс из списка.'
+    });
   });
 
   it('rejects an end date before the start date', () => {

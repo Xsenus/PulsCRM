@@ -2,6 +2,59 @@ import type { ScheduleBuilderValue } from '../components/ScheduleBuilder';
 
 export const DEFAULT_CAMPAIGN_TIME_ZONE = 'Asia/Novosibirsk';
 
+export interface CampaignTimeZoneOption {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export const campaignTimeZoneOptions: CampaignTimeZoneOption[] = [
+  {
+    id: DEFAULT_CAMPAIGN_TIME_ZONE,
+    label: 'Новосибирск (UTC+7)',
+    description: 'Основной часовой пояс проекта.'
+  },
+  {
+    id: 'Asia/Krasnoyarsk',
+    label: 'Красноярск (UTC+7)',
+    description: 'Для регионов с красноярским временем.'
+  },
+  {
+    id: 'Asia/Barnaul',
+    label: 'Барнаул (UTC+7)',
+    description: 'Для Алтайского края.'
+  },
+  {
+    id: 'Asia/Tomsk',
+    label: 'Томск (UTC+7)',
+    description: 'Для Томской области.'
+  },
+  {
+    id: 'Asia/Omsk',
+    label: 'Омск (UTC+6)',
+    description: 'Для Омской области.'
+  },
+  {
+    id: 'Europe/Moscow',
+    label: 'Москва (UTC+3)',
+    description: 'Для федеральных или московских рассылок.'
+  },
+  {
+    id: 'UTC',
+    label: 'UTC',
+    description: 'Технический режим без локального смещения.'
+  }
+];
+
+export function normalizeCampaignTimeZoneId(value?: string | null) {
+  return value?.trim() || DEFAULT_CAMPAIGN_TIME_ZONE;
+}
+
+export function findCampaignTimeZoneOption(value?: string | null) {
+  const normalized = normalizeCampaignTimeZoneId(value);
+  return campaignTimeZoneOptions.find((option) => option.id === normalized);
+}
+
 export interface ScheduleValidationIssue {
   key: string;
   message: string;
@@ -19,8 +72,12 @@ function hasCronShape(value?: string) {
 export function validateScheduleBuilderValue(value: ScheduleBuilderValue): ScheduleValidationIssue[] {
   const issues: ScheduleValidationIssue[] = [];
 
+  const timeZoneId = normalizeCampaignTimeZoneId(value.timeZoneId);
+
   if (!value.timeZoneId?.trim()) {
     issues.push({ key: 'timezone', message: 'Укажите часовой пояс для расчета локального времени.' });
+  } else if (!findCampaignTimeZoneOption(timeZoneId)) {
+    issues.push({ key: 'timezone-unknown', message: 'Выберите поддерживаемый часовой пояс из списка.' });
   }
 
   if (!isValidDate(value.startAtUtc)) {

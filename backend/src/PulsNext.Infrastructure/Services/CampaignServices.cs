@@ -201,7 +201,7 @@ public sealed class CampaignService(
                 CreatedAtUtc = now,
                 CreatedByLegacyUserId = currentLegacyUserId,
                 MaxAttempts = 3,
-                TimeZoneId = "Europe/Amsterdam"
+                TimeZoneId = MailingDefaults.TimeZoneId
             };
 
         campaign.Name = request.Name.Trim();
@@ -214,7 +214,7 @@ public sealed class CampaignService(
             : null;
         campaign.ScheduleKind = request.ScheduleKind;
         campaign.CronExpression = TextHelper.NullIfWhiteSpace(request.CronExpression);
-        campaign.TimeZoneId = TextHelper.NullIfWhiteSpace(request.TimeZoneId) ?? "Europe/Amsterdam";
+        campaign.TimeZoneId = TextHelper.NullIfWhiteSpace(request.TimeZoneId) ?? MailingDefaults.TimeZoneId;
         campaign.StartAtUtc = DateTimeHelper.MinIfNull(request.StartAtUtc?.ToUniversalTime() ?? now);
         campaign.EndAtUtc = DateTimeHelper.MinIfNull(request.EndAtUtc?.ToUniversalTime());
         campaign.IntervalMinutes = Math.Max(1, request.IntervalMinutes);
