@@ -91,6 +91,44 @@ describe('RowActionsMenu', () => {
     expect(onRetry).not.toHaveBeenCalled();
   });
 
+  it('links trigger and menu with ARIA and exposes busy actions', () => {
+    const onBusy = vi.fn();
+    const view = render(
+      <RowActionsMenu
+        label="Row actions"
+        actions={[
+          {
+            key: 'busy',
+            label: 'Processing',
+            busy: true,
+            onClick: onBusy
+          }
+        ]}
+      />
+    );
+
+    const trigger = view.querySelector<HTMLButtonElement>('.row-actions-menu-trigger')!;
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+
+    click(trigger);
+
+    const menu = view.querySelector<HTMLElement>('.row-actions-menu-list')!;
+    const action = view.querySelector<HTMLButtonElement>('.row-actions-menu-item')!;
+
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    expect(trigger.getAttribute('aria-controls')).toBe(menu.id);
+    expect(menu.getAttribute('aria-labelledby')).toBe(trigger.id);
+    expect(action.disabled).toBe(true);
+    expect(action.getAttribute('aria-busy')).toBe('true');
+    expect(action.getAttribute('aria-disabled')).toBe('true');
+
+    act(() => {
+      action.click();
+    });
+
+    expect(onBusy).not.toHaveBeenCalled();
+  });
+
   it('moves focus through enabled actions with keyboard shortcuts', () => {
     const view = render(
       <RowActionsMenu

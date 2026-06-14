@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ActionIcon } from './ActionIcon';
 
 export interface RowActionItem {
@@ -6,6 +6,7 @@ export interface RowActionItem {
   label: React.ReactNode;
   onClick: () => void | Promise<void>;
   disabled?: boolean;
+  busy?: boolean;
   danger?: boolean;
 }
 
@@ -24,6 +25,8 @@ export function RowActionsMenu({
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const actionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const triggerId = useId();
+  const menuId = useId();
   const [open, setOpen] = useState(false);
   const [horizontalAlignment, setHorizontalAlignment] = useState<MenuHorizontalAlignment>('end');
   const [verticalPlacement, setVerticalPlacement] = useState<MenuVerticalPlacement>('down');
@@ -175,7 +178,9 @@ export function RowActionsMenu({
         aria-label={label}
         title={label}
         aria-haspopup="menu"
+        aria-controls={open ? menuId : undefined}
         aria-expanded={open}
+        id={triggerId}
       >
         <ActionIcon kind="actions" />
       </button>
@@ -183,29 +188,37 @@ export function RowActionsMenu({
       {open ? (
         <div
           className={`row-actions-menu-list ${horizontalAlignment} ${verticalPlacement}`}
+          id={menuId}
           ref={menuRef}
           role="menu"
+          aria-labelledby={triggerId}
           onKeyDown={handleMenuKeyDown}
         >
-          {actions.map((action, index) => (
-            <button
-              key={action.key}
-              ref={(element) => {
-                actionRefs.current[index] = element;
-              }}
-              type="button"
-              className={`row-actions-menu-item${action.danger ? ' danger' : ''}`}
-              disabled={action.disabled}
-              role="menuitem"
-              onClick={(event) => {
-                event.stopPropagation();
-                setOpen(false);
-                void action.onClick();
-              }}
-            >
-              {action.label}
-            </button>
-          ))}
+          {actions.map((action, index) => {
+            const isDisabled = Boolean(action.disabled || action.busy);
+
+            return (
+              <button
+                key={action.key}
+                ref={(element) => {
+                  actionRefs.current[index] = element;
+                }}
+                type="button"
+                className={`row-actions-menu-item${action.danger ? ' danger' : ''}`}
+                disabled={isDisabled}
+                aria-busy={action.busy || undefined}
+                aria-disabled={isDisabled || undefined}
+                role="menuitem"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpen(false);
+                  void action.onClick();
+                }}
+              >
+                {action.label}
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </div>

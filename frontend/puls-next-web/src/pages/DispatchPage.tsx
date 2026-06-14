@@ -263,6 +263,7 @@ export function DispatchPage() {
           key: 'retry',
           label: actionBusyId === row.id ? <LoadingButtonLabel label="Возвращаем" /> : 'Повторить',
           disabled: !canRetryDispatchItem(row) || actionBusyId === row.id,
+          busy: actionBusyId === row.id,
           onClick: () => retryItem(row)
         },
         {

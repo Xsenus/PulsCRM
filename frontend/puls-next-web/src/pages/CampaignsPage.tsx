@@ -280,8 +280,8 @@ export function CampaignsPage() {
                 <RowActionsMenu
                   actions={[
                     { key: 'open', label: 'Открыть', onClick: () => navigate(`/campaigns/${row.id}`) },
-                    { key: 'run', label: 'Запустить', disabled: actionBusyId === row.id, onClick: () => handleRun(row.id) },
-                    { key: 'toggle', label: row.status === 1 ? 'Поставить на паузу' : 'Активировать', disabled: actionBusyId === row.id, onClick: () => handlePauseResume(row) },
+                    { key: 'run', label: 'Запустить', disabled: actionBusyId === row.id, busy: actionBusyId === row.id, onClick: () => handleRun(row.id) },
+                    { key: 'toggle', label: row.status === 1 ? 'Поставить на паузу' : 'Активировать', disabled: actionBusyId === row.id, busy: actionBusyId === row.id, onClick: () => handlePauseResume(row) },
                     { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
                   ]}
                 />
