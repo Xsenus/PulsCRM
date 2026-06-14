@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActionIcon } from './ActionIcon';
 
 export interface RowActionItem {
@@ -9,6 +9,10 @@ export interface RowActionItem {
   danger?: boolean;
 }
 
+type MenuHorizontalAlignment = 'start' | 'end';
+type MenuVerticalPlacement = 'down' | 'up';
+type InitialFocusTarget = 'first' | 'last';
+
 export function RowActionsMenu({
   actions,
   label = 'Действия'
@@ -18,8 +22,12 @@ export function RowActionsMenu({
 }) {
   const shellRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const actionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [open, setOpen] = useState(false);
+  const [horizontalAlignment, setHorizontalAlignment] = useState<MenuHorizontalAlignment>('end');
+  const [verticalPlacement, setVerticalPlacement] = useState<MenuVerticalPlacement>('down');
+  const [initialFocusTarget, setInitialFocusTarget] = useState<InitialFocusTarget>('first');
   actionRefs.current = actionRefs.current.slice(0, actions.length);
 
   const focusAction = (index: number) => {
@@ -36,12 +44,51 @@ export function RowActionsMenu({
     enabledActions[enabledActions.length - 1]?.focus();
   };
 
+  const openMenu = (focusTarget: InitialFocusTarget = 'first') => {
+    setInitialFocusTarget(focusTarget);
+    setOpen(true);
+  };
+
+  const toggleMenu = () => {
+    setInitialFocusTarget('first');
+    setOpen((current) => !current);
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const trigger = triggerRef.current;
+    const menu = menuRef.current;
+    if (!trigger || !menu) {
+      return;
+    }
+
+    const viewportGap = 8;
+    const triggerRect = trigger.getBoundingClientRect();
+    const menuWidth = menu.offsetWidth || menu.getBoundingClientRect().width;
+    const menuHeight = menu.offsetHeight || menu.getBoundingClientRect().height;
+    const nextHorizontalAlignment = triggerRect.right - menuWidth < viewportGap ? 'start' : 'end';
+    const nextVerticalPlacement = triggerRect.bottom + viewportGap + menuHeight > window.innerHeight
+      && triggerRect.top - viewportGap - menuHeight >= viewportGap
+      ? 'up'
+      : 'down';
+
+    setHorizontalAlignment(nextHorizontalAlignment);
+    setVerticalPlacement(nextVerticalPlacement);
+  }, [open, actions.length]);
+
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    focusFirstAction();
+    if (initialFocusTarget === 'last') {
+      focusLastAction();
+    } else {
+      focusFirstAction();
+    }
 
     const handlePointerDown = (event: PointerEvent) => {
       if (!shellRef.current?.contains(event.target as Node)) {
@@ -62,7 +109,7 @@ export function RowActionsMenu({
       document.removeEventListener('pointerdown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [initialFocusTarget, open]);
 
   const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Escape'].includes(event.key)) {
@@ -108,12 +155,12 @@ export function RowActionsMenu({
         className={`secondary-button button-inline icon-button row-actions-menu-trigger${open ? ' active' : ''}`}
         onClick={(event) => {
           event.stopPropagation();
-          setOpen((current) => !current);
+          toggleMenu();
         }}
         onKeyDown={(event) => {
-          if (event.key === 'ArrowDown') {
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
-            setOpen(true);
+            openMenu(event.key === 'ArrowUp' ? 'last' : 'first');
           }
         }}
         aria-label={label}
@@ -125,7 +172,12 @@ export function RowActionsMenu({
       </button>
 
       {open ? (
-        <div className="row-actions-menu-list" role="menu" onKeyDown={handleMenuKeyDown}>
+        <div
+          className={`row-actions-menu-list ${horizontalAlignment} ${verticalPlacement}`}
+          ref={menuRef}
+          role="menu"
+          onKeyDown={handleMenuKeyDown}
+        >
           {actions.map((action, index) => (
             <button
               key={action.key}

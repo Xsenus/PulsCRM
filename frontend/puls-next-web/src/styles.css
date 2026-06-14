@@ -859,8 +859,6 @@ select {
 
 .row-actions-menu-list {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
   z-index: 40;
   min-width: 190px;
   display: grid;
@@ -870,6 +868,22 @@ select {
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 24px 54px rgba(15, 23, 42, 0.16);
+}
+
+.row-actions-menu-list.down {
+  top: calc(100% + 8px);
+}
+
+.row-actions-menu-list.up {
+  bottom: calc(100% + 8px);
+}
+
+.row-actions-menu-list.end {
+  right: 0;
+}
+
+.row-actions-menu-list.start {
+  left: 0;
 }
 
 .row-actions-menu-item {

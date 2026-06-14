@@ -35,6 +35,21 @@ function keyDown(element: Element, key: string) {
   });
 }
 
+function rect(overrides: Partial<DOMRect>): DOMRect {
+  return {
+    bottom: 0,
+    height: 0,
+    left: 0,
+    right: 0,
+    top: 0,
+    width: 0,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+    ...overrides
+  };
+}
+
 afterEach(() => {
   if (root && container) {
     act(() => {
@@ -113,5 +128,82 @@ describe('RowActionsMenu', () => {
 
     expect(view.querySelector('.row-actions-menu-list')).toBeNull();
     expect(document.activeElement).toBe(trigger);
+  });
+
+  it('opens with ArrowUp and focuses the last enabled action', () => {
+    const view = render(
+      <RowActionsMenu
+        actions={[
+          { key: 'edit', label: 'Редактировать', onClick: vi.fn() },
+          { key: 'delete', label: 'Удалить', danger: true, onClick: vi.fn() }
+        ]}
+      />
+    );
+
+    const trigger = view.querySelector<HTMLButtonElement>('.row-actions-menu-trigger')!;
+    keyDown(trigger, 'ArrowUp');
+
+    const actions = Array.from(view.querySelectorAll<HTMLButtonElement>('.row-actions-menu-item'));
+    expect(view.querySelector('.row-actions-menu-list')).not.toBeNull();
+    expect(document.activeElement).toBe(actions[1]);
+  });
+
+  it('positions the menu inside the viewport when trigger is near edges', () => {
+    const originalInnerHeight = Object.getOwnPropertyDescriptor(window, 'innerHeight');
+    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+    const originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+    const originalOffsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 280 });
+    HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRectMock() {
+      if (this.classList.contains('row-actions-menu-trigger')) {
+        return rect({ bottom: 248, height: 38, left: 4, right: 42, top: 210, width: 38 });
+      }
+
+      if (this.classList.contains('row-actions-menu-list')) {
+        return rect({ height: 80, width: 190 });
+      }
+
+      return originalGetBoundingClientRect.call(this);
+    };
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+      configurable: true,
+      get() {
+        return this.classList.contains('row-actions-menu-list') ? 190 : 38;
+      }
+    });
+    Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
+      configurable: true,
+      get() {
+        return this.classList.contains('row-actions-menu-list') ? 80 : 38;
+      }
+    });
+
+    try {
+      const view = render(
+        <RowActionsMenu
+          actions={[
+            { key: 'edit', label: 'Редактировать', onClick: vi.fn() }
+          ]}
+        />
+      );
+
+      click(view.querySelector('.row-actions-menu-trigger')!);
+
+      const menu = view.querySelector<HTMLElement>('.row-actions-menu-list')!;
+      expect(menu.classList.contains('start')).toBe(true);
+      expect(menu.classList.contains('up')).toBe(true);
+    } finally {
+      if (originalInnerHeight) {
+        Object.defineProperty(window, 'innerHeight', originalInnerHeight);
+      }
+      HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+      if (originalOffsetWidth) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidth);
+      }
+      if (originalOffsetHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'offsetHeight', originalOffsetHeight);
+      }
+    }
   });
 });
