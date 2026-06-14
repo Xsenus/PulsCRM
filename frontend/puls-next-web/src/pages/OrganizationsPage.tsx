@@ -6,6 +6,7 @@ import {
   getOrganizations
 } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
+import { getContextMenuPosition } from '../app/contextMenuPosition';
 import { useAuth } from '../app/AuthContext';
 import { buildRaionSelectionSummary, getRaionSelectionId } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
@@ -167,17 +168,22 @@ export function OrganizationsPage() {
     }
 
     const close = () => setContextMenu(null);
+    const closeByEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        close();
+      }
+    };
 
     window.addEventListener('click', close);
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
-    window.addEventListener('keydown', close);
+    window.addEventListener('keydown', closeByEscape);
 
     return () => {
       window.removeEventListener('click', close);
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
-      window.removeEventListener('keydown', close);
+      window.removeEventListener('keydown', closeByEscape);
     };
   }, [contextMenu]);
 
@@ -409,10 +415,17 @@ export function OrganizationsPage() {
             onRowDoubleClick={(row) => void openEditEditor(row)}
             onRowContextMenu={(row, event) => {
               setSelectedRowId(row.id);
+              const position = getContextMenuPosition({
+                clientX: event.clientX,
+                clientY: event.clientY,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight
+              });
+
               setContextMenu({
                 row,
-                x: Math.min(event.clientX, window.innerWidth - 240),
-                y: Math.min(event.clientY, window.innerHeight - 180)
+                x: position.x,
+                y: position.y
               });
             }}
           />
@@ -436,6 +449,7 @@ export function OrganizationsPage() {
           className="row-context-menu"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           role="menu"
+          aria-label="Действия организации"
         >
           <button type="button" className="row-context-menu-item" onClick={() => void openCreateEditor()}>
             Создать
