@@ -14,8 +14,8 @@ let container: HTMLDivElement | null = null;
 const rows: OrganizationListItemDto[] = [
   {
     id: 201,
-    name: 'Mobile Org',
-    smallName: 'Mobile Org',
+    name: 'Очень длинное название организации SuperLongOrganizationNameWithoutSpacesForMobileLayoutCheck',
+    smallName: 'Очень длинное название организации',
     fullName: 'Mobile Organization Full Name',
     inn: '5400000000',
     raionId: 301,
@@ -76,7 +76,9 @@ describe('OrganizationsTable', () => {
     const card = view.querySelector('.data-table-card')!;
     const cardText = card.textContent ?? '';
 
-    expect(card.querySelector('.data-table-card-title')?.textContent).toBe('Mobile Org');
+    expect(card.querySelector('.data-table-card-title')?.textContent).toBe(
+      'Очень длинное название организации SuperLongOrganizationNameWithoutSpacesForMobileLayoutCheck'
+    );
     expect(cardText).toContain('ИНН');
     expect(cardText).toContain('5400000000');
     expect(cardText).toContain('Район');

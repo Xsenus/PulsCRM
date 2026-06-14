@@ -37,8 +37,8 @@ const organizationsResponse = {
   items: [
     {
       id: 201,
-      name: 'Mobile Org',
-      smallName: 'Mobile Org',
+      name: 'Очень длинное название организации SuperLongOrganizationNameWithoutSpacesForMobileLayoutCheck',
+      smallName: 'Очень длинное название организации',
       fullName: 'Mobile Organization Full Name',
       inn: '5400000000',
       raionId: 301,
@@ -96,7 +96,7 @@ test('organizations list uses mobile cards without page overflow', async ({ page
 
   await expect(page.locator('.app-shell')).toBeVisible();
   await expect(page.locator('.organizations-layout')).toBeVisible();
-  await expect(page.locator('.data-table-card').filter({ hasText: 'Mobile Org' })).toBeVisible();
+  await expect(page.locator('.data-table-card').filter({ hasText: 'SuperLongOrganizationNameWithoutSpacesForMobileLayoutCheck' })).toBeVisible();
   const filterPanel = page.locator('#organizations-filter-panel');
   await expect(filterPanel).toBeHidden();
   const filterToggle = page.getByRole('button', { name: /^Фильтры/ });

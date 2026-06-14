@@ -4560,6 +4560,19 @@ body.is-dragging-column {
     gap: 2px;
   }
 
+  .data-table-card-head {
+    grid-template-columns: 1fr;
+  }
+
+  .data-table-card-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .data-table-card-actions > * {
+    max-width: 100%;
+  }
+
   .table-settings-list {
     grid-template-columns: 1fr;
   }
