@@ -68,11 +68,15 @@ describe('OrganizationRelationsOverview', () => {
     const view = render(<OrganizationRelationsOverview cards={cards} activeTab="contacts" onChange={vi.fn()} />);
     const previewCards = Array.from(view.querySelectorAll('.organization-preview-card'));
     const tabs = Array.from(view.querySelectorAll('.settings-tab'));
+    const tablist = view.querySelector('[role="tablist"]');
 
     expect(view.textContent).toContain('Связанные записи');
     expect(view.textContent).toContain('Быстрые карточки и полный список по каждому разделу');
     expect(previewCards).toHaveLength(2);
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Контакты', 'Договоры']);
+    expect(tablist?.getAttribute('aria-label')).toBe('Связанные данные организации');
+    expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false']);
     expect(previewCards[0].className).toContain('active');
     expect(tabs[0].className).toContain('active');
     expect(view.textContent).toContain('Пока пусто.');

@@ -41,11 +41,17 @@ export function OrganizationRelationsOverview({
         ))}
       </div>
 
-      <div className="settings-tabs organization-card-tabs organization-card-tabs-inline">
+      <div
+        className="settings-tabs organization-card-tabs organization-card-tabs-inline"
+        role="tablist"
+        aria-label="Связанные данные организации"
+      >
         {cards.map((card) => (
           <button
             key={card.key}
             type="button"
+            role="tab"
+            aria-selected={activeTab === card.key}
             className={`settings-tab${activeTab === card.key ? ' active' : ''}`}
             onClick={() => onChange(card.key)}
           >
