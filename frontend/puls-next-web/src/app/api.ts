@@ -34,7 +34,7 @@ import type {
   CurrentUserDto,
   LoginUserOptionDto
 } from './types';
-import { throwApiError } from './apiErrors';
+import { getApiErrorStatus, throwApiError } from './apiErrors';
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 const TOKEN_KEY = 'puls-next-token';
@@ -69,7 +69,7 @@ api.interceptors.response.use(
   }
 );
 
-function unwrapError(error: any): never {
+function unwrapError(error: unknown): never {
   throwApiError(error);
 }
 
@@ -101,8 +101,8 @@ export async function getCurrentUser(): Promise<CurrentUserDto | null> {
   try {
     const { data } = await api.get<CurrentUserDto>('/api/auth/me');
     return data;
-  } catch (error: any) {
-    if (error?.response?.status === 401) {
+  } catch (error) {
+    if (getApiErrorStatus(error) === 401) {
       return null;
     }
 

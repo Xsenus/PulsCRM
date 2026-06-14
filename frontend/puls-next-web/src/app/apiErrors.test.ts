@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getApiErrorMessage } from './apiErrors';
+import { getApiErrorMessage, getApiErrorStatus } from './apiErrors';
 
 describe('getApiErrorMessage', () => {
   it('converts axios network errors to a user-facing API availability message', () => {
@@ -31,5 +31,13 @@ describe('getApiErrorMessage', () => {
 
   it('uses string errors as readable messages', () => {
     expect(getApiErrorMessage('Не удалось сохранить запись.')).toBe('Не удалось сохранить запись.');
+  });
+
+  it('reads numeric HTTP status from API errors', () => {
+    expect(getApiErrorStatus({ response: { status: 401 } })).toBe(401);
+  });
+
+  it('ignores non-numeric HTTP status values', () => {
+    expect(getApiErrorStatus({ response: { status: '401' } })).toBeUndefined();
   });
 });

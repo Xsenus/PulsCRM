@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { showToast } from '../app/toast';
 import type { EmployeeEditorLookupsDto, EmployeeUpsertRequest } from '../app/types';
 import { DatePickerInput } from './DatePickerInput';
@@ -169,7 +170,7 @@ export function EmployeeEditorForm({
           }));
       showToast(`Изображение "${getMediaTitle(kind)}" обновлено.`, 'update');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Не удалось загрузить изображение.', 'error');
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить изображение.'), 'error');
     }
   };
 

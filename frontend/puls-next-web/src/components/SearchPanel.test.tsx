@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act, Simulate } from 'react-dom/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { TOAST_EVENT, type ToastMessage } from '../app/toast';
 import { SearchPanel } from './SearchPanel';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -142,5 +143,38 @@ describe('SearchPanel', () => {
     click(view.querySelector('button[aria-label="Найти"]')!);
 
     expect(onSearch).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows readable refresh errors from rejected strings', async () => {
+    const toasts: ToastMessage[] = [];
+    const onToast = (event: Event) => {
+      toasts.push((event as CustomEvent<ToastMessage>).detail);
+    };
+    window.addEventListener(TOAST_EVENT, onToast);
+
+    const view = render(
+      <SearchPanel
+        value=""
+        placeholder="Search"
+        onChange={vi.fn()}
+        onSearch={vi.fn()}
+        onClear={vi.fn()}
+        onRefresh={() => Promise.reject('Не удалось обновить список.')}
+        refreshErrorMessage="Ошибка обновления."
+      />
+    );
+
+    try {
+      await act(async () => {
+        Simulate.click(view.querySelector('button[aria-label="Обновить список"]')!);
+      });
+
+      expect(toasts[toasts.length - 1]).toMatchObject({
+        message: 'Не удалось обновить список.',
+        type: 'error'
+      });
+    } finally {
+      window.removeEventListener(TOAST_EVENT, onToast);
+    }
   });
 });

@@ -5,6 +5,7 @@ import {
   getDispatchItems,
   retryDispatchItem
 } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import {
   buildDispatchBatchQuery,
@@ -65,10 +66,6 @@ function batchProgress(row: DispatchBatchDto) {
   return `${row.sentCount}/${row.totalRecipients}`;
 }
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback;
-}
-
 export function DispatchPage() {
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
@@ -114,7 +111,7 @@ export function DispatchPage() {
     } catch (error) {
       setItems([]);
       setItemTotalCount(0);
-      showToast(getErrorMessage(error, 'Не удалось загрузить сообщения очереди.'), 'error', 4000);
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить сообщения очереди.'), 'error', 4000);
     } finally {
       setItemsLoading(false);
     }
@@ -133,7 +130,7 @@ export function DispatchPage() {
     } catch (error) {
       setBatches([]);
       setBatchTotalCount(0);
-      showToast(getErrorMessage(error, 'Не удалось загрузить партии отправки.'), 'error', 4000);
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить партии отправки.'), 'error', 4000);
     } finally {
       setBatchesLoading(false);
     }
@@ -211,6 +208,8 @@ export function DispatchPage() {
       await retryDispatchItem(row.id);
       showToast('Сообщение возвращено в очередь.', 'success');
       await refresh();
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось вернуть сообщение в очередь.'), 'error', 4000);
     } finally {
       setActionBusyId(null);
     }
@@ -227,6 +226,8 @@ export function DispatchPage() {
       showToast('Сообщение отменено.', 'delete');
       setCancelTarget(null);
       await refresh();
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось отменить сообщение.'), 'error', 4000);
     } finally {
       setCancelBusy(false);
     }

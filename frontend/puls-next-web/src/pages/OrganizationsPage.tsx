@@ -5,6 +5,7 @@ import {
   getOrganizationRaions,
   getOrganizations
 } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import { buildRaionSelectionSummary, getRaionSelectionId } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
@@ -30,10 +31,6 @@ interface RowContextMenuState {
   row: OrganizationListItemDto;
   x: number;
   y: number;
-}
-
-function toErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Неизвестная ошибка';
 }
 
 function clampSidebarWidth(value: number) {
@@ -127,7 +124,7 @@ export function OrganizationsPage() {
 
   useEffect(() => {
     void loadData().catch((error) => {
-      showToast(toErrorMessage(error), 'error');
+      showToast(getApiErrorMessage(error), 'error');
     });
   }, [appliedSearch, page, pageSize, selectedRaionIdsKey]);
 
@@ -243,7 +240,7 @@ export function OrganizationsPage() {
       setDeleteTarget(null);
       await loadData();
     } catch (error) {
-      showToast(toErrorMessage(error), 'error');
+      showToast(getApiErrorMessage(error), 'error');
     } finally {
       setDeleteBusy(false);
     }
@@ -452,7 +449,7 @@ export function OrganizationsPage() {
             onClick={() => {
               setContextMenu(null);
               void refreshOrganizations().catch((error) => {
-                showToast(toErrorMessage(error), 'error');
+                showToast(getApiErrorMessage(error), 'error');
               });
             }}
           >

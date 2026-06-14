@@ -35,6 +35,16 @@ export function getApiErrorMessage(error: unknown, fallback = DEFAULT_API_ERROR_
   return message || fallback;
 }
 
+export function getApiErrorStatus(error: unknown) {
+  const apiError = error as {
+    response?: {
+      status?: unknown;
+    };
+  } | null | undefined;
+
+  return typeof apiError?.response?.status === 'number' ? apiError.response.status : undefined;
+}
+
 export function throwApiError(error: unknown): never {
   throw new Error(getApiErrorMessage(error));
 }

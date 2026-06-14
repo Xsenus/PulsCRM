@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getEmployees, getOrganizations, getWork } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
 import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
+import { showToast } from '../app/toast';
 import type { EmployeeListItemDto, OrganizationListItemDto, WorkItemDto } from '../app/types';
 import { DataTable } from '../components/DataTable';
 import { PageHeader } from '../components/PageHeader';
@@ -47,13 +49,19 @@ export function WorkPage() {
   const [totalCount, setTotalCount] = useState(0);
 
   const loadLookups = async () => {
-    const [employeeResponse, organizationResponse] = await Promise.all([
-      getEmployees('', 0, 500),
-      getOrganizations({ take: 500 })
-    ]);
+    try {
+      const [employeeResponse, organizationResponse] = await Promise.all([
+        getEmployees('', 0, 500),
+        getOrganizations({ take: 500 })
+      ]);
 
-    setEmployees(employeeResponse.items);
-    setOrganizations(organizationResponse.items);
+      setEmployees(employeeResponse.items);
+      setOrganizations(organizationResponse.items);
+    } catch (error) {
+      setEmployees([]);
+      setOrganizations([]);
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить фильтры задач.'), 'error', 4000);
+    }
   };
 
   const load = async () => {
@@ -69,6 +77,10 @@ export function WorkPage() {
       );
       setRows(result.items);
       setTotalCount(result.totalCount);
+    } catch (error) {
+      setRows([]);
+      setTotalCount(0);
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить задачи.'), 'error', 4000);
     } finally {
       setLoading(false);
     }

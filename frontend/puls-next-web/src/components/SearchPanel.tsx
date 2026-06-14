@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { showToast } from '../app/toast';
 import { ActionIcon } from './ActionIcon';
 
@@ -15,10 +16,6 @@ interface SearchPanelProps {
   refreshErrorMessage?: string;
   panelClassName?: string;
   inputClassName?: string;
-}
-
-function toErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 export function SearchPanel({
@@ -109,7 +106,7 @@ export function SearchPanel({
       await onRefresh();
       showToast(refreshSuccessMessage, 'success');
     } catch (error) {
-      showToast(toErrorMessage(error, refreshErrorMessage), 'error', 4000);
+      showToast(getApiErrorMessage(error, refreshErrorMessage), 'error', 4000);
     } finally {
       setRefreshing(false);
     }

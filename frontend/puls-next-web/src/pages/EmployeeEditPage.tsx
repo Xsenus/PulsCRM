@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getEmployee, getEmployeeLookups, saveEmployee } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import { showToast } from '../app/toast';
 import type { EmployeeDetailsDto, EmployeeEditorLookupsDto, EmployeeUpsertRequest } from '../app/types';
@@ -68,10 +69,6 @@ function mapDetailsToRequest(details: EmployeeDetailsDto): EmployeeUpsertRequest
     photoBase64: details.photoBase64,
     photoContentType: details.photoContentType
   };
-}
-
-function toErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Неизвестная ошибка';
 }
 
 function validateDraft(
@@ -152,7 +149,7 @@ export function EmployeeEditPage() {
         setDraft(detailsResult ? mapDetailsToRequest(detailsResult) : createEmptyEmployeeRequest(lookupsResult));
       } catch (error) {
         if (!cancelled) {
-          showToast(toErrorMessage(error), 'error');
+          showToast(getApiErrorMessage(error), 'error');
           navigate('/employees', { replace: true });
         }
       } finally {
@@ -214,7 +211,7 @@ export function EmployeeEditPage() {
       showToast(isEdit ? 'Изменения сотрудника сохранены.' : 'Сотрудник создан.', isEdit ? 'update' : 'create');
       navigate('/employees');
     } catch (error) {
-      showToast(toErrorMessage(error), 'error');
+      showToast(getApiErrorMessage(error), 'error');
     } finally {
       setSaving(false);
     }

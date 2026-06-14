@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 import { getOrganization, getOrganizationLookups, saveOrganization } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { showToast } from '../app/toast';
 import type {
   OrganizationDetailsDto,
@@ -100,10 +101,6 @@ function requestsEqual(left: OrganizationUpsertRequest, right: OrganizationUpser
   return ORGANIZATION_REQUEST_KEYS.every((key) => left[key] === right[key]);
 }
 
-function toErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Неизвестная ошибка';
-}
-
 function getLookupName(items: OrganizationEditorLookupsDto['raions'] | OrganizationEditorLookupsDto['orgTypes'] | undefined, id?: number) {
   return id ? items?.find((item) => item.id === id)?.name : undefined;
 }
@@ -144,7 +141,7 @@ export function OrganizationEditPage() {
         setDraft(detailsResult ? mapDetailsToRequest(detailsResult) : createEmptyOrganizationRequest());
       } catch (error) {
         if (!cancelled) {
-          showToast(toErrorMessage(error), 'error');
+          showToast(getApiErrorMessage(error), 'error');
           navigate('/organizations', { replace: true });
         }
       } finally {
@@ -174,7 +171,7 @@ export function OrganizationEditPage() {
         navigate(`/organizations/${result.id}/edit`, { replace: true });
       }
     } catch (error) {
-      showToast(toErrorMessage(error), 'error');
+      showToast(getApiErrorMessage(error), 'error');
     } finally {
       setSaving(false);
     }

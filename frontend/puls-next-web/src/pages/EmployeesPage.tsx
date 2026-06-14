@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteEmployee, getEmployees } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import { formatDate } from '../app/format';
 import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
@@ -20,10 +21,6 @@ interface RowContextMenuState {
   row: EmployeeListItemDto;
   x: number;
   y: number;
-}
-
-function toErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Неизвестная ошибка';
 }
 
 function formatBoolean(value: boolean) {
@@ -92,7 +89,9 @@ export function EmployeesPage() {
   };
 
   useEffect(() => {
-    void load();
+    void load().catch((error) => {
+      showToast(getApiErrorMessage(error), 'error');
+    });
   }, [appliedSearch, page, pageSize]);
 
   useEffect(() => {
@@ -173,7 +172,7 @@ export function EmployeesPage() {
       setDeleteTarget(null);
       await load();
     } catch (error) {
-      showToast(toErrorMessage(error), 'error');
+      showToast(getApiErrorMessage(error), 'error');
     } finally {
       setDeleteBusy(false);
     }
@@ -216,7 +215,17 @@ export function EmployeesPage() {
             <RowActionsMenu
               actions={[
                 { key: 'edit', label: 'Редактировать', onClick: () => navigate(`/employees/${row.id}/edit`) },
-                { key: 'refresh', label: 'Обновить', onClick: () => refreshEmployees() },
+                {
+                  key: 'refresh',
+                  label: 'Обновить',
+                  onClick: async () => {
+                    try {
+                      await refreshEmployees();
+                    } catch (error) {
+                      showToast(getApiErrorMessage(error), 'error');
+                    }
+                  }
+                },
                 { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
               ]}
             />
@@ -280,7 +289,9 @@ export function EmployeesPage() {
             className="row-context-menu-item"
             onClick={() => {
               setContextMenu(null);
-              void refreshEmployees();
+              void refreshEmployees().catch((error) => {
+                showToast(getApiErrorMessage(error), 'error');
+              });
             }}
           >
             Обновить
