@@ -332,7 +332,7 @@ export function TransportProfilesPage() {
                 render: (row) => (
                   <RowActionsMenu
                     actions={[
-                      { key: 'edit', label: 'Редактировать', onClick: () => openEdit(row) },
+                      { key: 'edit', label: 'Редактировать', primary: true, onClick: () => openEdit(row) },
                       { key: 'test', label: testingId === row.id ? 'Проверяем...' : 'Проверить', disabled: testingId === row.id, busy: testingId === row.id, onClick: () => runTest(row.id) },
                       { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
                     ]}

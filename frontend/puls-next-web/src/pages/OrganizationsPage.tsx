@@ -399,7 +399,7 @@ export function OrganizationsPage() {
             mobileActions={(row) => (
               <RowActionsMenu
                 actions={[
-                  { key: 'edit', label: 'Редактировать', onClick: () => void openEditEditor(row) },
+                  { key: 'edit', label: 'Редактировать', primary: true, onClick: () => void openEditEditor(row) },
                   { key: 'refresh', label: 'Обновить', onClick: () => refreshOrganizations() },
                   { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
                 ]}

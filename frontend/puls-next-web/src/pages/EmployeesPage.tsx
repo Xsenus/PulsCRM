@@ -215,7 +215,7 @@ export function EmployeesPage() {
           mobileActions={(row) => (
             <RowActionsMenu
               actions={[
-                { key: 'edit', label: 'Редактировать', onClick: () => navigate(`/employees/${row.id}/edit`) },
+                { key: 'edit', label: 'Редактировать', primary: true, onClick: () => navigate(`/employees/${row.id}/edit`) },
                 {
                   key: 'refresh',
                   label: 'Обновить',

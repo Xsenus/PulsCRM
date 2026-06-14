@@ -7,6 +7,7 @@ export interface RowActionItem {
   onClick: () => void | Promise<void>;
   disabled?: boolean;
   busy?: boolean;
+  primary?: boolean;
   danger?: boolean;
 }
 
@@ -196,6 +197,11 @@ export function RowActionsMenu({
         >
           {actions.map((action, index) => {
             const isDisabled = Boolean(action.disabled || action.busy);
+            const itemClassName = [
+              'row-actions-menu-item',
+              action.primary ? 'primary' : '',
+              action.danger ? 'danger' : ''
+            ].filter(Boolean).join(' ');
 
             return (
               <button
@@ -204,7 +210,7 @@ export function RowActionsMenu({
                   actionRefs.current[index] = element;
                 }}
                 type="button"
-                className={`row-actions-menu-item${action.danger ? ' danger' : ''}`}
+                className={itemClassName}
                 disabled={isDisabled}
                 aria-busy={action.busy || undefined}
                 aria-disabled={isDisabled || undefined}

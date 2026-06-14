@@ -904,6 +904,15 @@ select {
   color: var(--brand-2);
 }
 
+.row-actions-menu-item.primary {
+  background: #eff6ff;
+  color: var(--brand-2);
+}
+
+.row-actions-menu-item.primary:hover:not(:disabled) {
+  background: #dbeafe;
+}
+
 .row-actions-menu-item.danger {
   color: var(--danger);
 }

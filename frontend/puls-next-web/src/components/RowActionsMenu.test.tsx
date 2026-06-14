@@ -129,6 +129,25 @@ describe('RowActionsMenu', () => {
     expect(onBusy).not.toHaveBeenCalled();
   });
 
+  it('marks primary and danger actions with stable classes', () => {
+    const view = render(
+      <RowActionsMenu
+        actions={[
+          { key: 'open', label: 'Open', primary: true, onClick: vi.fn() },
+          { key: 'delete', label: 'Delete', danger: true, onClick: vi.fn() }
+        ]}
+      />
+    );
+
+    click(view.querySelector('.row-actions-menu-trigger')!);
+
+    const actions = Array.from(view.querySelectorAll<HTMLButtonElement>('.row-actions-menu-item'));
+    expect(actions[0].classList.contains('primary')).toBe(true);
+    expect(actions[0].classList.contains('danger')).toBe(false);
+    expect(actions[1].classList.contains('danger')).toBe(true);
+    expect(actions[1].classList.contains('primary')).toBe(false);
+  });
+
   it('moves focus through enabled actions with keyboard shortcuts', () => {
     const view = render(
       <RowActionsMenu
