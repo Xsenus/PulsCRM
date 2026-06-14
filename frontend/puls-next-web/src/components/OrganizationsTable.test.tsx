@@ -89,11 +89,12 @@ describe('OrganizationsTable', () => {
     expect(cardText).toContain('4');
     expect(cardText).toContain('Открытых задач');
     expect(cardText).toContain('3');
+    expect(cardText).toContain('Видимость');
+    expect(cardText).toContain('Скрыта');
     expect(cardText).toContain('Открыть');
-    expect(cardText).not.toContain('Видимость');
   });
 
-  it('renders optional organization state columns as badges only in table mode', () => {
+  it('keeps management state as an optional table-only badge', () => {
     window.localStorage.setItem('organizations-table-test-settings', JSON.stringify({
       columns: [
         { key: 'name', visible: true, width: 320 },
@@ -113,7 +114,7 @@ describe('OrganizationsTable', () => {
 
     expect(view.querySelector('.data-table .status-badge-neutral')?.textContent).toBe('Скрыта');
     expect(view.querySelector('.data-table .status-badge-info')?.textContent).toBe('Да');
-    expect(view.querySelector('.data-table-card')?.textContent).not.toContain('Скрыта');
+    expect(view.querySelector('.data-table-card')?.textContent).toContain('Скрыта');
     expect(view.querySelector('.data-table-card')?.textContent).not.toContain('Управленческая');
   });
 });

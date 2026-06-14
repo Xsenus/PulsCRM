@@ -117,8 +117,8 @@ const columns: Array<DataTableColumn<OrganizationListItemDto>> = [
     title: 'Видимость',
     width: 130,
     minWidth: 110,
-    visible: false,
-    mobileVisible: false,
+    mobileLabel: 'Видимость',
+    priority: 8,
     render: renderVisibilityBadge
   },
   {
