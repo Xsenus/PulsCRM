@@ -232,9 +232,11 @@ export function TransportProfilesPage() {
         actions={isSmtpGroup ? <button type="button" className="primary-button" onClick={openCreate}>Новый профиль</button> : undefined}
       />
 
-      <div className="settings-tabs">
+      <div className="settings-tabs" role="tablist" aria-label="Группы настроек">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeGroup === 'general'}
           className={`settings-tab${activeGroup === 'general' ? ' active' : ''}`}
           onClick={() => activateGroup('general')}
         >
@@ -242,6 +244,8 @@ export function TransportProfilesPage() {
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeGroup === 'smtp'}
           className={`settings-tab${activeGroup === 'smtp' ? ' active' : ''}`}
           onClick={() => activateGroup('smtp')}
         >
