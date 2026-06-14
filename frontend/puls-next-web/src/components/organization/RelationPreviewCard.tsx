@@ -26,7 +26,12 @@ export function RelationPreviewCard({
   onClick: () => void;
 }) {
   return (
-    <button type="button" className={`organization-preview-card${active ? ' active' : ''}`} onClick={onClick}>
+    <button
+      type="button"
+      className={`organization-preview-card${active ? ' active' : ''}`}
+      aria-pressed={active}
+      onClick={onClick}
+    >
       <div className="organization-preview-card-head">
         <div>
           <strong>{title}</strong>

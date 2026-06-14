@@ -59,6 +59,7 @@ describe('RelationPreviewCard', () => {
 
     const button = view.querySelector('.organization-preview-card')!;
     expect(button.className).toContain('active');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
     expect(view.querySelector('.organization-preview-card-count')?.textContent).toBe('1 234');
     expect(view.textContent).toContain('Иван Иванов');
     expect(view.textContent).toContain('Директор');
@@ -80,7 +81,9 @@ describe('RelationPreviewCard', () => {
       />
     );
 
-    expect(view.querySelector('.organization-preview-card')?.className).not.toContain('active');
+    const button = view.querySelector('.organization-preview-card');
+    expect(button?.className).not.toContain('active');
+    expect(button?.getAttribute('aria-pressed')).toBe('false');
     expect(view.textContent).toContain('Пока пусто.');
   });
 });
