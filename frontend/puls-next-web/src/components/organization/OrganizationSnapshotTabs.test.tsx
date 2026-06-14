@@ -49,8 +49,12 @@ describe('OrganizationSnapshotTabs', () => {
   it('renders snapshot titles and marks the active snapshot', () => {
     const view = render(<OrganizationSnapshotTabs snapshots={snapshots} activeKey="archive" onChange={vi.fn()} />);
     const buttons = Array.from(view.querySelectorAll('button'));
+    const tablist = view.querySelector('[role="tablist"]');
 
     expect(buttons.map((button) => button.textContent)).toEqual(['Текущие реквизиты', 'Архив 1С']);
+    expect(tablist?.getAttribute('aria-label')).toBe('Снимки 1С организации');
+    expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab']);
+    expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'true']);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, true]);
   });
 
@@ -68,6 +72,7 @@ describe('OrganizationSnapshotTabs', () => {
     const view = render(<OrganizationSnapshotTabs snapshots={[]} onChange={vi.fn()} />);
 
     expect(view.querySelector('.organization-card-tabs-inline')).not.toBeNull();
+    expect(view.querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBe('Снимки 1С организации');
     expect(view.querySelectorAll('button')).toHaveLength(0);
   });
 });

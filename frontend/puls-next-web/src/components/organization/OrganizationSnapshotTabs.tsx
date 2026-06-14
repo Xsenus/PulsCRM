@@ -15,11 +15,17 @@ export function OrganizationSnapshotTabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div className="settings-tabs organization-card-tabs organization-card-tabs-inline">
+    <div
+      className="settings-tabs organization-card-tabs organization-card-tabs-inline"
+      role="tablist"
+      aria-label="Снимки 1С организации"
+    >
       {snapshots.map((item) => (
         <button
           key={item.key}
           type="button"
+          role="tab"
+          aria-selected={activeKey === item.key}
           className={`settings-tab${activeKey === item.key ? ' active' : ''}`}
           onClick={() => onChange(item.key)}
         >
