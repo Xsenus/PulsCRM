@@ -29,6 +29,12 @@ function click(element: Element) {
   });
 }
 
+function keyDown(element: Element, key: string) {
+  act(() => {
+    element.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+  });
+}
+
 afterEach(() => {
   if (root && container) {
     act(() => {
@@ -68,5 +74,44 @@ describe('RowActionsMenu', () => {
     });
 
     expect(onRetry).not.toHaveBeenCalled();
+  });
+
+  it('moves focus through enabled actions with keyboard shortcuts', () => {
+    const view = render(
+      <RowActionsMenu
+        actions={[
+          { key: 'disabled', label: 'Недоступно', disabled: true, onClick: vi.fn() },
+          { key: 'edit', label: 'Редактировать', onClick: vi.fn() },
+          { key: 'delete', label: 'Удалить', danger: true, onClick: vi.fn() }
+        ]}
+      />
+    );
+
+    const trigger = view.querySelector<HTMLButtonElement>('.row-actions-menu-trigger')!;
+    click(trigger);
+
+    const menu = view.querySelector<HTMLElement>('.row-actions-menu-list')!;
+    const actions = Array.from(view.querySelectorAll<HTMLButtonElement>('.row-actions-menu-item'));
+    expect(document.activeElement).toBe(actions[1]);
+
+    keyDown(menu, 'ArrowDown');
+    expect(document.activeElement).toBe(actions[2]);
+
+    keyDown(menu, 'ArrowDown');
+    expect(document.activeElement).toBe(actions[1]);
+
+    keyDown(menu, 'ArrowUp');
+    expect(document.activeElement).toBe(actions[2]);
+
+    keyDown(menu, 'Home');
+    expect(document.activeElement).toBe(actions[1]);
+
+    keyDown(menu, 'End');
+    expect(document.activeElement).toBe(actions[2]);
+
+    keyDown(menu, 'Escape');
+
+    expect(view.querySelector('.row-actions-menu-list')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
   });
 });
