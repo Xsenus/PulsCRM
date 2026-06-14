@@ -44,8 +44,12 @@ describe('OrganizationViewTabs', () => {
   it('renders all workspace tabs and marks the active one', () => {
     const view = render(<OrganizationViewTabs activeTab="relations" onChange={vi.fn()} />);
     const buttons = Array.from(view.querySelectorAll('button'));
+    const tablist = view.querySelector('[role="tablist"]');
 
     expect(buttons.map((button) => button.textContent)).toEqual(['Карточка', 'Сопровождение', 'Связи', 'История']);
+    expect(tablist?.getAttribute('aria-label')).toBe('Разделы карточки организации');
+    expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab', 'tab', 'tab']);
+    expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true', 'false']);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, false, true, false]);
   });
 

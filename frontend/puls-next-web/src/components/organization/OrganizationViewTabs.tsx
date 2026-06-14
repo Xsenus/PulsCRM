@@ -17,11 +17,13 @@ export function OrganizationViewTabs({
   onChange: (tab: OrganizationViewTab) => void;
 }) {
   return (
-    <div className="settings-tabs organization-card-tabs">
+    <div className="settings-tabs organization-card-tabs" role="tablist" aria-label="Разделы карточки организации">
       {VIEW_TABS.map((tab) => (
         <button
           key={tab.key}
           type="button"
+          role="tab"
+          aria-selected={activeTab === tab.key}
           className={`settings-tab${activeTab === tab.key ? ' active' : ''}`}
           onClick={() => onChange(tab.key)}
         >
