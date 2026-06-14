@@ -260,16 +260,23 @@ DEPLOY_BACKUP_PATH = C:\Apps\PulsCRM\Backups
 2. setup `.NET 9`
 3. setup Node.js 20
 4. `dotnet restore`
-5. `npm ci && npm run build`
-6. `dotnet publish` API в `artifacts\api`
-7. копирование production-конфига API
-8. `app_offline.htm` для остановки API
-9. backup текущих каталогов API/Web в `DEPLOY_BACKUP_PATH\yyyyMMdd-HHmmss`
-10. `robocopy /MIR` API в `C:\Apps\PulsCRM\Api`
-11. `robocopy /MIR` frontend в `C:\Apps\PulsCRM\Web`
-12. healthcheck `/health`
-13. post-deploy smoke API/frontend
-14. read-only проверка `Mail*` таблиц, SMTP-профилей и очереди в SQL
+5. `dotnet test` backend solution
+6. `dotnet list package --vulnerable`
+7. `npm ci`
+8. `npm test`
+9. `npm audit --audit-level=moderate`
+10. `npm run build`
+11. `dotnet publish` API в `artifacts\api`
+12. копирование production-конфига API
+13. `app_offline.htm` для остановки API
+14. backup текущих каталогов API/Web в `DEPLOY_BACKUP_PATH\yyyyMMdd-HHmmss`
+15. `robocopy /MIR` API в `C:\Apps\PulsCRM\Api`
+16. `robocopy /MIR` frontend в `C:\Apps\PulsCRM\Web`
+17. healthcheck `/health`
+18. post-deploy smoke API/frontend
+19. read-only проверка `Mail*` таблиц, SMTP-профилей и очереди в SQL
+
+Если backend/frontend тесты, `npm audit` или NuGet vulnerability scan падают, workflow останавливается до backup и до замены файлов на IIS.
 
 Запуск деплоя:
 

@@ -40,13 +40,29 @@ jobs:
       - name: Restore solution
         run: dotnet restore backend/PulsNextMailing.sln
 
+      - name: Test backend
+        run: dotnet test backend/PulsNextMailing.sln --configuration Release --no-restore
+
+      - name: Scan NuGet vulnerabilities
+        run: dotnet list backend/PulsNextMailing.sln package --vulnerable
+
+      - name: Install frontend dependencies
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm ci
+
+      - name: Test frontend
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm test
+
+      - name: Audit frontend dependencies
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm audit --audit-level=moderate
+
       - name: Build frontend
         working-directory: ${{ env.FRONTEND_PATH }}
         env:
           VITE_API_URL: ${{ vars.PRODUCTION_API_URL }}
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
 
       - name: Publish API
         run: dotnet publish ${{ env.API_PROJECT }} -c Release --no-restore -o "${{ github.workspace }}\artifacts\api"

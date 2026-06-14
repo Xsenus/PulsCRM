@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-14 - quality gates перед IIS deploy
+
+Продолжен инкремент roadmap 8.1 по надежности автодеплоя:
+
+- GitHub Actions deploy теперь запускает backend-тесты до публикации API;
+- перед deploy добавлен NuGet vulnerability scan для всей backend solution;
+- frontend pipeline разделен на `npm ci`, `npm test`, `npm audit --audit-level=moderate` и `npm run build`;
+- IIS-гайд обновлен: теперь явно описано, что workflow останавливается до backup и замены файлов, если тесты или проверки зависимостей падают.
+
+Проверки этого этапа включают frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-14 - проверка опубликованного config после IIS deploy
 
 Продолжен инкремент roadmap 8.1 по smoke-проверкам после автодеплоя:
