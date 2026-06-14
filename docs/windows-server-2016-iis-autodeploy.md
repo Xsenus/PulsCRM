@@ -246,11 +246,16 @@ API_CONFIG_PATH = C:\PulsCRMConfig\Api\appsettings.Production.json
 HEALTHCHECK_URL = https://api.example.com/health
 FRONTEND_URL = https://app.example.com
 DEPLOY_BACKUP_PATH = C:\Apps\PulsCRM\Backups
+DB_REQUIRE_TRANSPORT_PROFILE = false
+DB_MAX_FAILED_DISPATCH_ITEMS = 0
+DB_MAX_QUEUE_DEPTH = 1000
 ```
 
 `FRONTEND_URL` можно не задавать, если frontend доступен с IIS-сервера на `http://localhost:8080/`. `PRODUCTION_API_URL` используется при сборке frontend и для smoke-проверки публичного `/api/auth/users?take=1`.
 
 `DEPLOY_BACKUP_PATH` можно не задавать, тогда workflow использует `C:\Apps\PulsCRM\Backups`. В этой папке хранятся пять последних публикаций API/Web для ручного отката.
+
+DB-переменные можно не задавать, тогда workflow только выводит состояние БД и падает при отсутствии `Mail*` таблиц. Если заданы `DB_MAX_FAILED_DISPATCH_ITEMS`, `DB_MAX_QUEUE_DEPTH` или `DB_REQUIRE_TRANSPORT_PROFILE=true`, post-deploy DB-check становится строгим и останавливает workflow при превышении порогов или отсутствии SMTP-профиля. Скрипт остается read-only.
 
 ## 9. Как работает workflow
 
@@ -274,7 +279,7 @@ DEPLOY_BACKUP_PATH = C:\Apps\PulsCRM\Backups
 16. `robocopy /MIR` frontend в `C:\Apps\PulsCRM\Web`
 17. healthcheck `/health`
 18. post-deploy smoke API/frontend
-19. read-only проверка `Mail*` таблиц, SMTP-профилей и очереди в SQL
+19. read-only проверка `Mail*` таблиц, SMTP-профилей, очереди и optional DB-порогов в SQL
 
 Если backend/frontend тесты, `npm audit` или NuGet vulnerability scan падают, workflow останавливается до backup и до замены файлов на IIS.
 
@@ -376,6 +381,18 @@ MailTransportProfile
   -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
   -RequireTransportProfile
 ```
+
+Для строгой проверки очереди после релиза можно задать лимиты:
+
+```powershell
+.\scripts\check-mailing-db.ps1 `
+  -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
+  -MaxFailedDispatchItems 0 `
+  -MaxQueueDepth 1000 `
+  -RequireTransportProfile
+```
+
+`-MaxFailedDispatchItems` и `-MaxQueueDepth` принимают `-1` как значение "не проверять лимит". При превышении лимита скрипт выводит `Issues` и завершается с ошибкой.
 
 Для полной проверки отправки рассылки можно запустить E2E smoke. Он поднимает локальный SMTP-catcher, создает временный SMTP-профиль, временную кампанию с ручным получателем, запускает отправку, проверяет полученное письмо и после успеха удаляет временные записи:
 

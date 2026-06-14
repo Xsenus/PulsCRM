@@ -4,6 +4,8 @@ param(
     [string]$ConnectionString,
     [string]$ConnectionStringName = "MailingDb",
     [int]$CommandTimeoutSeconds = 30,
+    [long]$MaxQueueDepth = -1,
+    [long]$MaxFailedDispatchItems = -1,
     [switch]$RequireTransportProfile,
     [switch]$Json
 )
@@ -12,6 +14,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 Add-Type -AssemblyName System.Data
+
+if ($MaxQueueDepth -lt -1) {
+    throw "MaxQueueDepth must be -1 or greater."
+}
+
+if ($MaxFailedDispatchItems -lt -1) {
+    throw "MaxFailedDispatchItems must be -1 or greater."
+}
 
 $expectedTables = @(
     "MailCampaign",
@@ -299,16 +309,48 @@ ORDER BY [FailedAtUtc] DESC, [Oid] DESC;
         }
     }
 
-    $status = if ($missingTables.Count -eq 0) { "ok" } else { "error" }
-    if ($RequireTransportProfile -and $transportProfiles.Total -lt 1) {
-        $status = "error"
+    $issues = @()
+    if ($missingTables.Count -gt 0) {
+        $issues += [pscustomobject]@{
+            Code = "MissingTables"
+            Message = "Missing mailing tables: $($missingTables -join ', ')"
+        }
     }
+
+    if ($RequireTransportProfile -and $transportProfiles.Total -lt 1) {
+        $issues += [pscustomobject]@{
+            Code = "MissingTransportProfile"
+            Message = "No SMTP transport profiles found in MailTransportProfile."
+        }
+    }
+
+    if ($MaxQueueDepth -ge 0 -and $queueDepth -gt $MaxQueueDepth) {
+        $issues += [pscustomobject]@{
+            Code = "QueueDepthExceeded"
+            Message = "Queue depth $queueDepth exceeds configured limit $MaxQueueDepth."
+        }
+    }
+
+    if ($MaxFailedDispatchItems -ge 0 -and $failedCount -gt $MaxFailedDispatchItems) {
+        $issues += [pscustomobject]@{
+            Code = "FailedDispatchItemsExceeded"
+            Message = "Failed dispatch items $failedCount exceeds configured limit $MaxFailedDispatchItems."
+        }
+    }
+
+    $status = if ($issues.Count -eq 0) { "ok" } else { "error" }
 
     $result = [pscustomobject]@{
         Status = $status
         CheckedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
         Server = $builder.DataSource
         Database = $builder.InitialCatalog
+        Issues = $issues
+        Limits = [pscustomobject]@{
+            MaxQueueDepth = $MaxQueueDepth
+            MaxFailedDispatchItems = $MaxFailedDispatchItems
+            RequireTransportProfile = [bool]$RequireTransportProfile
+        }
         MissingTables = $missingTables
         Tables = $tableSummaries
         TransportProfiles = $transportProfiles
@@ -332,6 +374,7 @@ ORDER BY [FailedAtUtc] DESC, [Oid] DESC;
         Write-Host "Transport profiles: total=$($transportProfiles.Total), enabled=$($transportProfiles.Enabled), default=$($transportProfiles.Default)"
         Write-Host "Queue depth: $queueDepth"
         Write-Host "Failed dispatch items: $failedCount"
+        Write-Host "Limits: maxQueueDepth=$MaxQueueDepth, maxFailedDispatchItems=$MaxFailedDispatchItems, requireTransportProfile=$([bool]$RequireTransportProfile)"
         Write-Host ""
         Write-Host "Table counts:"
         $tableSummaries | Format-Table -AutoSize
@@ -340,14 +383,16 @@ ORDER BY [FailedAtUtc] DESC, [Oid] DESC;
             Write-Host "Dispatch counts:"
             $dispatchCounts | Format-Table -AutoSize
         }
+
+        if ($issues.Count -gt 0) {
+            Write-Host "Issues:"
+            $issues | Format-Table -AutoSize
+        }
     }
 
-    if ($missingTables.Count -gt 0) {
-        throw "Missing mailing tables: $($missingTables -join ', ')"
-    }
-
-    if ($RequireTransportProfile -and $transportProfiles.Total -lt 1) {
-        throw "No SMTP transport profiles found in MailTransportProfile."
+    if ($issues.Count -gt 0) {
+        $issueMessages = @($issues | ForEach-Object { $_.Message })
+        throw "Mailing DB check failed: $($issueMessages -join '; ')"
     }
 
     $global:LASTEXITCODE = 0

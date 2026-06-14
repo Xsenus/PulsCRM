@@ -77,6 +77,9 @@ jobs:
           HEALTHCHECK_URL: ${{ vars.HEALTHCHECK_URL }}
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
           DEPLOY_BACKUP_PATH: ${{ vars.DEPLOY_BACKUP_PATH }}
+          DB_MAX_FAILED_DISPATCH_ITEMS: ${{ vars.DB_MAX_FAILED_DISPATCH_ITEMS }}
+          DB_MAX_QUEUE_DEPTH: ${{ vars.DB_MAX_QUEUE_DEPTH }}
+          DB_REQUIRE_TRANSPORT_PROFILE: ${{ vars.DB_REQUIRE_TRANSPORT_PROFILE }}
         run: |
           $frontendUrl = if ([string]::IsNullOrWhiteSpace($env:FRONTEND_URL)) { "http://localhost:8080/" } else { $env:FRONTEND_URL }
           $authUsersUrl = if ([string]::IsNullOrWhiteSpace($env:PRODUCTION_API_URL)) { "" } else { "$($env:PRODUCTION_API_URL.TrimEnd('/'))/api/auth/users?take=1" }
@@ -102,5 +105,15 @@ jobs:
             -PublishedApiConfigPath (Join-Path $env:API_SITE_PATH "appsettings.Production.json") `
             -ProductionApiUrl $env:PRODUCTION_API_URL
 
-          .\scripts\check-mailing-db.ps1 `
-            -ApiConfigPath $env:API_CONFIG_PATH
+          $dbCheckArgs = @("-ApiConfigPath", $env:API_CONFIG_PATH)
+          if (-not [string]::IsNullOrWhiteSpace($env:DB_MAX_FAILED_DISPATCH_ITEMS)) {
+            $dbCheckArgs += @("-MaxFailedDispatchItems", $env:DB_MAX_FAILED_DISPATCH_ITEMS)
+          }
+          if (-not [string]::IsNullOrWhiteSpace($env:DB_MAX_QUEUE_DEPTH)) {
+            $dbCheckArgs += @("-MaxQueueDepth", $env:DB_MAX_QUEUE_DEPTH)
+          }
+          if ($env:DB_REQUIRE_TRANSPORT_PROFILE -match "^(?i:true|1|yes)$") {
+            $dbCheckArgs += "-RequireTransportProfile"
+          }
+
+          .\scripts\check-mailing-db.ps1 @dbCheckArgs

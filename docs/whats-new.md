@@ -1,5 +1,16 @@
 # Что нового
 
+## 2026-06-14 - DB-пороги после IIS deploy
+
+Продолжен инкремент roadmap 8.3 по проверке БД после деплоя:
+
+- `check-mailing-db.ps1` получил read-only лимиты `-MaxFailedDispatchItems` и `-MaxQueueDepth`;
+- результат DB-check теперь содержит `Issues` и `Limits`, чтобы причина падения была видна в JSON и в обычном выводе;
+- GitHub Actions deploy умеет читать optional variables `DB_MAX_FAILED_DISPATCH_ITEMS`, `DB_MAX_QUEUE_DEPTH` и `DB_REQUIRE_TRANSPORT_PROFILE`;
+- IIS-гайд дополнен настройкой строгой post-deploy проверки очереди, failed-сообщений и обязательного SMTP-профиля.
+
+Проверки этого этапа включают parser-проверку PowerShell-скриптов, локальный DB-check с лимитами, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-14 - quality gates перед IIS deploy
 
 Продолжен инкремент roadmap 8.1 по надежности автодеплоя:
