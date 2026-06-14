@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildOrganizationFilterPanelClassName,
   buildOrganizationPickerFilterSummary,
   buildRaionSelectionSummary,
   getRaionSelectionId,
@@ -36,5 +37,10 @@ describe('organization raion filter helpers', () => {
     expect(buildOrganizationPickerFilterSummary(12, true)).toBe('Найдено с email: 12');
     expect(buildOrganizationPickerFilterSummary(12, false)).toBe('Найдено: 12');
     expect(buildOrganizationPickerFilterSummary(-1, true)).toBe('Найдено с email: 0');
+  });
+
+  it('marks organization filter panel visibility for compact layouts', () => {
+    expect(buildOrganizationFilterPanelClassName(false)).toBe('panel organizations-sidebar collapsed-on-small');
+    expect(buildOrganizationFilterPanelClassName(true)).toBe('panel organizations-sidebar expanded-on-small');
   });
 });

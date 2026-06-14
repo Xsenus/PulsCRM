@@ -1516,6 +1516,10 @@ select {
   flex-wrap: wrap;
 }
 
+.organization-filter-toggle {
+  display: none;
+}
+
 .organization-search-panel,
 .search-panel {
   padding: 18px 22px;
@@ -4140,6 +4144,18 @@ body.is-dragging-column {
 
   .organizations-layout-resizer-shell {
     display: none;
+  }
+
+  .organization-filter-toggle {
+    display: inline-flex;
+  }
+
+  .organizations-sidebar.collapsed-on-small {
+    display: none;
+  }
+
+  .organizations-sidebar.expanded-on-small {
+    display: grid;
   }
 
   .organization-search-shell,

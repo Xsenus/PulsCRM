@@ -6,6 +6,10 @@ export function getRaionSelectionId(raion: Pick<OrganizationRaionDto, 'id'>) {
   return raion.id ?? WITHOUT_RAION_ID;
 }
 
+export function buildOrganizationFilterPanelClassName(expandedOnSmallScreens: boolean) {
+  return `panel organizations-sidebar ${expandedOnSmallScreens ? 'expanded-on-small' : 'collapsed-on-small'}`;
+}
+
 export function buildRaionSelectionSummary(
   raions: Array<Pick<OrganizationRaionDto, 'id' | 'name'>>,
   selectedIds: number[],

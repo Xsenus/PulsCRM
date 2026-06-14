@@ -8,7 +8,11 @@ import {
 import { getApiErrorMessage } from '../app/apiErrors';
 import { getContextMenuPosition } from '../app/contextMenuPosition';
 import { useAuth } from '../app/AuthContext';
-import { buildRaionSelectionSummary, getRaionSelectionId } from '../app/organizationFilters';
+import {
+  buildOrganizationFilterPanelClassName,
+  buildRaionSelectionSummary,
+  getRaionSelectionId
+} from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type {
@@ -73,6 +77,7 @@ export function OrganizationsPage() {
   const [contextMenu, setContextMenu] = useState<RowContextMenuState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<OrganizationListItemDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
 
   const selectedRaionIdsKey = useMemo(
     () => [...selectedRaionIds].sort((left, right) => left - right).join(','),
@@ -301,7 +306,7 @@ export function OrganizationsPage() {
         className="organizations-layout"
         style={{ ['--organizations-sidebar-width' as string]: `${sidebarWidth}px` }}
       >
-        <aside className="panel organizations-sidebar">
+        <aside id="organizations-filter-panel" className={buildOrganizationFilterPanelClassName(filtersExpanded)}>
           <div className="organizations-sidebar-head">
             <div>
               <div className="organizations-sidebar-title">Районы</div>
@@ -379,6 +384,15 @@ export function OrganizationsPage() {
             </div>
 
             <div className="organization-list-filter-actions">
+              <button
+                type="button"
+                className="secondary-button button-inline organization-filter-toggle"
+                onClick={() => setFiltersExpanded((current) => !current)}
+                aria-expanded={filtersExpanded}
+                aria-controls="organizations-filter-panel"
+              >
+                {filtersExpanded ? 'Скрыть фильтры' : `Фильтры${activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}`}
+              </button>
               <span className="status-badge status-badge-info">Найдено: {totalCount}</span>
               <button
                 type="button"
