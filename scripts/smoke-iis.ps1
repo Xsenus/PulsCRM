@@ -6,6 +6,7 @@ param(
     [string]$FrontendUrl = "http://localhost:8080/",
     [string]$AuthUsersUrl,
     [string]$ApiConfigPath,
+    [string]$PublishedApiConfigPath,
     [string]$ProductionApiUrl,
     [int]$Attempts = 12,
     [int]$DelaySeconds = 5
@@ -129,17 +130,31 @@ function Get-FrontendAssetPath {
     return $null
 }
 
+function Assert-FileExists {
+    param(
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Label
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "$Label was not found: $Path"
+    }
+
+    Write-Host "$Label exists: $Path"
+}
+
 Write-Host "Production API URL: $ProductionApiUrl"
 Write-Host "Healthcheck URL: $HealthcheckUrl"
 Write-Host "Frontend URL: $FrontendUrl"
 
-if (-not [string]::IsNullOrWhiteSpace($ApiConfigPath)) {
-    if (-not (Test-Path -LiteralPath $ApiConfigPath -PathType Leaf)) {
-        throw "API production config was not found: $ApiConfigPath"
-    }
-
-    Write-Host "API production config exists: $ApiConfigPath"
-}
+Assert-FileExists -Path $ApiConfigPath -Label "API production config source"
+Assert-FileExists -Path $PublishedApiConfigPath -Label "Published API production config"
 
 $healthResponse = Invoke-SmokeRequest -Label "API health" -Url $HealthcheckUrl
 Assert-HealthResponse -Response $healthResponse

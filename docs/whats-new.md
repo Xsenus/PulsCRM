@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-14 - проверка опубликованного config после IIS deploy
+
+Продолжен инкремент roadmap 8.1 по smoke-проверкам после автодеплоя:
+
+- `smoke-iis.ps1` теперь отдельно проверяет внешний production config и опубликованный `appsettings.Production.json` в папке API;
+- GitHub Actions deploy передает в smoke путь `API_SITE_PATH\appsettings.Production.json`, чтобы деплой падал, если config не скопировался в publish-каталог;
+- manual smoke checklist и IIS-гайд обновлены под актуальные параметры `smoke-iis.ps1` и `check-mailing-db.ps1`.
+
+Проверки этого этапа включают parser-проверку PowerShell-скриптов, локальный IIS smoke против API/frontend, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB-проверку против SQL-БД.
+
 ## 2026-06-13 - негативный SMTP-сценарий в smoke
 
 Продолжен инкремент roadmap 4.9 по end-to-end проверке рассылки:

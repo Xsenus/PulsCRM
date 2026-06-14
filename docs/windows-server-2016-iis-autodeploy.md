@@ -332,6 +332,7 @@ Invoke-WebRequest https://api.example.com/health -UseBasicParsing
   -FrontendUrl https://app.example.com `
   -AuthUsersUrl https://api.example.com/api/auth/users?take=1 `
   -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
+  -PublishedApiConfigPath C:\Apps\PulsCRM\Api\appsettings.Production.json `
   -ProductionApiUrl https://api.example.com
 
 .\scripts\check-mailing-db.ps1 `

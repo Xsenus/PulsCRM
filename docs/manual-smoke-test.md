@@ -33,11 +33,14 @@ Pop-Location
 
 ```powershell
 .\scripts\smoke-iis.ps1 `
-  -ApiBaseUrl http://localhost:8081 `
-  -FrontendUrl http://localhost:8080
+  -HealthcheckUrl http://localhost:8081/health `
+  -FrontendUrl http://localhost:8080 `
+  -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
+  -PublishedApiConfigPath C:\Apps\PulsCRM\Api\appsettings.Production.json `
+  -ProductionApiUrl http://localhost:8081
 
 .\scripts\check-mailing-db.ps1 `
-  -ConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
+  -ApiConfigPath C:\PulsCRMConfig\Api\appsettings.Production.json `
   -RequireTransportProfile
 ```
 

@@ -83,6 +83,7 @@ jobs:
             -FrontendUrl $frontendUrl `
             -AuthUsersUrl $authUsersUrl `
             -ApiConfigPath $env:API_CONFIG_PATH `
+            -PublishedApiConfigPath (Join-Path $env:API_SITE_PATH "appsettings.Production.json") `
             -ProductionApiUrl $env:PRODUCTION_API_URL
 
           .\scripts\check-mailing-db.ps1 `
