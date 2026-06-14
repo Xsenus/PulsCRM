@@ -15,11 +15,17 @@ export function OrganizationEventViewModeTabs({
   onChange: (mode: OrganizationEventViewMode) => void;
 }) {
   return (
-    <div className="settings-tabs organization-card-tabs organization-card-tabs-inline">
+    <div
+      className="settings-tabs organization-card-tabs organization-card-tabs-inline"
+      role="tablist"
+      aria-label="Режим просмотра событий организации"
+    >
       {EVENT_VIEW_MODES.map((mode) => (
         <button
           key={mode.key}
           type="button"
+          role="tab"
+          aria-selected={activeMode === mode.key}
           className={`settings-tab${activeMode === mode.key ? ' active' : ''}`}
           onClick={() => onChange(mode.key)}
         >

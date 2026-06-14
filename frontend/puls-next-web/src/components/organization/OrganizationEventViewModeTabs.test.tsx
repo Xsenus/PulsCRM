@@ -44,8 +44,12 @@ describe('OrganizationEventViewModeTabs', () => {
   it('renders event view modes and marks the active mode', () => {
     const view = render(<OrganizationEventViewModeTabs activeMode="table" onChange={vi.fn()} />);
     const buttons = Array.from(view.querySelectorAll('button'));
+    const tablist = view.querySelector('[role="tablist"]');
 
     expect(buttons.map((button) => button.textContent)).toEqual(['Лента', 'Таблица']);
+    expect(tablist?.getAttribute('aria-label')).toBe('Режим просмотра событий организации');
+    expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab']);
+    expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'true']);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, true]);
   });
 
