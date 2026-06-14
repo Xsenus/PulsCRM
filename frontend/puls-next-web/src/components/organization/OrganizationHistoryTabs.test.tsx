@@ -44,8 +44,12 @@ describe('OrganizationHistoryTabs', () => {
   it('renders all history tabs and marks the active one', () => {
     const view = render(<OrganizationHistoryTabs activeTab="snapshots" onChange={vi.fn()} />);
     const buttons = Array.from(view.querySelectorAll('button'));
+    const tablist = view.querySelector('[role="tablist"]');
 
     expect(buttons.map((button) => button.textContent)).toEqual(['События', 'Снимки 1С', 'Аудит']);
+    expect(tablist?.getAttribute('aria-label')).toBe('История организации');
+    expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab', 'tab']);
+    expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, true, false]);
   });
 
