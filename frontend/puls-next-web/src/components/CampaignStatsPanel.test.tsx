@@ -165,4 +165,30 @@ describe('CampaignStatsPanel', () => {
 
     expect(onRetryItem).toHaveBeenCalledWith(22);
   });
+
+  it('keeps retry action disabled while retry is pending', async () => {
+    let resolveRetry: () => void = () => {};
+    const retryPromise = new Promise<void>((resolve) => {
+      resolveRetry = resolve;
+    });
+    const onRetryItem = vi.fn(() => retryPromise);
+    const view = render(panel(statistics(), vi.fn(), onRetryItem));
+    const retryButton = Array.from(view.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent === 'Повторить')!;
+
+    act(() => {
+      retryButton.click();
+    });
+
+    expect(onRetryItem).toHaveBeenCalledTimes(1);
+    expect(retryButton.disabled).toBe(true);
+    expect(retryButton.textContent).toContain('Возвращаем');
+
+    await act(async () => {
+      resolveRetry();
+      await retryPromise;
+    });
+
+    expect(retryButton.disabled).toBe(false);
+    expect(retryButton.textContent).toContain('Повторить');
+  });
 });

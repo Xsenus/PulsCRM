@@ -55,6 +55,7 @@ export function TransportProfilesPage() {
   const [pageSize, setPageSize] = useState(() => loadStoredPageSize(pageSizeStorageKey));
   const [deleteTarget, setDeleteTarget] = useState<TransportProfileDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [testingId, setTestingId] = useState<number | null>(null);
 
   const editingProfile = useMemo(() => rows.find((item) => item.id === editingId), [editingId, rows]);
   const isSmtpGroup = activeGroup === 'smtp';
@@ -163,11 +164,14 @@ export function TransportProfilesPage() {
   };
 
   const runTest = async (id: number) => {
+    setTestingId(id);
     try {
       const result = await testTransportProfile(id);
       showToast(result.message, result.success ? 'success' : 'error', 4000);
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось проверить SMTP профиль'), 'error', 4000);
+    } finally {
+      setTestingId((current) => current === id ? null : current);
     }
   };
 
@@ -329,7 +333,7 @@ export function TransportProfilesPage() {
                   <RowActionsMenu
                     actions={[
                       { key: 'edit', label: 'Редактировать', onClick: () => openEdit(row) },
-                      { key: 'test', label: 'Проверить', onClick: () => runTest(row.id) },
+                      { key: 'test', label: testingId === row.id ? 'Проверяем...' : 'Проверить', disabled: testingId === row.id, onClick: () => runTest(row.id) },
                       { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
                     ]}
                   />
@@ -360,8 +364,8 @@ export function TransportProfilesPage() {
         actions={(
           <>
             {editingId ? (
-              <button type="button" className="secondary-button" onClick={() => void runTest(editingId)}>
-                Проверить SMTP
+              <button type="button" className="secondary-button" disabled={testingId === editingId} onClick={() => void runTest(editingId)}>
+                {testingId === editingId ? <LoadingButtonLabel label="Проверяем" /> : 'Проверить SMTP'}
               </button>
             ) : null}
             <button type="button" className="secondary-button" onClick={() => setModalOpen(false)}>Закрыть</button>

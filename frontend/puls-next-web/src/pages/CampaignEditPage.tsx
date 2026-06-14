@@ -189,6 +189,7 @@ export function CampaignEditPage() {
   const [readinessLoading, setReadinessLoading] = useState(false);
   const [stats, setStats] = useState<CampaignStatisticsDto | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [runningNow, setRunningNow] = useState(false);
   const [activeTab, setActiveTab] = useState<CampaignEditorTab>('basic');
   const [savedSnapshot, setSavedSnapshot] = useState<string>('');
 
@@ -291,16 +292,23 @@ export function CampaignEditPage() {
     }
   };
 
-  const refreshStats = async () => {
+  const refreshStats = async (options: { showError?: boolean; rethrow?: boolean } = {}) => {
     if (!id) {
       return;
     }
 
+    const showError = options.showError ?? true;
     setStatsLoading(true);
     try {
       setStats(await getCampaignStats(id));
     } catch (error: unknown) {
-      showToast(getApiErrorMessage(error, 'Не удалось обновить статистику'), 'error', 4000);
+      if (showError) {
+        showToast(getApiErrorMessage(error, 'Не удалось обновить статистику'), 'error', 4000);
+      }
+
+      if (options.rethrow) {
+        throw error;
+      }
     } finally {
       setStatsLoading(false);
     }
@@ -310,7 +318,11 @@ export function CampaignEditPage() {
     try {
       await retryDispatchItem(itemId);
       showToast('Сообщение возвращено в очередь', 'success');
-      await refreshStats();
+      try {
+        await refreshStats({ showError: false, rethrow: true });
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'Сообщение возвращено в очередь, но статистика не обновилась'), 'error', 4000);
+      }
     } catch (error: unknown) {
       showToast(getApiErrorMessage(error, 'Не удалось вернуть сообщение в очередь'), 'error', 4000);
     }
@@ -398,23 +410,34 @@ export function CampaignEditPage() {
   };
 
   const runNow = async () => {
+    if (runningNow) {
+      return;
+    }
+
     if (!id) {
       setActiveTab('basic');
       showToast('Сначала сохраните кампанию', 'warning');
       return;
     }
 
-    const readinessResult = await checkReadinessClick();
-    if (!readinessResult?.isReady) {
-      return;
-    }
-
+    setRunningNow(true);
     try {
+      const readinessResult = await checkReadinessClick();
+      if (!readinessResult?.isReady) {
+        return;
+      }
+
       await runCampaign(id, {});
       showToast('Ручной запуск поставлен в очередь', 'success');
-      await refreshStats();
+      try {
+        await refreshStats({ showError: false, rethrow: true });
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'Кампания запущена, но статистика не обновилась'), 'error', 4000);
+      }
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось запустить кампанию вручную'), 'error', 4000);
+    } finally {
+      setRunningNow(false);
     }
   };
 
@@ -431,8 +454,8 @@ export function CampaignEditPage() {
             <button type="button" className="secondary-button button-inline" disabled={readinessLoading} onClick={() => void checkReadinessClick()}>
               {readinessLoading ? <LoadingButtonLabel label="Проверяем" /> : 'Проверить готовность'}
             </button>
-            <button type="button" className="secondary-button button-inline" disabled={!id} onClick={() => void runNow()}>
-              Запустить сейчас
+            <button type="button" className="secondary-button button-inline" disabled={!id || runningNow || readinessLoading} onClick={() => void runNow()}>
+              {runningNow ? <LoadingButtonLabel label="Запускаем" /> : 'Запустить сейчас'}
             </button>
             <button type="button" className="primary-button action-button" disabled={saving} onClick={() => void save()}>
               {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Сохранить'}
