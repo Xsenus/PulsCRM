@@ -111,7 +111,7 @@ export function DispatchPage() {
     } catch (error) {
       setItems([]);
       setItemTotalCount(0);
-      showToast(getApiErrorMessage(error, 'Не удалось загрузить сообщения очереди.'), 'error', 4000);
+      throw error;
     } finally {
       setItemsLoading(false);
     }
@@ -130,7 +130,7 @@ export function DispatchPage() {
     } catch (error) {
       setBatches([]);
       setBatchTotalCount(0);
-      showToast(getApiErrorMessage(error, 'Не удалось загрузить партии отправки.'), 'error', 4000);
+      throw error;
     } finally {
       setBatchesLoading(false);
     }
@@ -141,11 +141,15 @@ export function DispatchPage() {
   };
 
   useEffect(() => {
-    void loadItems();
+    void loadItems().catch((error) => {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить сообщения очереди.'), 'error', 4000);
+    });
   }, [appliedFilters, itemPage, itemPageSize]);
 
   useEffect(() => {
-    void loadBatches();
+    void loadBatches().catch((error) => {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить партии отправки.'), 'error', 4000);
+    });
   }, [appliedFilters.campaignId, batchPage, batchPageSize]);
 
   useEffect(() => {
@@ -207,7 +211,11 @@ export function DispatchPage() {
     try {
       await retryDispatchItem(row.id);
       showToast('Сообщение возвращено в очередь.', 'success');
-      await refresh();
+      try {
+        await refresh();
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'Сообщение возвращено в очередь, но список не обновился.'), 'error', 4000);
+      }
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось вернуть сообщение в очередь.'), 'error', 4000);
     } finally {
@@ -225,7 +233,11 @@ export function DispatchPage() {
       await cancelDispatchItem(cancelTarget.id);
       showToast('Сообщение отменено.', 'delete');
       setCancelTarget(null);
-      await refresh();
+      try {
+        await refresh();
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'Сообщение отменено, но список не обновился.'), 'error', 4000);
+      }
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось отменить сообщение.'), 'error', 4000);
     } finally {
@@ -259,7 +271,13 @@ export function DispatchPage() {
         title="Очередь рассылок"
         subtitle="Диагностика сообщений, партий отправки и повторных попыток без прямого доступа к SQL."
         actions={(
-          <button type="button" className="secondary-button" onClick={() => void refresh()}>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => void refresh().catch((error) => {
+              showToast(getApiErrorMessage(error, 'Не удалось обновить очередь.'), 'error', 4000);
+            })}
+          >
             Обновить
           </button>
         )}
@@ -296,6 +314,7 @@ export function DispatchPage() {
         onDebouncedChange={applySearchValue}
         onRefresh={refresh}
         refreshSuccessMessage="Очередь обновлена."
+        refreshErrorMessage="Не удалось обновить очередь."
       />
 
       <div className="panel toolbar-panel dispatch-filter-panel">

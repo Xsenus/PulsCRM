@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getOrganizationRaions, getOrganizations } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import { buildOrganizationSelectionSummary } from '../app/campaignRecipients';
 import { buildOrganizationPickerFilterSummary } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../app/table';
+import { showToast } from '../app/toast';
 import type { OrganizationListItemDto, OrganizationRaionDto } from '../app/types';
 import { DataTable } from './DataTable';
 import { Modal } from './Modal';
@@ -66,6 +68,11 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
       setRows(organizationsResponse.items);
       setTotalCount(organizationsResponse.totalCount);
       setRaions(raionsResponse);
+    } catch (error) {
+      setRows([]);
+      setTotalCount(0);
+      setRaions([]);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -76,7 +83,9 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
       return;
     }
 
-    void loadData();
+    void loadData().catch((error) => {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить справочник организаций.'), 'error', 4000);
+    });
   }, [appliedSearch, modalOpen, onlyWithEmail, page, pageSize, selectedRaionId]);
 
   useEffect(() => {
@@ -245,6 +254,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
               onDebouncedChange={applySearchValue}
               onRefresh={loadData}
               refreshSuccessMessage="Справочник организаций обновлен."
+              refreshErrorMessage="Не удалось обновить справочник организаций."
             />
 
             <div className="picker-filter-strip">

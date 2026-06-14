@@ -60,7 +60,7 @@ export function WorkPage() {
     } catch (error) {
       setEmployees([]);
       setOrganizations([]);
-      showToast(getApiErrorMessage(error, 'Не удалось загрузить фильтры задач.'), 'error', 4000);
+      throw error;
     }
   };
 
@@ -80,18 +80,22 @@ export function WorkPage() {
     } catch (error) {
       setRows([]);
       setTotalCount(0);
-      showToast(getApiErrorMessage(error, 'Не удалось загрузить задачи.'), 'error', 4000);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadLookups();
+    void loadLookups().catch((error) => {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить фильтры задач.'), 'error', 4000);
+    });
   }, []);
 
   useEffect(() => {
-    void load();
+    void load().catch((error) => {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить задачи.'), 'error', 4000);
+    });
   }, [appliedFilters, page, pageSize]);
 
   useEffect(() => {
@@ -177,6 +181,7 @@ export function WorkPage() {
         onDebouncedChange={applySearchValue}
         onRefresh={load}
         refreshSuccessMessage="Список задач обновлен."
+        refreshErrorMessage="Не удалось обновить список задач."
       />
 
       <div className="panel toolbar-panel toolbar-panel-grid">

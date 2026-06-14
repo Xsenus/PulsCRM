@@ -191,6 +191,7 @@ export function EmployeesPage() {
         onDebouncedChange={applySearchValue}
         onRefresh={load}
         refreshSuccessMessage="Список сотрудников обновлен."
+        refreshErrorMessage="Не удалось обновить список сотрудников."
       />
 
       <div className="panel">

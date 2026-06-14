@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getDashboard } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
+import { showToast } from '../app/toast';
 import type { DashboardDto } from '../app/types';
 import { ActionIcon } from '../components/ActionIcon';
 import { AppLoader } from '../components/AppLoader';
@@ -15,6 +17,8 @@ export function DashboardPage() {
     setLoading(true);
     try {
       setDashboard(await getDashboard());
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить сводку.'), 'error', 4000);
     } finally {
       setLoading(false);
     }

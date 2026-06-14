@@ -78,13 +78,18 @@ export function TransportProfilesPage() {
     setLoading(true);
     try {
       setRows(await getTransportProfiles());
+    } catch (error) {
+      setRows([]);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load();
+    void load().catch((error) => {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить SMTP профили'), 'error', 4000);
+    });
   }, []);
 
   useEffect(() => {
@@ -145,7 +150,11 @@ export function TransportProfilesPage() {
       setModalOpen(false);
       setEditingId(undefined);
       setModel(emptyModel);
-      await load();
+      try {
+        await load();
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'SMTP профиль сохранен, но список не обновился'), 'error', 4000);
+      }
     } catch (error: unknown) {
       showToast(getApiErrorMessage(error, 'Не удалось сохранить SMTP профиль'), 'error', 4000);
     } finally {
@@ -154,8 +163,12 @@ export function TransportProfilesPage() {
   };
 
   const runTest = async (id: number) => {
-    const result = await testTransportProfile(id);
-    showToast(result.message, result.success ? 'success' : 'error', 4000);
+    try {
+      const result = await testTransportProfile(id);
+      showToast(result.message, result.success ? 'success' : 'error', 4000);
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось проверить SMTP профиль'), 'error', 4000);
+    }
   };
 
   const remove = async () => {
@@ -174,7 +187,11 @@ export function TransportProfilesPage() {
         setModel(emptyModel);
       }
       setDeleteTarget(null);
-      await load();
+      try {
+        await load();
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'SMTP профиль удален, но список не обновился'), 'error', 4000);
+      }
     } catch (error: unknown) {
       showToast(getApiErrorMessage(error, 'Не удалось удалить SMTP профиль'), 'error', 4000);
     } finally {
@@ -263,6 +280,7 @@ export function TransportProfilesPage() {
             onDebouncedChange={applySearchValue}
             onRefresh={load}
             refreshSuccessMessage="Список SMTP профилей обновлен."
+            refreshErrorMessage="Не удалось обновить список SMTP профилей."
           />
 
           <DataTable

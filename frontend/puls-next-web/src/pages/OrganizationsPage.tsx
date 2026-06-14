@@ -286,6 +286,7 @@ export function OrganizationsPage() {
         onDebouncedChange={applySearchValue}
         onRefresh={loadData}
         refreshSuccessMessage="Список организаций обновлен."
+        refreshErrorMessage="Не удалось обновить список организаций."
         panelClassName="organization-search-panel"
         inputClassName="organization-search-input"
       />

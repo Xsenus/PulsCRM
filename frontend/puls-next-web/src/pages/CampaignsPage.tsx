@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { changeCampaignStatus, deleteCampaign, getCampaigns, runCampaign } from '../app/api';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import { formatDateTime } from '../app/format';
 import { campaignStatusOptions, labelOf, scheduleKindOptions } from '../app/lookups';
@@ -56,6 +57,7 @@ export function CampaignsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<CampaignListItemDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [actionBusyId, setActionBusyId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -63,13 +65,19 @@ export function CampaignsPage() {
       const result = await getCampaigns(appliedSearch, appliedStatus, (page - 1) * pageSize, pageSize);
       setRows(result.items);
       setTotalCount(result.totalCount);
+    } catch (error) {
+      setRows([]);
+      setTotalCount(0);
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    void load();
+    void load().catch((error) => {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить список кампаний.'), 'error', 4000);
+    });
   }, [appliedSearch, appliedStatus, page, pageSize]);
 
   useEffect(() => {
@@ -120,16 +128,38 @@ export function CampaignsPage() {
   };
 
   const handleRun = async (id: number) => {
-    await runCampaign(id, {});
-    showToast('Кампания поставлена в очередь', 'success');
-    await load();
+    setActionBusyId(id);
+    try {
+      await runCampaign(id, {});
+      showToast('Кампания поставлена в очередь', 'success');
+      try {
+        await load();
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'Кампания запущена, но список не обновился.'), 'error', 4000);
+      }
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось запустить кампанию.'), 'error', 4000);
+    } finally {
+      setActionBusyId(null);
+    }
   };
 
   const handlePauseResume = async (row: CampaignListItemDto) => {
-    const nextStatus = row.status === 1 ? 2 : 1;
-    await changeCampaignStatus(row.id, { status: nextStatus });
-    showToast(nextStatus === 1 ? 'Кампания активирована' : 'Кампания поставлена на паузу', 'success');
-    await load();
+    setActionBusyId(row.id);
+    try {
+      const nextStatus = row.status === 1 ? 2 : 1;
+      await changeCampaignStatus(row.id, { status: nextStatus });
+      showToast(nextStatus === 1 ? 'Кампания активирована' : 'Кампания поставлена на паузу', 'success');
+      try {
+        await load();
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'Статус изменен, но список не обновился.'), 'error', 4000);
+      }
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось изменить статус кампании.'), 'error', 4000);
+    } finally {
+      setActionBusyId(null);
+    }
   };
 
   const handleDelete = async () => {
@@ -143,7 +173,13 @@ export function CampaignsPage() {
       await deleteCampaign(deleteTarget.id);
       showToast('Кампания удалена', 'delete');
       setDeleteTarget(null);
-      await load();
+      try {
+        await load();
+      } catch (error) {
+        showToast(getApiErrorMessage(error, 'Кампания удалена, но список не обновился.'), 'error', 4000);
+      }
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось удалить кампанию.'), 'error', 4000);
     } finally {
       setDeleteBusy(false);
     }
@@ -165,6 +201,7 @@ export function CampaignsPage() {
         onDebouncedChange={applySearchValue}
         onRefresh={load}
         refreshSuccessMessage="Список кампаний обновлен."
+        refreshErrorMessage="Не удалось обновить список кампаний."
       />
 
       <div className="panel toolbar-panel campaigns-filter-panel">
@@ -243,8 +280,8 @@ export function CampaignsPage() {
                 <RowActionsMenu
                   actions={[
                     { key: 'open', label: 'Открыть', onClick: () => navigate(`/campaigns/${row.id}`) },
-                    { key: 'run', label: 'Запустить', onClick: () => handleRun(row.id) },
-                    { key: 'toggle', label: row.status === 1 ? 'Поставить на паузу' : 'Активировать', onClick: () => handlePauseResume(row) },
+                    { key: 'run', label: 'Запустить', disabled: actionBusyId === row.id, onClick: () => handleRun(row.id) },
+                    { key: 'toggle', label: row.status === 1 ? 'Поставить на паузу' : 'Активировать', disabled: actionBusyId === row.id, onClick: () => handlePauseResume(row) },
                     { key: 'delete', label: 'Удалить', danger: true, onClick: () => setDeleteTarget(row) }
                   ]}
                 />

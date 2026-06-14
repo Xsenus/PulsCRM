@@ -234,6 +234,8 @@ export function CampaignEditPage() {
         setSavedSnapshot(createCampaignDraftSnapshot(buildCampaignRequest(defaultModel, [], [])));
         setStats(null);
       }
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить кампанию'), 'error', 4000);
     } finally {
       setLoading(false);
     }
@@ -407,9 +409,13 @@ export function CampaignEditPage() {
       return;
     }
 
-    await runCampaign(id, {});
-    showToast('Ручной запуск поставлен в очередь', 'success');
-    await refreshStats();
+    try {
+      await runCampaign(id, {});
+      showToast('Ручной запуск поставлен в очередь', 'success');
+      await refreshStats();
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось запустить кампанию вручную'), 'error', 4000);
+    }
   };
 
   return (
