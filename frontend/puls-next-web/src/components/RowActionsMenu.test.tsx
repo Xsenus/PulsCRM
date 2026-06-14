@@ -206,4 +206,54 @@ describe('RowActionsMenu', () => {
       }
     }
   });
+
+  it('returns focus to trigger when closed by global Escape', () => {
+    const view = render(
+      <RowActionsMenu
+        actions={[
+          { key: 'edit', label: 'Редактировать', onClick: vi.fn() }
+        ]}
+      />
+    );
+
+    const trigger = view.querySelector<HTMLButtonElement>('.row-actions-menu-trigger')!;
+    click(trigger);
+
+    expect(view.querySelector('.row-actions-menu-list')).not.toBeNull();
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+
+    expect(view.querySelector('.row-actions-menu-list')).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('closes the menu on viewport changes', () => {
+    const view = render(
+      <RowActionsMenu
+        actions={[
+          { key: 'edit', label: 'Редактировать', onClick: vi.fn() }
+        ]}
+      />
+    );
+
+    click(view.querySelector('.row-actions-menu-trigger')!);
+    expect(view.querySelector('.row-actions-menu-list')).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    expect(view.querySelector('.row-actions-menu-list')).toBeNull();
+
+    click(view.querySelector('.row-actions-menu-trigger')!);
+    expect(view.querySelector('.row-actions-menu-list')).not.toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new Event('scroll'));
+    });
+
+    expect(view.querySelector('.row-actions-menu-list')).toBeNull();
+  });
 });
