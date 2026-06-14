@@ -17,7 +17,7 @@ export function getApiErrorMessage(error: unknown, fallback = DEFAULT_API_ERROR_
     };
   } | null | undefined;
 
-  const message = readString(apiError?.message);
+  const message = readString(apiError?.message) || readString(error);
 
   if (!apiError?.response && (apiError?.code === 'ERR_NETWORK' || message === 'Network Error' || message === 'Failed to fetch')) {
     return NETWORK_ERROR_MESSAGE;

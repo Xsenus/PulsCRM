@@ -18,6 +18,7 @@ import { canApplyDefaultCampaignMessageTemplate, createDefaultCampaignMessageTem
 import { buildRecipientSourceSummary } from '../app/campaignRecipients';
 import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaignReadiness';
 import { useAuth } from '../app/AuthContext';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { formatDateTime } from '../app/format';
 import { campaignStatusOptions, labelOf, recipientSourceOptions } from '../app/lookups';
 import { validateMessageContent } from '../app/messageValidation';
@@ -281,8 +282,8 @@ export function CampaignEditPage() {
       }
 
       setStats(await getCampaignStats(saved.id));
-    } catch (error: any) {
-      showToast(error.message || 'Не удалось сохранить кампанию', 'error', 4000);
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, 'Не удалось сохранить кампанию'), 'error', 4000);
     } finally {
       setSaving(false);
     }
@@ -296,8 +297,8 @@ export function CampaignEditPage() {
     setStatsLoading(true);
     try {
       setStats(await getCampaignStats(id));
-    } catch (error: any) {
-      showToast(error.message || 'Не удалось обновить статистику', 'error', 4000);
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, 'Не удалось обновить статистику'), 'error', 4000);
     } finally {
       setStatsLoading(false);
     }
@@ -308,8 +309,8 @@ export function CampaignEditPage() {
       await retryDispatchItem(itemId);
       showToast('Сообщение возвращено в очередь', 'success');
       await refreshStats();
-    } catch (error: any) {
-      showToast(error.message || 'Не удалось вернуть сообщение в очередь', 'error', 4000);
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, 'Не удалось вернуть сообщение в очередь'), 'error', 4000);
     }
   };
 
@@ -329,9 +330,10 @@ export function CampaignEditPage() {
         count: 10
       });
       setSchedulePreviewItems(preview);
-    } catch (error: any) {
-      setSchedulePreviewError(error.message || 'Не удалось построить расписание');
-      showToast(error.message || 'Не удалось построить расписание', 'error', 4000);
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, 'Не удалось построить расписание');
+      setSchedulePreviewError(message);
+      showToast(message, 'error', 4000);
     } finally {
       setSchedulePreviewLoading(false);
     }
@@ -341,8 +343,8 @@ export function CampaignEditPage() {
     try {
       setActiveTab('recipients');
       setRecipientPreviewData(await previewRecipients(buildRequest));
-    } catch (error: any) {
-      showToast(error.message || 'Не удалось получить список получателей', 'error', 4000);
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, 'Не удалось получить список получателей'), 'error', 4000);
     }
   };
 
@@ -385,8 +387,8 @@ export function CampaignEditPage() {
       setReadiness(result);
       showToast(result.isReady ? 'Кампания готова к запуску' : 'Кампания не готова к запуску', result.isReady ? 'success' : 'warning');
       return result;
-    } catch (error: any) {
-      showToast(error.message || 'Не удалось проверить готовность кампании', 'error', 4000);
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, 'Не удалось проверить готовность кампании'), 'error', 4000);
       return null;
     } finally {
       setReadinessLoading(false);

@@ -28,4 +28,8 @@ describe('getApiErrorMessage', () => {
   it('uses fallback when error does not contain a readable message', () => {
     expect(getApiErrorMessage({}, 'Не удалось войти.')).toBe('Не удалось войти.');
   });
+
+  it('uses string errors as readable messages', () => {
+    expect(getApiErrorMessage('Не удалось сохранить запись.')).toBe('Не удалось сохранить запись.');
+  });
 });

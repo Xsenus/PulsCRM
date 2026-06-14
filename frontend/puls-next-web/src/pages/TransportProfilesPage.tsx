@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { deleteTransportProfile, getTransportProfiles, saveTransportProfile, testTransportProfile } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { getApiErrorMessage } from '../app/apiErrors';
 import { formatDateTime } from '../app/format';
 import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
@@ -145,8 +146,8 @@ export function TransportProfilesPage() {
       setEditingId(undefined);
       setModel(emptyModel);
       await load();
-    } catch (error: any) {
-      showToast(error.message || 'Не удалось сохранить SMTP профиль', 'error', 4000);
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, 'Не удалось сохранить SMTP профиль'), 'error', 4000);
     } finally {
       setSaving(false);
     }
@@ -174,8 +175,8 @@ export function TransportProfilesPage() {
       }
       setDeleteTarget(null);
       await load();
-    } catch (error: any) {
-      showToast(error.message || 'Не удалось удалить SMTP профиль', 'error', 4000);
+    } catch (error: unknown) {
+      showToast(getApiErrorMessage(error, 'Не удалось удалить SMTP профиль'), 'error', 4000);
     } finally {
       setDeleteBusy(false);
     }
