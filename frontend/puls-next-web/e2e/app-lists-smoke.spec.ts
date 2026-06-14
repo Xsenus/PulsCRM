@@ -104,5 +104,7 @@ test('organizations list uses mobile cards without page overflow', async ({ page
   await filterToggle.click();
   await expect(filterPanel).toBeVisible();
   await expect(filterPanel.getByText('Central').first()).toBeVisible();
+  await filterPanel.getByRole('button', { name: 'Скрыть' }).click();
+  await expect(filterPanel).toBeHidden();
   await expect.poll(() => expectNoDocumentHorizontalOverflow(page)).toBe(true);
 });

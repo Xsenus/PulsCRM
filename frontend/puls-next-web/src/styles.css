@@ -1321,8 +1321,21 @@ select {
   gap: 12px;
 }
 
+.organizations-sidebar-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .organizations-sidebar-clear-button {
   flex: 0 0 auto;
+}
+
+.organizations-sidebar-close-button {
+  display: none;
 }
 
 .organizations-layout-resizer-shell {
@@ -4156,6 +4169,10 @@ body.is-dragging-column {
 
   .organizations-sidebar.expanded-on-small {
     display: grid;
+  }
+
+  .organizations-sidebar-close-button {
+    display: inline-flex;
   }
 
   .organization-search-shell,

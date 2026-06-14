@@ -313,15 +313,25 @@ export function OrganizationsPage() {
               <div className="field-hint">{selectedRaionSummary}</div>
             </div>
 
-            <button
-              type="button"
-              className="secondary-button button-inline icon-button organizations-sidebar-clear-button"
-              onClick={clearOrganizationFilters}
-              aria-label="Очистить фильтры"
-              title="Очистить фильтры"
-            >
-              <ActionIcon kind="clear" />
-            </button>
+            <div className="organizations-sidebar-head-actions">
+              <button
+                type="button"
+                className="secondary-button button-inline icon-button organizations-sidebar-clear-button"
+                onClick={clearOrganizationFilters}
+                aria-label="Очистить фильтры"
+                title="Очистить фильтры"
+              >
+                <ActionIcon kind="clear" />
+              </button>
+              <button
+                type="button"
+                className="secondary-button button-inline organizations-sidebar-close-button"
+                onClick={() => setFiltersExpanded(false)}
+                aria-controls="organizations-filter-panel"
+              >
+                Скрыть
+              </button>
+            </div>
           </div>
 
           <input
