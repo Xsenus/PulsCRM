@@ -3,7 +3,7 @@ import { ActionIcon } from './ActionIcon';
 
 export interface RowActionItem {
   key: string;
-  label: string;
+  label: React.ReactNode;
   onClick: () => void | Promise<void>;
   disabled?: boolean;
   danger?: boolean;

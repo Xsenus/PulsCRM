@@ -20,6 +20,7 @@ import { formatDateTime } from '../app/format';
 import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
 import type { DispatchBatchDto, DispatchItemDto } from '../app/types';
+import { LoadingButtonLabel } from '../components/AppLoader';
 import { DataTable } from '../components/DataTable';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
@@ -90,6 +91,7 @@ export function DispatchPage() {
   const [cancelTarget, setCancelTarget] = useState<DispatchItemDto | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [actionBusyId, setActionBusyId] = useState<number | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const summary = useMemo(() => ({
     queued: items.filter((item) => item.status === 0).length,
@@ -136,8 +138,17 @@ export function DispatchPage() {
     }
   };
 
-  const refresh = async () => {
-    await Promise.all([loadItems(), loadBatches()]);
+  const refresh = async (options: { force?: boolean } = {}) => {
+    if (refreshing && !options.force) {
+      return;
+    }
+
+    setRefreshing(true);
+    try {
+      await Promise.all([loadItems(), loadBatches()]);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -212,7 +223,7 @@ export function DispatchPage() {
       await retryDispatchItem(row.id);
       showToast('Сообщение возвращено в очередь.', 'success');
       try {
-        await refresh();
+        await refresh({ force: true });
       } catch (error) {
         showToast(getApiErrorMessage(error, 'Сообщение возвращено в очередь, но список не обновился.'), 'error', 4000);
       }
@@ -234,7 +245,7 @@ export function DispatchPage() {
       showToast('Сообщение отменено.', 'delete');
       setCancelTarget(null);
       try {
-        await refresh();
+        await refresh({ force: true });
       } catch (error) {
         showToast(getApiErrorMessage(error, 'Сообщение отменено, но список не обновился.'), 'error', 4000);
       }
@@ -250,7 +261,7 @@ export function DispatchPage() {
       actions={[
         {
           key: 'retry',
-          label: 'Повторить',
+          label: actionBusyId === row.id ? <LoadingButtonLabel label="Возвращаем" /> : 'Повторить',
           disabled: !canRetryDispatchItem(row) || actionBusyId === row.id,
           onClick: () => retryItem(row)
         },
@@ -274,11 +285,12 @@ export function DispatchPage() {
           <button
             type="button"
             className="secondary-button"
+            disabled={refreshing}
             onClick={() => void refresh().catch((error) => {
               showToast(getApiErrorMessage(error, 'Не удалось обновить очередь.'), 'error', 4000);
             })}
           >
-            Обновить
+            {refreshing ? <LoadingButtonLabel label="Обновляем" /> : 'Обновить'}
           </button>
         )}
       />
