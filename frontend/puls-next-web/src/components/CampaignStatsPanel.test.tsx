@@ -141,8 +141,13 @@ describe('CampaignStatsPanel', () => {
 
   it('filters recent items by failed status', () => {
     const view = render(panel(statistics()));
-    const failedFilter = Array.from(view.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent === 'Ошибки');
+    const tablist = view.querySelector('.campaign-dispatch-filters[role="tablist"]');
+    const filters = Array.from(tablist?.querySelectorAll<HTMLButtonElement>('.settings-tab') ?? []);
+    const failedFilter = filters.find((button) => button.textContent === 'Ошибки');
 
+    expect(tablist?.getAttribute('aria-label')).toBe('Фильтр сообщений очереди');
+    expect(filters.map((filter) => filter.getAttribute('role'))).toEqual(['tab', 'tab', 'tab', 'tab', 'tab', 'tab']);
+    expect(filters.map((filter) => filter.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false', 'false']);
     expect(view.textContent).toContain('sent@example.test');
     expect(view.textContent).toContain('failed@example.test');
 
@@ -150,6 +155,7 @@ describe('CampaignStatsPanel', () => {
       failedFilter?.click();
     });
 
+    expect(filters.map((filter) => filter.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false', 'false', 'true', 'false']);
     expect(view.textContent).not.toContain('sent@example.test');
     expect(view.textContent).toContain('failed@example.test');
   });
