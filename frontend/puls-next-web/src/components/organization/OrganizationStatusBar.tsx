@@ -21,15 +21,17 @@ export function OrganizationStatusBar({
 }: OrganizationStatusBarProps) {
   return (
     <section className="panel organization-record-status-bar">
-      <div className="organization-card-chip-row">
-        <span className={`organization-chip${visible ? ' accent' : ''}`}>{visible ? 'Видима' : 'Скрыта'}</span>
-        {isManager ? <span className="organization-chip accent">Для менеджера</span> : null}
-        {raionName ? <span className="organization-chip">{raionName}</span> : null}
-        {orgTypeName ? <span className="organization-chip">{orgTypeName}</span> : null}
-        {statusName ? <span className="organization-chip">{statusName}</span> : null}
-        {flagName ? <span className="organization-chip">{flagName}</span> : null}
+      <div className="organization-card-chip-row" role="list" aria-label="Статусы организации">
+        <span className={`organization-chip${visible ? ' accent' : ''}`} role="listitem">
+          {visible ? 'Видима' : 'Скрыта'}
+        </span>
+        {isManager ? <span className="organization-chip accent" role="listitem">Для менеджера</span> : null}
+        {raionName ? <span className="organization-chip" role="listitem">{raionName}</span> : null}
+        {orgTypeName ? <span className="organization-chip" role="listitem">{orgTypeName}</span> : null}
+        {statusName ? <span className="organization-chip" role="listitem">{statusName}</span> : null}
+        {flagName ? <span className="organization-chip" role="listitem">{flagName}</span> : null}
       </div>
-      <span className={`organization-status-pill organization-status-pill--${isDirty ? 'warn' : 'ok'}`}>
+      <span className={`organization-status-pill organization-status-pill--${isDirty ? 'warn' : 'ok'}`} role="status">
         {isDirty ? 'Черновик изменен' : 'Все изменения сохранены'}
       </span>
     </section>

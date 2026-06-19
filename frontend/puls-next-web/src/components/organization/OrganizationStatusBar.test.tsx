@@ -47,9 +47,12 @@ describe('OrganizationStatusBar', () => {
         flagName="Важная"
       />
     );
+    const statusList = view.querySelector('[role="list"]');
     const chips = Array.from(view.querySelectorAll('.organization-chip')).map((item) => item.textContent);
     const saveStatus = view.querySelector('.organization-status-pill');
 
+    expect(statusList?.getAttribute('aria-label')).toBe('Статусы организации');
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(6);
     expect(chips).toEqual([
       'Видима',
       'Для менеджера',
@@ -58,6 +61,7 @@ describe('OrganizationStatusBar', () => {
       'Работает',
       'Важная'
     ]);
+    expect(saveStatus?.getAttribute('role')).toBe('status');
     expect(saveStatus?.textContent).toBe('Все изменения сохранены');
     expect(saveStatus?.className).toBe('organization-status-pill organization-status-pill--ok');
   });
@@ -66,7 +70,9 @@ describe('OrganizationStatusBar', () => {
     const view = render(<OrganizationStatusBar visible={false} isManager={false} isDirty />);
 
     expect(Array.from(view.querySelectorAll('.organization-chip')).map((item) => item.textContent)).toEqual(['Скрыта']);
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(1);
     expect(view.textContent).toContain('Черновик изменен');
+    expect(view.querySelector('.organization-status-pill')?.getAttribute('role')).toBe('status');
     expect(view.querySelector('.organization-status-pill')?.className).toBe(
       'organization-status-pill organization-status-pill--warn'
     );
