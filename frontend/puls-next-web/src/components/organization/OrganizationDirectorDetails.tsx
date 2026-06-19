@@ -43,40 +43,40 @@ export function OrganizationDirectorDetails({ details }: { details?: Organizatio
         <h4>Руководитель и служебные реквизиты</h4>
         <span className="field-hint">Данные из legacy-карточки организации</span>
       </div>
-      <div className="detail-grid">
-        <div className="detail-card">
+      <div className="detail-grid" role="list" aria-label="Реквизиты руководителя организации">
+        <div className="detail-card" role="listitem">
           <strong>Руководитель</strong>
           <span>{textValue(details?.directorFullName)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Кратко</strong>
           <span>{textValue(details?.directorShortName)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>ФИО в родительном</strong>
           <span>{textValue(details?.directorGenitiveName)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Должность</strong>
           <span>{textValue(details?.directorPosition)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Должность в родительном</strong>
           <span>{textValue(details?.directorPositionGenitive)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Основание</strong>
           <span>{textValue(details?.authorityDocument)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Телефон</strong>
           <span>{renderPhone(details?.directorPhone)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Email</strong>
           <span>{renderMail(details?.directorEmail)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>СНИЛС</strong>
           <span>{textValue(details?.directorSnils)}</span>
         </div>

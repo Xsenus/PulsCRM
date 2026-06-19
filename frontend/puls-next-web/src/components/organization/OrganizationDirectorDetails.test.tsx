@@ -49,8 +49,11 @@ const details: OrganizationDirectorDetailsData = {
 describe('OrganizationDirectorDetails', () => {
   it('renders director fields and contact links', () => {
     const view = render(<OrganizationDirectorDetails details={details} />);
+    const list = view.querySelector('[role="list"]');
 
     expect(view.querySelector('h4')?.textContent).toBe('Руководитель и служебные реквизиты');
+    expect(list?.getAttribute('aria-label')).toBe('Реквизиты руководителя организации');
+    expect(list?.querySelectorAll('[role="listitem"]')).toHaveLength(9);
     expect(view.querySelectorAll('.detail-card')).toHaveLength(9);
     expect(view.textContent).toContain('Иванов Иван Иванович');
     expect(view.textContent).toContain('Устав');
