@@ -46,44 +46,44 @@ export function OrganizationSnapshotDetails({ snapshot }: { snapshot?: Organizat
   }
 
   return (
-    <div className="detail-grid">
-      <div className="detail-card">
+    <div className="detail-grid" role="list" aria-label="Поля снимка 1С организации">
+      <div className="detail-card" role="listitem">
         <strong>Код</strong>
         <span>{textValue(snapshot?.code)}</span>
       </div>
-      <div className="detail-card">
+      <div className="detail-card" role="listitem">
         <strong>Район</strong>
         <span>{textValue(snapshot?.raion)}</span>
       </div>
-      <div className="detail-card">
+      <div className="detail-card" role="listitem">
         <strong>ИНН</strong>
         <span>{textValue(snapshot?.inn)}</span>
       </div>
-      <div className="detail-card detail-card-wide">
+      <div className="detail-card detail-card-wide" role="listitem">
         <strong>Наименование</strong>
         <span>{textValue(snapshot?.name)}</span>
       </div>
-      <div className="detail-card detail-card-wide">
+      <div className="detail-card detail-card-wide" role="listitem">
         <strong>Полное наименование</strong>
         <span>{textValue(snapshot?.fullName)}</span>
       </div>
-      <div className="detail-card">
+      <div className="detail-card" role="listitem">
         <strong>Телефон</strong>
         <span>{renderPhone(snapshot?.phone)}</span>
       </div>
-      <div className="detail-card detail-card-wide">
+      <div className="detail-card detail-card-wide" role="listitem">
         <strong>Другая информация</strong>
         <span>{textValue(snapshot?.otherInfo)}</span>
       </div>
-      <div className="detail-card detail-card-wide">
+      <div className="detail-card detail-card-wide" role="listitem">
         <strong>Комментарий</strong>
         <span>{textValue(snapshot?.comment)}</span>
       </div>
-      <div className="detail-card detail-card-wide">
+      <div className="detail-card detail-card-wide" role="listitem">
         <strong>Юридический адрес</strong>
         <span>{textValue(snapshot?.addressLegal)}</span>
       </div>
-      <div className="detail-card detail-card-wide">
+      <div className="detail-card detail-card-wide" role="listitem">
         <strong>Фактический адрес</strong>
         <span>{textValue(snapshot?.addressActual)}</span>
       </div>

@@ -54,7 +54,10 @@ describe('OrganizationSnapshotDetails', () => {
   it('renders all snapshot fields and keeps phone clickable', () => {
     const view = render(<OrganizationSnapshotDetails snapshot={snapshot} />);
     const phone = view.querySelector('a[href="tel:+73832000000"]');
+    const list = view.querySelector('[role="list"]');
 
+    expect(list?.getAttribute('aria-label')).toBe('Поля снимка 1С организации');
+    expect(list?.querySelectorAll('[role="listitem"]')).toHaveLength(10);
     expect(view.querySelectorAll('.detail-card')).toHaveLength(10);
     expect(view.textContent).toContain('Код');
     expect(view.textContent).toContain('ORG-42');
