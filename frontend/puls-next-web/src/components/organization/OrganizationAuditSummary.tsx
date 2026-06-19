@@ -37,40 +37,40 @@ export function OrganizationAuditSummary({
         </div>
       </div>
 
-      <div className="detail-grid">
-        <div className="detail-card">
+      <div className="detail-grid" role="list" aria-label="Счетчики связанных данных организации">
+        <div className="detail-card" role="listitem">
           <strong>Email-адресов</strong>
           <span>{formatCount(emailCount)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Контактов</strong>
           <span>{formatCount(details?.contacts.length ?? 0)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Событий</strong>
           <span>{formatCount(details?.events.length ?? 0)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Договоров</strong>
           <span>{formatCount(details?.contracts.length ?? 0)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Документов</strong>
           <span>{formatCount(details?.attachments.length ?? 0)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Реализаций</strong>
           <span>{formatCount(details?.realizations.length ?? 0)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Программных блоков</strong>
           <span>{formatCount(details?.programInfos.length ?? 0)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Лицензий Парус</strong>
           <span>{formatCount(details?.parusLicenses.length ?? 0)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Заказов Парус</strong>
           <span>{formatCount(details?.parusOrders.length ?? 0)}</span>
         </div>
