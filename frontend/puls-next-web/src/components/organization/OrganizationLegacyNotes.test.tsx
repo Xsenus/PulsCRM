@@ -45,8 +45,11 @@ describe('OrganizationLegacyNotes', () => {
     const view = render(<OrganizationLegacyNotes details={details} />);
     const labels = Array.from(view.querySelectorAll('strong')).map((item) => item.textContent);
     const values = Array.from(view.querySelectorAll('.field-hint')).map((item) => item.textContent);
+    const list = view.querySelector('[role="list"]');
 
     expect(view.querySelector('h4')?.textContent).toBe('Legacy-заметки');
+    expect(list?.getAttribute('aria-label')).toBe('Legacy-заметки организации');
+    expect(list?.querySelectorAll('[role="listitem"]')).toHaveLength(3);
     expect(labels).toEqual(['Дополнительный комментарий', 'Техника', 'Закупки']);
     expect(values).toEqual(['Особые условия сопровождения', 'Есть удаленный доступ', 'Закупка через конкурс']);
   });

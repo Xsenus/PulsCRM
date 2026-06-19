@@ -20,16 +20,16 @@ export function OrganizationLegacyNotes({ details }: { details?: OrganizationLeg
   return (
     <div className="panel-subsection">
       <h4>Legacy-заметки</h4>
-      <div className="detail-list">
-        <div>
+      <div className="detail-list" role="list" aria-label="Legacy-заметки организации">
+        <div role="listitem">
           <strong>Дополнительный комментарий</strong>
           <div className="field-hint">{textValue(details?.additionalComment)}</div>
         </div>
-        <div>
+        <div role="listitem">
           <strong>Техника</strong>
           <div className="field-hint">{textValue(details?.technicsComment)}</div>
         </div>
-        <div>
+        <div role="listitem">
           <strong>Закупки</strong>
           <div className="field-hint">{textValue(details?.procurementComment)}</div>
         </div>
