@@ -60,11 +60,17 @@ const items: OrganizationInfoTaskDto[] = [
 describe('OrganizationProgramBlocks', () => {
   it('renders known program cards and extra variants', () => {
     const view = render(<OrganizationProgramBlocks items={items} />);
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
     const cards = Array.from(view.querySelectorAll('.organization-program-card'));
 
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Типовые блоки программ организации',
+      'Дополнительные блоки программ организации'
+    ]);
     expect(view.querySelector('h4')?.textContent).toBe('Блоки программ');
     expect(view.textContent).toContain('2 записей');
     expect(cards).toHaveLength(11);
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(11);
     expect(view.textContent).toContain('Бухгалтерия учреждения');
     expect(view.textContent).toContain('Рабочих мест: 5');
     expect(view.textContent).toContain('#42');
@@ -74,11 +80,14 @@ describe('OrganizationProgramBlocks', () => {
 
   it('renders empty known cards when items are missing', () => {
     const view = render(<OrganizationProgramBlocks items={null} />);
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
     const cards = Array.from(view.querySelectorAll('.organization-program-card'));
     const emptyCards = Array.from(view.querySelectorAll('.organization-program-card-empty'));
 
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual(['Типовые блоки программ организации']);
     expect(view.textContent).toContain('0 записей');
     expect(cards).toHaveLength(10);
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(10);
     expect(emptyCards).toHaveLength(10);
     expect(view.textContent).toContain('Запись пока не заполнена');
   });

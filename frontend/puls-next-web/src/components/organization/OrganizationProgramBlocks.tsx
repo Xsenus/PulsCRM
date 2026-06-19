@@ -48,11 +48,12 @@ export function OrganizationProgramBlocks({ items }: { items?: OrganizationInfoT
         <h4>Блоки программ</h4>
         <span className="field-hint">{formatCount(programCards.total)} записей</span>
       </div>
-      <div className="detail-grid organization-program-grid">
+      <div className="detail-grid organization-program-grid" role="list" aria-label="Типовые блоки программ организации">
         {programCards.knownItems.map(({ meta, item }) => (
           <div
             key={meta.variant}
             className={`detail-card organization-program-card${item ? '' : ' organization-program-card-empty'}`}
+            role="listitem"
           >
             <div className="organization-program-card-heading">
               <strong>{meta.shortLabel}</strong>
@@ -73,11 +74,11 @@ export function OrganizationProgramBlocks({ items }: { items?: OrganizationInfoT
       </div>
 
       {programCards.extraItems.length ? (
-        <div className="detail-grid organization-program-grid">
+        <div className="detail-grid organization-program-grid" role="list" aria-label="Дополнительные блоки программ организации">
           {programCards.extraItems.map((item) => {
             const meta = getProgramVariantMeta(item.variant);
             return (
-              <div key={item.id} className="detail-card organization-program-card">
+              <div key={item.id} className="detail-card organization-program-card" role="listitem">
                 <div className="organization-program-card-heading">
                   <strong>{meta?.shortLabel || `#${item.variant}`}</strong>
                   <span>{item.fullName || item.name || `Блок #${item.id}`}</span>
