@@ -114,13 +114,15 @@ describe('OrganizationSidebar', () => {
       'Статус и сопровождение организации',
       'Финансовые показатели организации',
       'Почтовые адреса организации',
-      'Задачи организации'
+      'Задачи организации',
+      'Контекст карточки организации'
     ]);
     expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(4);
     expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(4);
     expect(lists[2].querySelectorAll('[role="listitem"]')).toHaveLength(4);
     expect(lists[3].querySelectorAll('[role="listitem"]')).toHaveLength(2);
     expect(lists[4].querySelectorAll('[role="listitem"]')).toHaveLength(1);
+    expect(lists[5].querySelectorAll('[role="listitem"]')).toHaveLength(3);
 
     click(Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Документы')!);
     click(Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Снимки 1С')!);

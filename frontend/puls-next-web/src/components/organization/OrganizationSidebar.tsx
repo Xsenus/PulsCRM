@@ -220,16 +220,16 @@ export function OrganizationSidebar({
 
       <div className="panel-subsection organization-sidebar-section">
         <h4>Контекст карточки</h4>
-        <div className="detail-list">
-          <div>
+        <div className="detail-list" role="list" aria-label="Контекст карточки организации">
+          <div role="listitem">
             <strong>Полное наименование</strong>
             <div className="field-hint">{draft.fullName || details?.fullName || EMPTY_VALUE}</div>
           </div>
-          <div>
+          <div role="listitem">
             <strong>Комментарий</strong>
             <div className="field-hint">{shortText(draft.comment || details?.comment, 180) || 'Не заполнен'}</div>
           </div>
-          <div>
+          <div role="listitem">
             <strong>Прочее</strong>
             <div className="field-hint">{shortText(draft.otherInfo || details?.otherInfo, 180) || 'Не заполнено'}</div>
           </div>
