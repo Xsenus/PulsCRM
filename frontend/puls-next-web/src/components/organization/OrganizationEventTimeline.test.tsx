@@ -102,7 +102,9 @@ describe('OrganizationEventTimeline', () => {
 
   it('renders empty state when events are missing', () => {
     const view = render(<OrganizationEventTimeline events={[]} />);
+    const emptyState = view.querySelector('.empty-state');
 
-    expect(view.querySelector('.empty-state')?.textContent).toBe('История событий по организации пока пуста.');
+    expect(emptyState?.getAttribute('role')).toBe('status');
+    expect(emptyState?.textContent).toBe('История событий по организации пока пуста.');
   });
 });

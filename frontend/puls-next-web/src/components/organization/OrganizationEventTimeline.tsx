@@ -17,7 +17,7 @@ export function OrganizationEventTimeline({
   events: OrganizationEventDto[];
 }) {
   if (!events.length) {
-    return <div className="empty-state organization-record-inline-empty">История событий по организации пока пуста.</div>;
+    return <div className="empty-state organization-record-inline-empty" role="status">История событий по организации пока пуста.</div>;
   }
 
   return (
