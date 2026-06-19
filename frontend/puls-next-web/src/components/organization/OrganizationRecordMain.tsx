@@ -93,7 +93,7 @@ export function OrganizationRecordMain({
             />
           </div>
         ) : (
-          <div className="empty-state organization-record-inline-empty">Связанные данные появятся после сохранения организации.</div>
+          <div className="empty-state organization-record-inline-empty" role="status">Связанные данные появятся после сохранения организации.</div>
         ))
         : null}
 
@@ -109,7 +109,7 @@ export function OrganizationRecordMain({
             />
           </div>
         ) : (
-          <div className="empty-state organization-record-inline-empty">История станет доступна после первого сохранения карточки.</div>
+          <div className="empty-state organization-record-inline-empty" role="status">История станет доступна после первого сохранения карточки.</div>
         ))
         : null}
     </div>

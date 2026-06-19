@@ -96,13 +96,17 @@ describe('OrganizationRecordMain', () => {
 
   it('renders relations empty state before organization is saved', () => {
     const view = renderMain('relations');
+    const emptyState = view.querySelector('.empty-state');
 
-    expect(view.querySelector('.empty-state')?.textContent).toBe('Связанные данные появятся после сохранения организации.');
+    expect(emptyState?.getAttribute('role')).toBe('status');
+    expect(emptyState?.textContent).toBe('Связанные данные появятся после сохранения организации.');
   });
 
   it('renders history empty state before organization is saved', () => {
     const view = renderMain('history');
+    const emptyState = view.querySelector('.empty-state');
 
-    expect(view.querySelector('.empty-state')?.textContent).toBe('История станет доступна после первого сохранения карточки.');
+    expect(emptyState?.getAttribute('role')).toBe('status');
+    expect(emptyState?.textContent).toBe('История станет доступна после первого сохранения карточки.');
   });
 });
