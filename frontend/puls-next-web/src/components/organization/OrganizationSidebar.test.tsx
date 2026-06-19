@@ -108,6 +108,9 @@ describe('OrganizationSidebar', () => {
     expect(view.querySelector('a[href="tel:+73832000000"]')?.textContent).toBe('+7 (383) 200-00-00');
     expect(view.querySelector('a[href="https://puls.example.test"]')?.textContent).toBe('puls.example.test');
     expect(view.querySelector('a[href="mailto:office@example.test"]')?.textContent).toBe('office@example.test');
+    const quickToolbar = view.querySelector('[role="toolbar"]');
+    expect(quickToolbar?.getAttribute('aria-label')).toBe('Быстрые переходы организации');
+    expect(quickToolbar?.querySelectorAll('button')).toHaveLength(5);
     const lists = Array.from(view.querySelectorAll('[role="list"]'));
     expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
       'Паспортные данные организации',

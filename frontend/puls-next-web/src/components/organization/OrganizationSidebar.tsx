@@ -165,7 +165,7 @@ export function OrganizationSidebar({
 
       <div className="panel-subsection organization-sidebar-section">
         <h4>Быстрый доступ</h4>
-        <div className="organization-sidebar-links">
+        <div className="organization-sidebar-links" role="toolbar" aria-label="Быстрые переходы организации">
           <button type="button" className="secondary-button button-inline" onClick={() => onOpenRelations('contacts')}>
             Контакты
           </button>
