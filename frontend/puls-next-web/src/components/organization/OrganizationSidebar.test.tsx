@@ -110,11 +110,17 @@ describe('OrganizationSidebar', () => {
     expect(view.querySelector('a[href="mailto:office@example.test"]')?.textContent).toBe('office@example.test');
     const lists = Array.from(view.querySelectorAll('[role="list"]'));
     expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Паспортные данные организации',
+      'Статус и сопровождение организации',
+      'Финансовые показатели организации',
       'Почтовые адреса организации',
       'Задачи организации'
     ]);
-    expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(2);
-    expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(1);
+    expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(4);
+    expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(4);
+    expect(lists[2].querySelectorAll('[role="listitem"]')).toHaveLength(4);
+    expect(lists[3].querySelectorAll('[role="listitem"]')).toHaveLength(2);
+    expect(lists[4].querySelectorAll('[role="listitem"]')).toHaveLength(1);
 
     click(Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Документы')!);
     click(Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Снимки 1С')!);

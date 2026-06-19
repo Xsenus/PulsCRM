@@ -97,20 +97,20 @@ export function OrganizationSidebar({
           <h4>Паспорт организации</h4>
           {details?.updatedAtUtc ? <span className="field-hint">{formatDateOnly(details.updatedAtUtc)}</span> : null}
         </div>
-        <div className="detail-grid organization-sidebar-facts">
-          <div className="detail-card">
+        <div className="detail-grid organization-sidebar-facts" role="list" aria-label="Паспортные данные организации">
+          <div className="detail-card" role="listitem">
             <strong>ИНН / КПП</strong>
             <span>{[draft.inn || details?.inn, draft.kpp || details?.kpp].filter(Boolean).join(' / ') || EMPTY_VALUE}</span>
           </div>
-          <div className="detail-card">
+          <div className="detail-card" role="listitem">
             <strong>ОГРН</strong>
             <span>{draft.ogrn || details?.ogrn || EMPTY_VALUE}</span>
           </div>
-          <div className="detail-card">
+          <div className="detail-card" role="listitem">
             <strong>Телефон</strong>
             <span>{renderPhone(draft.phone || details?.phone)}</span>
           </div>
-          <div className="detail-card">
+          <div className="detail-card" role="listitem">
             <strong>Сайт</strong>
             <span>{renderLink(draft.site || details?.site)}</span>
           </div>
@@ -119,20 +119,20 @@ export function OrganizationSidebar({
 
       <div className="panel-subsection organization-sidebar-section">
         <h4>Статус и сопровождение</h4>
-        <div className="detail-list">
-          <div>
+        <div className="detail-list" role="list" aria-label="Статус и сопровождение организации">
+          <div role="listitem">
             <strong>Последнее изменение</strong>
             <div className="field-hint">{formatAuditValue(details?.updatedAtUtc, details?.updatedByName)}</div>
           </div>
-          <div>
+          <div role="listitem">
             <strong>Юридический адрес</strong>
             <div className="field-hint">{draft.addressLegal || details?.addressLegal || EMPTY_VALUE}</div>
           </div>
-          <div>
+          <div role="listitem">
             <strong>Фактический адрес</strong>
             <div className="field-hint">{draft.addressActual || details?.addressActual || EMPTY_VALUE}</div>
           </div>
-          <div>
+          <div role="listitem">
             <strong>Интернет / ЭДО</strong>
             <div className="field-hint">
               {[details?.internetSpeed, details?.edo].filter(Boolean).join(' • ') || 'Не заполнено'}
@@ -143,20 +143,20 @@ export function OrganizationSidebar({
 
       <div className="panel-subsection organization-sidebar-section">
         <h4>Финансовый контур</h4>
-        <div className="detail-grid organization-sidebar-metrics">
-          <div className="detail-card">
+        <div className="detail-grid organization-sidebar-metrics" role="list" aria-label="Финансовые показатели организации">
+          <div className="detail-card" role="listitem">
             <strong>Текущий долг</strong>
             <span>{formatMoney(details?.debtAmount)}</span>
           </div>
-          <div className="detail-card">
+          <div className="detail-card" role="listitem">
             <strong>Актуальный долг</strong>
             <span>{formatMoney(details?.debtActualAmount)}</span>
           </div>
-          <div className="detail-card">
+          <div className="detail-card" role="listitem">
             <strong>Долг -6</strong>
             <span>{formatMoney(details?.debtMinus6Amount)}</span>
           </div>
-          <div className="detail-card">
+          <div className="detail-card" role="listitem">
             <strong>Открытые задачи</strong>
             <span>{formatCount(details?.openWorkItems ?? 0)}</span>
           </div>
