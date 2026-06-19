@@ -61,9 +61,12 @@ const items: OrganizationSupportSummaryItem[] = [
 describe('OrganizationSupportSummary', () => {
   it('renders summary cards with status tone classes', () => {
     const view = render(<OrganizationSupportSummary items={items} />);
+    const summaryList = view.querySelector('[role="list"]');
     const cards = Array.from(view.querySelectorAll('.organization-support-summary-card'));
     const pills = Array.from(view.querySelectorAll('.organization-status-pill'));
 
+    expect(summaryList?.getAttribute('aria-label')).toBe('Сводка сопровождения организации');
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(3);
     expect(cards).toHaveLength(3);
     expect(view.textContent).toContain('Лицензия актуальна');
     expect(view.textContent).toContain('Осталось 10 дн.');
@@ -78,7 +81,8 @@ describe('OrganizationSupportSummary', () => {
   it('keeps an empty summary grid when items are missing', () => {
     const view = render(<OrganizationSupportSummary items={[]} />);
 
-    expect(view.querySelector('.organization-support-summary-grid')).not.toBeNull();
+    expect(view.querySelector('.organization-support-summary-grid')?.getAttribute('role')).toBe('list');
     expect(view.querySelectorAll('.organization-support-summary-card')).toHaveLength(0);
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(0);
   });
 });
