@@ -74,8 +74,15 @@ describe('OrganizationOneCDetails', () => {
   it('renders 1C details, links and license status', () => {
     const view = render(<OrganizationOneCDetails details={details} licenseStatus={licenseStatus} />);
     const cards = Array.from(view.querySelectorAll('.detail-card'));
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
 
     expect(view.querySelector('h4')?.textContent).toBe('1С');
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Параметры 1С организации',
+      'Комментарии 1С организации'
+    ]);
+    expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(24);
+    expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(6);
     expect(cards).toHaveLength(24);
     expect(view.textContent).toContain('Иван Иванов');
     expect(view.textContent).toContain('Срок скоро закончится');
