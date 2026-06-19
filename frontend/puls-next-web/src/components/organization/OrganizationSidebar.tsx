@@ -190,9 +190,9 @@ export function OrganizationSidebar({
           <span className="field-hint">{emailChips.length}</span>
         </div>
         {emailChips.length ? (
-          <div className="organization-email-list">
+          <div className="organization-email-list" role="list" aria-label="Почтовые адреса организации">
             {emailChips.map((email) => (
-              <a key={email} href={`mailto:${email}`} className="organization-email-chip">{email}</a>
+              <a key={email} href={`mailto:${email}`} className="organization-email-chip" role="listitem">{email}</a>
             ))}
           </div>
         ) : (
@@ -206,9 +206,9 @@ export function OrganizationSidebar({
           <span className="field-hint">{details?.tasks.length ?? 0}</span>
         </div>
         {details?.tasks.length ? (
-          <div className="organization-card-chip-row">
+          <div className="organization-card-chip-row" role="list" aria-label="Задачи организации">
             {details.tasks.map((task) => (
-              <span key={task.id} className="organization-chip">
+              <span key={task.id} className="organization-chip" role="listitem">
                 {task.fullName || task.name || `Задача #${task.id}`}
               </span>
             ))}

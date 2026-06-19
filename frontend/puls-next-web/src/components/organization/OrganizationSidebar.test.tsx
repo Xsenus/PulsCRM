@@ -108,6 +108,13 @@ describe('OrganizationSidebar', () => {
     expect(view.querySelector('a[href="tel:+73832000000"]')?.textContent).toBe('+7 (383) 200-00-00');
     expect(view.querySelector('a[href="https://puls.example.test"]')?.textContent).toBe('puls.example.test');
     expect(view.querySelector('a[href="mailto:office@example.test"]')?.textContent).toBe('office@example.test');
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Почтовые адреса организации',
+      'Задачи организации'
+    ]);
+    expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(2);
+    expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(1);
 
     click(Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Документы')!);
     click(Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Снимки 1С')!);
