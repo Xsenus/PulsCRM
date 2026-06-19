@@ -58,8 +58,12 @@ describe('RelationPreviewCard', () => {
     );
 
     const button = view.querySelector('.organization-preview-card')!;
+    const previewList = view.querySelector('[role="list"]');
     expect(button.className).toContain('active');
     expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(button.tagName).toBe('BUTTON');
+    expect(previewList?.getAttribute('aria-label')).toBe('Примеры: Контакты');
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(2);
     expect(view.querySelector('.organization-preview-card-count')?.textContent).toBe('1 234');
     expect(view.textContent).toContain('Иван Иванов');
     expect(view.textContent).toContain('Директор');
@@ -84,6 +88,7 @@ describe('RelationPreviewCard', () => {
     const button = view.querySelector('.organization-preview-card');
     expect(button?.className).not.toContain('active');
     expect(button?.getAttribute('aria-pressed')).toBe('false');
+    expect(view.querySelector('[role="list"]')).toBeNull();
     expect(view.textContent).toContain('Пока пусто.');
   });
 });

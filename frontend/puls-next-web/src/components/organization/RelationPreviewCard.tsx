@@ -40,9 +40,9 @@ export function RelationPreviewCard({
         <span className="organization-preview-card-count">{formatCount(count)}</span>
       </div>
       {items.length ? (
-        <div className="organization-preview-card-list">
+        <div className="organization-preview-card-list" role="list" aria-label={`Примеры: ${title}`}>
           {items.map((item) => (
-            <div key={item.key} className="organization-preview-card-item">
+            <div key={item.key} className="organization-preview-card-item" role="listitem">
               <span>{item.title}</span>
               {item.caption ? <span className="field-hint">{item.caption}</span> : null}
             </div>
