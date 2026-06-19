@@ -55,8 +55,15 @@ describe('OrganizationBankDetails', () => {
   it('renders bank requisites and ECP comments', () => {
     const view = render(<OrganizationBankDetails details={details} />);
     const cards = Array.from(view.querySelectorAll('.detail-card'));
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
 
     expect(view.querySelector('h4')?.textContent).toBe('ЭЦП и банковские реквизиты');
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Банковские реквизиты организации',
+      'Комментарии ЭЦП организации'
+    ]);
+    expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(12);
+    expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(2);
     expect(cards).toHaveLength(12);
     expect(view.textContent).toContain('62.01');
     expect(view.textContent).toContain('ПАО Тест Банк');
