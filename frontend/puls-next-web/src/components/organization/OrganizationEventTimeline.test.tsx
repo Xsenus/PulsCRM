@@ -77,6 +77,10 @@ describe('OrganizationEventTimeline', () => {
       />
     );
 
+    const list = view.querySelector('[role="list"]');
+
+    expect(list?.getAttribute('aria-label')).toBe('История событий организации');
+    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(2);
     expect(view.querySelectorAll('.organization-timeline-item')).toHaveLength(2);
     expect(view.textContent).toContain('Продление лицензии');
     expect(view.textContent).toContain('Оператор • Сопровождение • в процессе • не завершено');

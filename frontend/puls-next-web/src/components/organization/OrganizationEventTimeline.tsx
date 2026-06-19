@@ -21,7 +21,7 @@ export function OrganizationEventTimeline({
   }
 
   return (
-    <div className="organization-timeline">
+    <div className="organization-timeline" role="list" aria-label="История событий организации">
       {events.map((event, index) => {
         const title = event.name || event.taskName || event.categoryName || event.categoryFullName || `Событие #${event.id}`;
         const eventDate = formatDateTime(event.eventDateUtc) || formatDateTime(event.createdAtUtc) || EMPTY_VALUE;
@@ -33,7 +33,7 @@ export function OrganizationEventTimeline({
         ].filter(Boolean);
         const period = [formatDateTime(event.dateFromUtc), formatDateTime(event.dateToUtc)].filter(Boolean).join(' — ');
         return (
-          <article key={event.id} className="organization-timeline-item">
+          <article key={event.id} className="organization-timeline-item" role="listitem">
             <div className="organization-timeline-marker" aria-hidden="true">
               <span className="organization-timeline-dot" />
               {index < events.length - 1 ? <span className="organization-timeline-stem" /> : null}
