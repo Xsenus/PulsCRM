@@ -32,6 +32,7 @@ export function OrganizationEventTimeline({
           event.isCompleted === undefined ? undefined : event.isCompleted ? 'завершено' : 'не завершено'
         ].filter(Boolean);
         const period = [formatDateTime(event.dateFromUtc), formatDateTime(event.dateToUtc)].filter(Boolean).join(' — ');
+        const hasLicenseChips = Boolean(event.licenseKey || (event.licenseAmount !== undefined && event.licenseAmount !== null));
         return (
           <article key={event.id} className="organization-timeline-item" role="listitem">
             <div className="organization-timeline-marker" aria-hidden="true">
@@ -44,12 +45,14 @@ export function OrganizationEventTimeline({
                   <strong>{title}</strong>
                   <span className="field-hint">{eventDate}</span>
                 </div>
-                <div className="organization-card-chip-row">
-                  {event.licenseKey ? <span className="organization-chip">{event.licenseKey}</span> : null}
-                  {event.licenseAmount !== undefined && event.licenseAmount !== null ? (
-                    <span className="organization-chip">{formatMoney(event.licenseAmount)}</span>
-                  ) : null}
-                </div>
+                {hasLicenseChips ? (
+                  <div className="organization-card-chip-row" role="list" aria-label={`Лицензионные признаки события: ${title}`}>
+                    {event.licenseKey ? <span className="organization-chip" role="listitem">{event.licenseKey}</span> : null}
+                    {event.licenseAmount !== undefined && event.licenseAmount !== null ? (
+                      <span className="organization-chip" role="listitem">{formatMoney(event.licenseAmount)}</span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
               {meta.length ? <div className="organization-timeline-meta">{meta.join(' • ')}</div> : null}
               {period ? <div className="field-hint">Период: {period}</div> : null}

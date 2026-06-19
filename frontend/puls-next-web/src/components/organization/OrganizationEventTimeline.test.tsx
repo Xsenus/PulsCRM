@@ -77,11 +77,18 @@ describe('OrganizationEventTimeline', () => {
       />
     );
 
-    const list = view.querySelector('[role="list"]');
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
+    const timelineList = lists[0];
+    const licenseList = lists[1];
 
-    expect(list?.getAttribute('aria-label')).toBe('История событий организации');
-    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(2);
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'История событий организации',
+      'Лицензионные признаки события: Продление лицензии'
+    ]);
+    expect(timelineList?.querySelectorAll(':scope > [role="listitem"]')).toHaveLength(2);
+    expect(licenseList?.querySelectorAll('[role="listitem"]')).toHaveLength(2);
     expect(view.querySelectorAll('.organization-timeline-item')).toHaveLength(2);
+    expect(view.querySelectorAll('.organization-card-chip-row')).toHaveLength(1);
     expect(view.textContent).toContain('Продление лицензии');
     expect(view.textContent).toContain('Оператор • Сопровождение • в процессе • не завершено');
     expect(view.textContent).toContain('ITS-001');
