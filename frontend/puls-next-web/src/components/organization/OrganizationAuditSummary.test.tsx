@@ -93,11 +93,17 @@ function makeDetails(): OrganizationDetailsDto {
 describe('OrganizationAuditSummary', () => {
   it('renders audit authors and entity counters', () => {
     const view = render(<OrganizationAuditSummary details={makeDetails()} emailCount={2} />);
-    const counterList = view.querySelector('[role="list"]');
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
+    const auditList = lists[0];
+    const counterList = lists[1];
     const cards = Array.from(view.querySelectorAll('.detail-card'));
 
-    expect(counterList?.getAttribute('aria-label')).toBe('Счетчики связанных данных организации');
-    expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(9);
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Аудит карточки организации',
+      'Счетчики связанных данных организации'
+    ]);
+    expect(auditList?.querySelectorAll('[role="listitem"]')).toHaveLength(3);
+    expect(counterList?.querySelectorAll('[role="listitem"]')).toHaveLength(9);
     expect(view.textContent).toContain('Создано');
     expect(view.textContent).toContain('Администратор');
     expect(view.textContent).toContain('Оператор');

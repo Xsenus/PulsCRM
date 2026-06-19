@@ -22,16 +22,16 @@ export function OrganizationAuditSummary({
 }) {
   return (
     <div className="organization-tab-stack">
-      <div className="detail-list">
-        <div>
+      <div className="detail-list" role="list" aria-label="Аудит карточки организации">
+        <div role="listitem">
           <strong>Создано</strong>
           <div className="field-hint">{formatAuditValue(details?.createdAtUtc, details?.createdByName)}</div>
         </div>
-        <div>
+        <div role="listitem">
           <strong>Обновлено</strong>
           <div className="field-hint">{formatAuditValue(details?.updatedAtUtc, details?.updatedByName)}</div>
         </div>
-        <div>
+        <div role="listitem">
           <strong>Админ. обновление</strong>
           <div className="field-hint">{formatAuditValue(details?.updatedAdminAtUtc, details?.updatedAdminByName)}</div>
         </div>
