@@ -57,8 +57,15 @@ const details: OrganizationSiteDetailsData = {
 describe('OrganizationSiteDetails', () => {
   it('renders site details, normalized links and status', () => {
     const view = render(<OrganizationSiteDetails details={details} licenseStatus={licenseStatus} />);
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
 
     expect(view.querySelector('h4')?.textContent).toBe('Сайт');
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Параметры сайта организации',
+      'Комментарии по сайту организации'
+    ]);
+    expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(14);
+    expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(1);
     expect(Array.from(view.querySelectorAll('.detail-card'))).toHaveLength(14);
     expect(view.querySelector('a[href=\"https://example.test\"]')?.textContent).toBe('example.test');
     expect(view.querySelector('a[href=\"tel:+79130000000\"]')?.textContent).toBe('+7 913 000-00-00');

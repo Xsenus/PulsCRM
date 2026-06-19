@@ -75,67 +75,67 @@ export function OrganizationSiteDetails({
   return (
     <div className="panel-subsection">
       <h4>Сайт</h4>
-      <div className="detail-grid">
-        <div className="detail-card">
+      <div className="detail-grid" role="list" aria-label="Параметры сайта организации">
+        <div className="detail-card" role="listitem">
           <strong>Сайт</strong>
           <span>{renderLink(details?.site)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Alias</strong>
           <span>{textValue(details?.siteAlias)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Контакт</strong>
           <span>{textValue(details?.siteContactName)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Телефон</strong>
           <span>{renderPhone(details?.siteContactPhone)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Email</strong>
           <span>{renderMail(details?.siteEmail)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Состояние</strong>
           <span>{textValue(details?.siteState)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>На сопровождении</strong>
           <span>{boolLabel(details?.siteOnSupport)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Шаблон</strong>
           <span>{textValue(details?.siteTemplate)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>ID Base</strong>
           <span>{textValue(details?.siteBaseId)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Создание</strong>
           <span>{formatDateTime(details?.siteReadyAtUtc) || EMPTY_VALUE}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Лицензия с</strong>
           <span>{formatDateTime(details?.siteLicenseDateFromUtc) || EMPTY_VALUE}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Лицензия по</strong>
           <span>{formatDateTime(details?.siteLicenseDateToUtc) || EMPTY_VALUE}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Лицензия завершена</strong>
           <span>{boolLabel(details?.siteLicenseCompleted)}</span>
         </div>
-        <div className="detail-card">
+        <div className="detail-card" role="listitem">
           <strong>Статус домена</strong>
           <span className={`organization-status-pill organization-status-pill--${licenseStatus.tone}`}>{licenseStatus.label}</span>
           <span className="field-hint">{licenseStatus.hint}</span>
         </div>
       </div>
-      <div className="detail-list">
-        <div>
+      <div className="detail-list" role="list" aria-label="Комментарии по сайту организации">
+        <div role="listitem">
           <strong>Комментарий по сайту</strong>
           <div className="field-hint">{textValue(details?.siteComment)}</div>
         </div>
