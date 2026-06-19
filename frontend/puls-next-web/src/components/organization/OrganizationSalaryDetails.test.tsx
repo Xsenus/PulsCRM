@@ -59,8 +59,15 @@ const details: OrganizationSalaryDetailsData = {
 describe('OrganizationSalaryDetails', () => {
   it('renders salary fields, contact links and comments', () => {
     const view = render(<OrganizationSalaryDetails details={details} />);
+    const lists = Array.from(view.querySelectorAll('[role="list"]'));
 
     expect(view.querySelector('h4')?.textContent).toBe('Зарплата');
+    expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
+      'Зарплатное сопровождение организации',
+      'Комментарии зарплатного сопровождения'
+    ]);
+    expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(17);
+    expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(2);
     expect(view.querySelectorAll('.detail-card')).toHaveLength(17);
     expect(view.textContent).toContain('Да');
     expect(view.textContent).toContain('LO-42');
