@@ -42,7 +42,7 @@ function hasSnapshotData(snapshot: OrganizationOneCSnapshotDto | undefined) {
 
 export function OrganizationSnapshotDetails({ snapshot }: { snapshot?: OrganizationOneCSnapshotDto }) {
   if (!hasSnapshotData(snapshot)) {
-    return <div className="empty-state organization-record-inline-empty">В выбранном снимке нет данных.</div>;
+    return <div className="empty-state organization-record-inline-empty" role="status">В выбранном снимке нет данных.</div>;
   }
 
   return (

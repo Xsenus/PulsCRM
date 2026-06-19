@@ -76,14 +76,17 @@ describe('OrganizationSnapshotDetails', () => {
 
   it('renders empty state when selected snapshot has no data', () => {
     const view = render(<OrganizationSnapshotDetails snapshot={{ key: 'empty', title: 'Пустой снимок' }} />);
+    const emptyState = view.querySelector('.organization-record-inline-empty');
 
-    expect(view.querySelector('.organization-record-inline-empty')?.textContent).toBe('В выбранном снимке нет данных.');
+    expect(emptyState?.getAttribute('role')).toBe('status');
+    expect(emptyState?.textContent).toBe('В выбранном снимке нет данных.');
     expect(view.querySelector('.detail-grid')).toBeNull();
   });
 
   it('renders empty state when snapshot is missing', () => {
     const view = render(<OrganizationSnapshotDetails />);
 
+    expect(view.querySelector('.organization-record-inline-empty')?.getAttribute('role')).toBe('status');
     expect(view.textContent).toBe('В выбранном снимке нет данных.');
   });
 });

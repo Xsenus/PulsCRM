@@ -94,7 +94,7 @@ export function OrganizationHistoryWorkspace({
         <OrganizationSnapshotDetails snapshot={activeSnapshot} />
       </div>
     ) : (
-      <div className="empty-state organization-record-inline-empty">Снимки 1С по организации не найдены.</div>
+      <div className="empty-state organization-record-inline-empty" role="status">Снимки 1С по организации не найдены.</div>
     );
   }
 

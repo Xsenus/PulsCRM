@@ -151,7 +151,10 @@ describe('OrganizationHistoryWorkspace', () => {
 
     const view = renderWorkspace('snapshots', details);
 
-    expect(view.querySelector('.empty-state')?.textContent).toBe('Снимки 1С по организации не найдены.');
+    const emptyState = view.querySelector('.empty-state');
+
+    expect(emptyState?.getAttribute('role')).toBe('status');
+    expect(emptyState?.textContent).toBe('Снимки 1С по организации не найдены.');
   });
 
   it('renders audit summary with provided email count', () => {
