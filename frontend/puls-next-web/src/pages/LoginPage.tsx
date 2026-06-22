@@ -100,6 +100,11 @@ function getUserMeta(user: { login: string; userGroup?: string }) {
   return [user.login, user.userGroup].filter(Boolean).join(' / ');
 }
 
+function renderLastLoginUsedAt(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <> / <time dateTime={value ?? undefined}>{formatted}</time></> : null;
+}
+
 function LoginChevronIcon({ open }: { open: boolean }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -485,7 +490,7 @@ export function LoginPage() {
                   <span className="login-last-user-name">{getUserTitle(lastLoginProfile)}</span>
                   <span className="login-last-user-meta">
                     {getUserMeta(lastLoginProfile)}
-                    {lastLoginProfile.lastUsedAt ? ` / ${formatDateTime(lastLoginProfile.lastUsedAt)}` : ''}
+                    {renderLastLoginUsedAt(lastLoginProfile.lastUsedAt)}
                   </span>
                 </span>
               </button>
