@@ -3,7 +3,7 @@ import React from 'react';
 export interface PreviewCardItem {
   key: string;
   title: string;
-  caption?: string;
+  caption?: React.ReactNode;
 }
 
 function formatCount(value?: number | null) {

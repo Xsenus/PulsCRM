@@ -36,11 +36,34 @@ function formatDateOnly(value?: string | null) {
   return new Intl.DateTimeFormat('ru-RU').format(date);
 }
 
+function renderDateOnly(value?: string | null) {
+  const formatted = formatDateOnly(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : undefined;
+}
+
+function buildCaption(parts: Array<React.ReactNode | undefined | null | false>) {
+  const visibleParts = parts.filter(Boolean);
+  if (!visibleParts.length) {
+    return undefined;
+  }
+
+  return (
+    <>
+      {visibleParts.map((part, index) => (
+        <React.Fragment key={index}>
+          {index > 0 ? ' • ' : null}
+          {part}
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
 function buildContactPreviewItems(items: OrganizationContactDto[]): PreviewCardItem[] {
   return items.slice(0, 3).map((item) => ({
     key: String(item.id),
     title: item.fio || `Контакт #${item.id}`,
-    caption: [item.position, item.phone || item.email].filter(Boolean).join(' • ') || undefined
+    caption: buildCaption([item.position, item.phone || item.email])
   }));
 }
 
@@ -48,7 +71,7 @@ function buildAttachmentPreviewItems(items: OrganizationAttachmentDto[]): Previe
   return items.slice(0, 3).map((item) => ({
     key: String(item.id),
     title: item.name || item.fileName || item.number || `Документ #${item.id}`,
-    caption: [item.attachDocumentTypeName, formatDateOnly(item.dateUtc)].filter(Boolean).join(' • ') || undefined
+    caption: buildCaption([item.attachDocumentTypeName, renderDateOnly(item.dateUtc)])
   }));
 }
 
@@ -56,7 +79,7 @@ function buildContractPreviewItems(items: OrganizationContractDto[]): PreviewCar
   return items.slice(0, 3).map((item) => ({
     key: String(item.id),
     title: item.name || item.fileName || item.number || `Договор #${item.id}`,
-    caption: [formatDateOnly(item.dateUtc), item.summa === undefined || item.summa === null ? undefined : formatMoney(item.summa)].filter(Boolean).join(' • ') || undefined
+    caption: buildCaption([renderDateOnly(item.dateUtc), item.summa === undefined || item.summa === null ? undefined : formatMoney(item.summa)])
   }));
 }
 
@@ -64,7 +87,7 @@ function buildRealizationPreviewItems(items: OrganizationRealizationDto[]): Prev
   return items.slice(0, 3).map((item) => ({
     key: String(item.id),
     title: item.contractName || item.number || `Реализация #${item.id}`,
-    caption: [formatDateOnly(item.dateUtc), item.summa === undefined || item.summa === null ? undefined : formatMoney(item.summa)].filter(Boolean).join(' • ') || undefined
+    caption: buildCaption([renderDateOnly(item.dateUtc), item.summa === undefined || item.summa === null ? undefined : formatMoney(item.summa)])
   }));
 }
 
@@ -72,7 +95,7 @@ function buildLicensePreviewItems(items: OrganizationParusLicenseDto[]): Preview
   return items.slice(0, 3).map((item) => ({
     key: String(item.id),
     title: item.modification || item.nomenclature || `Лицензия #${item.id}`,
-    caption: [item.regNumberClient, formatDateOnly(item.dateToUtc)].filter(Boolean).join(' • ') || undefined
+    caption: buildCaption([item.regNumberClient, renderDateOnly(item.dateToUtc)])
   }));
 }
 
@@ -80,7 +103,7 @@ function buildOrderPreviewItems(items: OrganizationParusOrderDto[]): PreviewCard
   return items.slice(0, 3).map((item) => ({
     key: String(item.id),
     title: item.payer || item.mnemoOrg || `Заказ #${item.id}`,
-    caption: [formatDateOnly(item.dateUtc), formatMoney(item.summa)].filter(Boolean).join(' • ') || undefined
+    caption: buildCaption([renderDateOnly(item.dateUtc), formatMoney(item.summa)])
   }));
 }
 

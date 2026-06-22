@@ -123,6 +123,13 @@ describe('OrganizationRelationsSection', () => {
     expect(view.textContent).toContain('Иван Иванов');
     expect(view.textContent).toContain('Директор');
     expect(view.textContent).toContain('ФИО');
+    expect(Array.from(view.querySelectorAll('.organization-preview-card .field-hint time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-10T00:00:00Z',
+      '2026-06-12T00:00:00Z',
+      '2026-06-11T00:00:00Z',
+      '2026-07-01T00:00:00Z',
+      '2026-06-09T00:00:00Z'
+    ]);
   });
 
   it('renders active contracts table and formatted preview amount', () => {
