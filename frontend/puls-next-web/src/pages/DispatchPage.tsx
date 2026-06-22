@@ -9,11 +9,11 @@ import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
 import {
   buildDispatchBatchQuery,
+  buildDispatchItemsSummary,
   buildDispatchItemQuery,
   canCancelDispatchItem,
   canRetryDispatchItem,
   dispatchStatusOptions,
-  findLatestDispatchProblemItem,
   getDispatchStatusLabel,
   getDispatchStatusTone
 } from '../app/dispatchDiagnostics';
@@ -103,13 +103,8 @@ export function DispatchPage() {
   const [actionBusyId, setActionBusyId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const summary = useMemo(() => ({
-    queued: items.filter((item) => item.status === 0).length,
-    processing: items.filter((item) => item.status === 1).length,
-    failed: items.filter((item) => item.status === 3).length,
-    deferred: items.filter((item) => item.status === 5).length
-  }), [items]);
-  const latestProblemItem = useMemo(() => findLatestDispatchProblemItem(items), [items]);
+  const summary = useMemo(() => buildDispatchItemsSummary(items), [items]);
+  const latestProblemItem = summary.latestProblemItem;
 
   const loadItems = async () => {
     setItemsLoading(true);

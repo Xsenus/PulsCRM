@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildDispatchBatchQuery,
+  buildDispatchItemsSummary,
   buildDispatchItemQuery,
   canCancelDispatchItem,
   canRetryDispatchItem,
@@ -53,6 +54,26 @@ describe('dispatch diagnostics helpers', () => {
 
     expect(latest?.id).toBe(12);
     expect(findLatestDispatchProblemItem([dispatchItem({ id: 13, status: 2 })])).toBeNull();
+  });
+
+  it('builds dispatch item summary in one pass without changing source order', () => {
+    const items = [
+      dispatchItem({ id: 20, status: 0 }),
+      dispatchItem({ id: 21, status: 1 }),
+      dispatchItem({ id: 22, status: 3, failedAtUtc: '2026-06-20T06:00:00.000Z' }),
+      dispatchItem({ id: 23, status: 5, nextAttemptAtUtc: '2026-06-20T07:00:00.000Z' }),
+      dispatchItem({ id: 24, status: 3, failedAtUtc: '2026-06-20T08:00:00.000Z' }),
+      dispatchItem({ id: 25, status: 2 })
+    ];
+
+    expect(buildDispatchItemsSummary(items)).toEqual({
+      queued: 1,
+      processing: 1,
+      failed: 2,
+      deferred: 1,
+      latestProblemItem: items[4]
+    });
+    expect(items.map((item) => item.id)).toEqual([20, 21, 22, 23, 24, 25]);
   });
 
   it('builds normalized item and batch queries', () => {
