@@ -2,10 +2,17 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act, Simulate } from 'react-dom/test-utils';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TransportProfilesPage } from './TransportProfilesPage';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+const apiMocks = vi.hoisted(() => ({
+  deleteTransportProfile: vi.fn(),
+  getTransportProfiles: vi.fn(),
+  saveTransportProfile: vi.fn(),
+  testTransportProfile: vi.fn()
+}));
 
 vi.mock('../app/AuthContext', () => ({
   useAuth: () => ({
@@ -23,10 +30,10 @@ vi.mock('../app/AuthContext', () => ({
 }));
 
 vi.mock('../app/api', () => ({
-  deleteTransportProfile: async () => undefined,
-  getTransportProfiles: async () => [],
-  saveTransportProfile: async () => ({}),
-  testTransportProfile: async () => ({ success: true, message: 'SMTP ok' })
+  deleteTransportProfile: apiMocks.deleteTransportProfile,
+  getTransportProfiles: apiMocks.getTransportProfiles,
+  saveTransportProfile: apiMocks.saveTransportProfile,
+  testTransportProfile: apiMocks.testTransportProfile
 }));
 
 let root: Root | null = null;
@@ -56,6 +63,13 @@ function click(element: Element) {
   });
 }
 
+beforeEach(() => {
+  apiMocks.deleteTransportProfile.mockResolvedValue(undefined);
+  apiMocks.getTransportProfiles.mockResolvedValue([]);
+  apiMocks.saveTransportProfile.mockResolvedValue({});
+  apiMocks.testTransportProfile.mockResolvedValue({ success: true, message: 'SMTP ok' });
+});
+
 afterEach(() => {
   root?.unmount();
   root = null;
@@ -84,5 +98,60 @@ describe('TransportProfilesPage', () => {
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false']);
     expect(tabs.map((tab) => tab.className.includes('active'))).toEqual([true, false]);
     expect(view.textContent).not.toContain('Новый профиль');
+  });
+
+  it('renders SMTP profile dates as machine-readable time elements', async () => {
+    apiMocks.getTransportProfiles.mockResolvedValue([
+      {
+        id: 42,
+        name: 'SMTP основной',
+        host: 'smtp.example.test',
+        port: 587,
+        useSsl: true,
+        username: 'smtp-user',
+        senderEmail: 'sender@example.test',
+        senderName: 'Puls CRM',
+        replyToEmail: 'reply@example.test',
+        maxConnections: 2,
+        messagesPerMinute: 60,
+        isDefault: true,
+        isEnabled: true,
+        createdAtUtc: '2026-06-15T06:30:00.000Z',
+        updatedAtUtc: '2026-06-18T09:45:00.000Z'
+      }
+    ]);
+    window.localStorage.setItem('puls-table-settings:transport-profiles-list:7', JSON.stringify({
+      columns: [
+        { key: 'createdAtUtc', visible: true, width: 180 },
+        { key: 'updatedAtUtc', visible: true, width: 180 }
+      ]
+    }));
+
+    const view = render(<TransportProfilesPage />);
+    await flushEffects();
+
+    const tableTimes = Array.from(view.querySelectorAll<HTMLTableElement>('table time'));
+
+    expect(tableTimes.map((item) => item.getAttribute('dateTime'))).toEqual([
+      '2026-06-15T06:30:00.000Z',
+      '2026-06-18T09:45:00.000Z'
+    ]);
+
+    const rowActionsButton = view.querySelector<HTMLButtonElement>('.row-actions-menu-trigger');
+    expect(rowActionsButton).not.toBeNull();
+    click(rowActionsButton!);
+    await flushEffects();
+
+    const editAction = view.querySelector<HTMLButtonElement>('[role="menuitem"]');
+    expect(editAction).not.toBeNull();
+    click(editAction!);
+    await flushEffects();
+
+    const metaTimes = Array.from(document.body.querySelectorAll<HTMLTimeElement>('.settings-form-meta time'));
+
+    expect(metaTimes.map((item) => item.getAttribute('dateTime'))).toEqual([
+      '2026-06-15T06:30:00.000Z',
+      '2026-06-18T09:45:00.000Z'
+    ]);
   });
 });

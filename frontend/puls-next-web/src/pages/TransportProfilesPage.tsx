@@ -36,6 +36,11 @@ type SettingsGroupKey = 'general' | 'smtp';
 const EMPTY_VALUE = '—';
 const TRANSPORT_PROFILES_TABLE_STORAGE_ID = 'transport-profiles-list';
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 export function TransportProfilesPage() {
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
@@ -321,8 +326,8 @@ export function TransportProfilesPage() {
                   </div>
                 )
               },
-              { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.createdAtUtc) || EMPTY_VALUE },
-              { key: 'updatedAtUtc', title: 'Обновлено', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.updatedAtUtc) || EMPTY_VALUE },
+              { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, visible: false, render: (row) => renderDateTime(row.createdAtUtc) },
+              { key: 'updatedAtUtc', title: 'Обновлено', width: 180, minWidth: 160, visible: false, render: (row) => renderDateTime(row.updatedAtUtc) },
               {
                 key: 'actions',
                 title: 'Действия',
@@ -440,7 +445,7 @@ export function TransportProfilesPage() {
 
         {editingProfile ? (
           <div className="settings-form-meta">
-            Создан: {new Date(editingProfile.createdAtUtc).toLocaleString()} • Обновлен: {new Date(editingProfile.updatedAtUtc).toLocaleString()}
+            Создан: {renderDateTime(editingProfile.createdAtUtc)} • Обновлен: {renderDateTime(editingProfile.updatedAtUtc)}
           </div>
         ) : null}
       </Modal>
