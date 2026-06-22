@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { act } from 'react-dom/test-utils';
+import { act, Simulate } from 'react-dom/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CAMPAIGN_TIME_ZONE } from '../app/scheduleValidation';
 import type { ScheduleOccurrenceDto } from '../app/types';
@@ -51,6 +51,47 @@ afterEach(() => {
 });
 
 describe('ScheduleBuilder', () => {
+  it('marks schedule kinds as tabs with accessible state labels', () => {
+    function ScheduleHarness() {
+      const [value, setValue] = React.useState(scheduleValue({ scheduleKind: 1 }));
+
+      return (
+        <ScheduleBuilder
+          value={value}
+          onChange={(patch) => setValue((current) => ({ ...current, ...patch }))}
+          preview={[]}
+          onPreview={vi.fn()}
+        />
+      );
+    }
+
+    const view = render(<ScheduleHarness />);
+    const tablist = view.querySelector('.schedule-kind-tabs[role="tablist"]');
+    const tabs = Array.from(tablist?.querySelectorAll<HTMLButtonElement>('.settings-tab') ?? []);
+
+    expect(tablist?.getAttribute('aria-label')).toBe('Тип расписания');
+    expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab', 'tab', 'tab']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false', 'false']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
+      'Один запуск: выбрать тип расписания',
+      'Фиксированный интервал: текущий тип расписания',
+      'Случайный интервал: выбрать тип расписания',
+      'Cron-расписание: выбрать тип расписания'
+    ]);
+
+    act(() => {
+      Simulate.click(tabs[2]);
+    });
+
+    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true', 'false']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
+      'Один запуск: выбрать тип расписания',
+      'Фиксированный интервал: выбрать тип расписания',
+      'Случайный интервал: текущий тип расписания',
+      'Cron-расписание: выбрать тип расписания'
+    ]);
+  });
+
   it('renders project timezone as a select option with description', () => {
     const onChange = vi.fn();
     const view = render(

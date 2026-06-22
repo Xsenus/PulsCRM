@@ -41,6 +41,10 @@ function renderDateTime(value: string) {
   return <time dateTime={value}>{formatDateTime(value)}</time>;
 }
 
+function buildScheduleKindAriaLabel(label: string, active: boolean) {
+  return `${label}: ${active ? 'текущий тип расписания' : 'выбрать тип расписания'}`;
+}
+
 export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLoading = false, previewError }: ScheduleBuilderProps) {
   const validationIssues = validateScheduleBuilderValue(value);
   const canPreview = validationIssues.length === 0 && !previewLoading;
@@ -59,6 +63,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
             className={`settings-tab${value.scheduleKind === option.value ? ' active' : ''}`}
             role="tab"
             aria-selected={value.scheduleKind === option.value}
+            aria-label={buildScheduleKindAriaLabel(option.label, value.scheduleKind === option.value)}
             title={scheduleDescriptions[option.value]}
             onClick={() => onChange({ scheduleKind: option.value })}
           >
