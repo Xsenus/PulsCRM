@@ -77,10 +77,12 @@ describe('OrganizationPicker', () => {
     expect(summary?.textContent).toContain('Контактов4');
     expect(view.textContent).toContain('Первая организация');
     expect(view.textContent).toContain('Вторая организация');
+    expect(view.querySelector('[role="status"]')?.textContent).toContain('Без email: 1');
 
     const selectedList = view.querySelector('[aria-label="Выбранные организации для рассылки"]');
     expect(selectedList?.getAttribute('role')).toBe('list');
     expect(selectedList?.querySelectorAll('[role="listitem"]')).toHaveLength(2);
+    expect(selectedList?.querySelector('.status-badge-warning')?.textContent).toBe('Нет email');
     expect(view.querySelector('[aria-label="Убрать организацию Первая организация из получателей"]')).toBeInstanceOf(HTMLButtonElement);
   });
 
@@ -93,5 +95,6 @@ describe('OrganizationPicker', () => {
     const summary = view.querySelector('[aria-label="Сводка выбранных организаций"]');
     expect(summary?.getAttribute('role')).toBe('list');
     expect(summary?.querySelectorAll('[role="listitem"]')).toHaveLength(5);
+    expect(view.querySelector('[role="status"]')).toBeNull();
   });
 });

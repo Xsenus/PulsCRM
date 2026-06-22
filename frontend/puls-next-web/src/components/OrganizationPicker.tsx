@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { getOrganizationRaions, getOrganizations } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
-import { buildOrganizationSelectionSummary } from '../app/campaignRecipients';
+import { buildOrganizationSelectionSummary, getOrganizationKnownEmailCount } from '../app/campaignRecipients';
 import { buildOrganizationPickerFilterSummary } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
@@ -11,6 +11,7 @@ import { DataTable } from './DataTable';
 import { Modal } from './Modal';
 import { Pagination } from './Pagination';
 import { SearchPanel } from './SearchPanel';
+import { StatusBadge } from './StatusBadge';
 
 const EMPTY_VALUE = '—';
 
@@ -160,32 +161,44 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
           <strong>{selectionSummary.contactCount}</strong>
         </div>
       </div>
+      {selectionSummary.organizationsWithoutEmail > 0 ? (
+        <div className="field-hint field-hint-error" role="status">
+          Без email: {selectionSummary.organizationsWithoutEmail}. Эти организации не попадут в отправку, пока у них не появится адрес.
+        </div>
+      ) : null}
 
       {value.length === 0 ? (
         <div className="empty-state">Организации пока не выбраны.</div>
       ) : (
         <div className="selected-org-list" role="list" aria-label="Выбранные организации для рассылки">
-          {value.map((organization) => (
-            <div key={organization.id} className="selected-org-card" role="listitem">
-              <div>
-                <div className="selected-org-name">{organization.name}</div>
-                <div className="selected-org-meta">
-                  {organization.inn ? `ИНН ${organization.inn}` : 'Без ИНН'}
-                  {organization.raion ? ` • ${organization.raion}` : ''}
-                  {organization.orgType ? ` • ${organization.orgType}` : ''}
-                </div>
-              </div>
+          {value.map((organization) => {
+            const knownEmailCount = getOrganizationKnownEmailCount(organization);
 
-              <button
-                type="button"
-                className="secondary-button button-inline danger-button"
-                onClick={() => onChange(value.filter((item) => item.id !== organization.id))}
-                aria-label={`Убрать организацию ${organization.name} из получателей`}
-              >
-                Убрать
-              </button>
-            </div>
-          ))}
+            return (
+              <div key={organization.id} className="selected-org-card" role="listitem">
+                <div>
+                  <div className="status-badge-stack">
+                    <div className="selected-org-name">{organization.name}</div>
+                    {knownEmailCount === 0 ? <StatusBadge tone="warning">Нет email</StatusBadge> : null}
+                  </div>
+                  <div className="selected-org-meta">
+                    {organization.inn ? `ИНН ${organization.inn}` : 'Без ИНН'}
+                    {organization.raion ? ` • ${organization.raion}` : ''}
+                    {organization.orgType ? ` • ${organization.orgType}` : ''}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="secondary-button button-inline danger-button"
+                  onClick={() => onChange(value.filter((item) => item.id !== organization.id))}
+                  aria-label={`Убрать организацию ${organization.name} из получателей`}
+                >
+                  Убрать
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 

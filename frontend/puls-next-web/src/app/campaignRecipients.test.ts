@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOrganizationSelectionSummary, buildRecipientSourceSummary } from './campaignRecipients';
+import { buildOrganizationSelectionSummary, buildRecipientSourceSummary, getOrganizationKnownEmailCount } from './campaignRecipients';
 import type { CampaignRecipientPreviewItemDto, OrganizationListItemDto } from './types';
 
 function organization(overrides: Partial<OrganizationListItemDto>): OrganizationListItemDto {
@@ -51,6 +51,14 @@ describe('buildOrganizationSelectionSummary', () => {
       organizationsWithoutEmail: 0,
       contactCount: 0
     });
+  });
+});
+
+describe('getOrganizationKnownEmailCount', () => {
+  it('uses explicit email count before email chips', () => {
+    expect(getOrganizationKnownEmailCount(organization({ emailCount: 2, emails: ['fallback@example.test'] }))).toBe(2);
+    expect(getOrganizationKnownEmailCount(organization({ emailCount: 0, emails: ['fallback@example.test'] }))).toBe(1);
+    expect(getOrganizationKnownEmailCount(organization({ emailCount: -1, emails: [] }))).toBe(0);
   });
 });
 

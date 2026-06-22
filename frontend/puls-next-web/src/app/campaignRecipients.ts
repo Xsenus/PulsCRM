@@ -14,11 +14,15 @@ export interface RecipientSourceSummaryItem {
   count: number;
 }
 
+export function getOrganizationKnownEmailCount(item: OrganizationListItemDto): number {
+  const explicitEmailCount = Math.max(item.emailCount ?? 0, 0);
+  return explicitEmailCount > 0 ? explicitEmailCount : Math.max(item.emails?.length ?? 0, 0);
+}
+
 export function buildOrganizationSelectionSummary(items: OrganizationListItemDto[]): OrganizationSelectionSummary {
   return items.reduce<OrganizationSelectionSummary>(
     (summary, item) => {
-      const explicitEmailCount = Math.max(item.emailCount ?? 0, 0);
-      const emailCount = explicitEmailCount > 0 ? explicitEmailCount : Math.max(item.emails?.length ?? 0, 0);
+      const emailCount = getOrganizationKnownEmailCount(item);
 
       summary.organizationCount += 1;
       summary.knownEmailCount += emailCount;

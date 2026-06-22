@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-22 - предупреждение об организациях без email
+
+Продолжен backlog roadmap по accessibility-полировке менее частых сценариев рассылок:
+
+- расчет известных email у выбранной организации вынесен в общий helper `getOrganizationKnownEmailCount`;
+- `OrganizationPicker` показывает доступное предупреждение, если среди выбранных получателей есть организации без email;
+- карточки выбранных организаций без адреса получили компактный бейдж `Нет email`, а тесты закрепляют helper и UI-разметку.
+
+Проверки этого этапа включают targeted frontend-тесты `campaignRecipients` и `OrganizationPicker`, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-22 - доступный список выбранных организаций
 
 Продолжен backlog roadmap по accessibility-полировке менее частых сценариев рассылок:
