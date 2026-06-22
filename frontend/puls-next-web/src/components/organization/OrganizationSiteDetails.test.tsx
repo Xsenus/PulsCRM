@@ -51,6 +51,9 @@ const details: OrganizationSiteDetailsData = {
   siteOnSupport: false,
   siteTemplate: 'Основной',
   siteBaseId: 0,
+  siteReadyAtUtc: '2026-06-12T03:10:00Z',
+  siteLicenseDateFromUtc: '2026-06-01T00:00:00Z',
+  siteLicenseDateToUtc: '2026-06-30T00:00:00Z',
   siteComment: 'Комментарий по сайту'
 };
 
@@ -72,6 +75,11 @@ describe('OrganizationSiteDetails', () => {
     expect(view.querySelector('a[href=\"mailto:site@example.test\"]')?.textContent).toBe('site@example.test');
     expect(view.textContent).toContain('Домен делегирован');
     expect(view.querySelector('.organization-status-pill')?.getAttribute('role')).toBe('status');
+    expect(Array.from(view.querySelectorAll('time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-12T03:10:00Z',
+      '2026-06-01T00:00:00Z',
+      '2026-06-30T00:00:00Z'
+    ]);
     expect(view.textContent).toContain('Нет');
     expect(view.textContent).toContain('0');
     expect(view.textContent).toContain('Комментарий по сайту');

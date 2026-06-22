@@ -65,6 +65,11 @@ function renderMail(value?: string | null) {
   return value?.trim() ? <a href={`mailto:${value.trim()}`}>{value.trim()}</a> : EMPTY_VALUE;
 }
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 export function OrganizationSiteDetails({
   details,
   licenseStatus
@@ -114,15 +119,15 @@ export function OrganizationSiteDetails({
         </div>
         <div className="detail-card" role="listitem">
           <strong>Создание</strong>
-          <span>{formatDateTime(details?.siteReadyAtUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.siteReadyAtUtc)}</span>
         </div>
         <div className="detail-card" role="listitem">
           <strong>Лицензия с</strong>
-          <span>{formatDateTime(details?.siteLicenseDateFromUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.siteLicenseDateFromUtc)}</span>
         </div>
         <div className="detail-card" role="listitem">
           <strong>Лицензия по</strong>
-          <span>{formatDateTime(details?.siteLicenseDateToUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.siteLicenseDateToUtc)}</span>
         </div>
         <div className="detail-card" role="listitem">
           <strong>Лицензия завершена</strong>
