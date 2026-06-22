@@ -769,6 +769,7 @@ export function CampaignEditPage() {
                 <label>HTML-версия письма</label>
                 <textarea
                   className="form-textarea form-textarea-code"
+                  aria-label="HTML-версия письма кампании"
                   value={model.htmlBody || ''}
                   placeholder="<p>Здравствуйте!</p>&#10;<p>Текст письма...</p>"
                   onChange={(event) => patchModel({ htmlBody: event.target.value })}
@@ -791,6 +792,7 @@ export function CampaignEditPage() {
               <label>Текстовая версия</label>
               <textarea
                 className="form-textarea"
+                aria-label="Текстовая версия письма кампании"
                 value={model.plainTextBody || ''}
                 placeholder="Здравствуйте! Текстовая версия письма..."
                 onChange={(event) => patchModel({ plainTextBody: event.target.value })}

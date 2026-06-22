@@ -203,10 +203,10 @@ test('new campaign editor previews recipients, readiness and schedule', async ({
 
   await page.getByRole('tab').nth(2).click();
   await page.getByRole('button', { name: 'Вставить шаблон' }).click();
-  await expect(page.locator('.form-textarea-code')).toHaveValue(/Подготовили для вас важную информацию\./);
-  await expect(page.locator('textarea').last()).toHaveValue(/Подготовили для вас важную информацию\./);
-  await page.locator('.form-textarea-code').fill('<p>Hello from smoke test</p>');
-  await page.locator('textarea').last().fill('Hello from smoke test');
+  await expect(page.getByLabel('HTML-версия письма кампании')).toHaveValue(/Подготовили для вас важную информацию\./);
+  await expect(page.getByLabel('Текстовая версия письма кампании')).toHaveValue(/Подготовили для вас важную информацию\./);
+  await page.getByLabel('HTML-версия письма кампании').fill('<p>Hello from smoke test</p>');
+  await page.getByLabel('Текстовая версия письма кампании').fill('Hello from smoke test');
 
   await page.getByRole('tab').nth(1).click();
   await expect(page.getByLabel('Использовать основной email организации для рассылки')).toBeChecked();
