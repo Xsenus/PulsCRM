@@ -394,44 +394,44 @@ export function TransportProfilesPage() {
         <div className="settings-form-grid">
           <div className="field">
             <label>Название</label>
-            <input className="form-input" value={model.name} onChange={(event) => patchModel('name', event.target.value)} />
+            <input className="form-input" aria-label="Название SMTP профиля" value={model.name} onChange={(event) => patchModel('name', event.target.value)} />
           </div>
           <div className="field">
             <label>SMTP сервер</label>
-            <input className="form-input" value={model.host} onChange={(event) => patchModel('host', event.target.value)} />
+            <input className="form-input" aria-label="SMTP сервер профиля" value={model.host} onChange={(event) => patchModel('host', event.target.value)} />
           </div>
           <div className="field">
             <label>Порт</label>
-            <input className="form-input" type="number" min={1} value={model.port} onChange={(event) => patchModel('port', Number(event.target.value) || 587)} />
+            <input className="form-input" aria-label="Порт SMTP профиля" type="number" min={1} value={model.port} onChange={(event) => patchModel('port', Number(event.target.value) || 587)} />
           </div>
           <div className="field">
             <label>Логин</label>
-            <input className="form-input" value={model.username || ''} onChange={(event) => patchModel('username', event.target.value)} />
+            <input className="form-input" aria-label="Логин SMTP профиля" value={model.username || ''} onChange={(event) => patchModel('username', event.target.value)} />
           </div>
           <div className="field">
             <label>Пароль</label>
-            <input className="form-input" type="password" value={model.password || ''} onChange={(event) => patchModel('password', event.target.value)} />
+            <input className="form-input" aria-label="Пароль SMTP профиля" type="password" value={model.password || ''} onChange={(event) => patchModel('password', event.target.value)} />
             <div className="field-hint">Оставьте пустым, если пароль менять не нужно.</div>
           </div>
           <div className="field">
             <label>Адрес отправителя</label>
-            <input className="form-input" value={model.senderEmail || ''} onChange={(event) => patchModel('senderEmail', event.target.value)} />
+            <input className="form-input" aria-label="Адрес отправителя SMTP профиля" value={model.senderEmail || ''} onChange={(event) => patchModel('senderEmail', event.target.value)} />
           </div>
           <div className="field">
             <label>Имя отправителя</label>
-            <input className="form-input" value={model.senderName || ''} onChange={(event) => patchModel('senderName', event.target.value)} />
+            <input className="form-input" aria-label="Имя отправителя SMTP профиля" value={model.senderName || ''} onChange={(event) => patchModel('senderName', event.target.value)} />
           </div>
           <div className="field">
             <label>Адрес для ответа</label>
-            <input className="form-input" value={model.replyToEmail || ''} onChange={(event) => patchModel('replyToEmail', event.target.value)} />
+            <input className="form-input" aria-label="Адрес для ответа SMTP профиля" value={model.replyToEmail || ''} onChange={(event) => patchModel('replyToEmail', event.target.value)} />
           </div>
           <div className="field">
             <label>Макс. соединений</label>
-            <input className="form-input" type="number" min={1} value={model.maxConnections} onChange={(event) => patchModel('maxConnections', Number(event.target.value) || 1)} />
+            <input className="form-input" aria-label="Максимум соединений SMTP профиля" type="number" min={1} value={model.maxConnections} onChange={(event) => patchModel('maxConnections', Number(event.target.value) || 1)} />
           </div>
           <div className="field">
             <label>Писем в минуту</label>
-            <input className="form-input" type="number" min={0} value={model.messagesPerMinute} onChange={(event) => patchModel('messagesPerMinute', Number(event.target.value) || 0)} />
+            <input className="form-input" aria-label="Лимит писем в минуту SMTP профиля" type="number" min={0} value={model.messagesPerMinute} onChange={(event) => patchModel('messagesPerMinute', Number(event.target.value) || 0)} />
           </div>
         </div>
 

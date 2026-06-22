@@ -164,4 +164,31 @@ describe('TransportProfilesPage', () => {
       '2026-06-18T09:45:00.000Z'
     ]);
   });
+
+  it('labels SMTP profile form fields for assistive technologies', async () => {
+    const view = render(<TransportProfilesPage />);
+    await flushEffects();
+
+    const createButton = view.querySelector<HTMLButtonElement>('.page-header-actions .primary-button');
+    expect(createButton).not.toBeNull();
+    click(createButton!);
+    await flushEffects();
+
+    const expectedLabels = [
+      'Название SMTP профиля',
+      'SMTP сервер профиля',
+      'Порт SMTP профиля',
+      'Логин SMTP профиля',
+      'Пароль SMTP профиля',
+      'Адрес отправителя SMTP профиля',
+      'Имя отправителя SMTP профиля',
+      'Адрес для ответа SMTP профиля',
+      'Максимум соединений SMTP профиля',
+      'Лимит писем в минуту SMTP профиля'
+    ];
+
+    for (const label of expectedLabels) {
+      expect(document.body.querySelector(`[aria-label="${label}"]`)).toBeInstanceOf(HTMLInputElement);
+    }
+  });
 });
