@@ -193,6 +193,7 @@ export function WorkPage() {
       <div className="panel toolbar-panel toolbar-panel-grid">
         <select
           className="form-select"
+          aria-label="Фильтр задач по организации"
           value={filters.orgId ?? ''}
           onChange={(event) => setFilters((current) => ({ ...current, orgId: event.target.value ? Number(event.target.value) : undefined }))}
         >
@@ -204,6 +205,7 @@ export function WorkPage() {
 
         <select
           className="form-select"
+          aria-label="Фильтр задач по сотруднику"
           value={filters.employeeId ?? ''}
           onChange={(event) => setFilters((current) => ({ ...current, employeeId: event.target.value ? Number(event.target.value) : undefined }))}
         >

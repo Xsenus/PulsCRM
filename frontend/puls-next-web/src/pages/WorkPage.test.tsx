@@ -103,9 +103,13 @@ describe('WorkPage', () => {
     await flushEffects();
 
     const workSearch = view.querySelector<HTMLInputElement>('[aria-label="Поиск задач по сообщению, задаче, сотруднику или организации"]');
+    const organizationFilter = view.querySelector<HTMLSelectElement>('[aria-label="Фильтр задач по организации"]');
+    const employeeFilter = view.querySelector<HTMLSelectElement>('[aria-label="Фильтр задач по сотруднику"]');
     const tableTimes = Array.from(view.querySelectorAll<HTMLTimeElement>('table time'));
 
     expect(workSearch).toBeInstanceOf(HTMLInputElement);
+    expect(organizationFilter).toBeInstanceOf(HTMLSelectElement);
+    expect(employeeFilter).toBeInstanceOf(HTMLSelectElement);
     expect(tableTimes.map((item) => item.getAttribute('dateTime'))).toEqual([
       '2026-06-12T04:30:00.000Z',
       '2026-06-15T09:00:00.000Z',
