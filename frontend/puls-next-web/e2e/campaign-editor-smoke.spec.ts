@@ -194,9 +194,12 @@ test('new campaign editor previews recipients, readiness and schedule', async ({
     'Статистика: открыть раздел'
   ]);
 
-  await page.locator('.campaign-main-grid .form-input').nth(0).fill('Smoke Campaign');
-  await page.locator('.campaign-main-grid .form-input').nth(1).fill('Smoke subject');
-  await page.locator('.campaign-main-grid .form-select').nth(1).selectOption(String(mainTransportProfile.id));
+  await page.getByLabel('Название кампании').fill('Smoke Campaign');
+  await page.getByLabel('Тема письма кампании').fill('Smoke subject');
+  await expect(page.getByLabel('Статус кампании')).toHaveValue('0');
+  await page.getByLabel('SMTP профиль кампании').selectOption(String(mainTransportProfile.id));
+  await expect(page.getByLabel('Максимум получателей кампании за запуск')).toHaveValue('0');
+  await expect(page.getByLabel('Максимум попыток отправки кампании')).toHaveValue('3');
 
   await page.getByRole('tab').nth(2).click();
   await page.getByRole('button', { name: 'Вставить шаблон' }).click();

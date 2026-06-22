@@ -559,17 +559,17 @@ export function CampaignEditPage() {
             <div className="form-grid campaign-main-grid">
               <div className="field field-wide">
                 <label>Название кампании</label>
-                <input className="form-input" value={model.name} onChange={(event) => patchModel({ name: event.target.value })} />
+                <input className="form-input" aria-label="Название кампании" value={model.name} onChange={(event) => patchModel({ name: event.target.value })} />
               </div>
 
               <div className="field field-wide">
                 <label>Тема письма</label>
-                <input className="form-input" value={model.subject || ''} onChange={(event) => patchModel({ subject: event.target.value })} />
+                <input className="form-input" aria-label="Тема письма кампании" value={model.subject || ''} onChange={(event) => patchModel({ subject: event.target.value })} />
               </div>
 
               <div className="field">
                 <label>Статус</label>
-                <select className="form-select" value={model.status} onChange={(event) => patchModel({ status: Number(event.target.value) })}>
+                <select className="form-select" aria-label="Статус кампании" value={model.status} onChange={(event) => patchModel({ status: Number(event.target.value) })}>
                   {campaignStatusOptions.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
@@ -580,6 +580,7 @@ export function CampaignEditPage() {
                 <label>SMTP профиль</label>
                 <select
                   className="form-select"
+                  aria-label="SMTP профиль кампании"
                   value={model.transportProfileId ?? ''}
                   onChange={(event) => patchModel({ transportProfileId: event.target.value ? Number(event.target.value) : undefined })}
                 >
@@ -594,6 +595,7 @@ export function CampaignEditPage() {
                 <label>Макс. получателей за запуск</label>
                 <input
                   className="form-input"
+                  aria-label="Максимум получателей кампании за запуск"
                   type="number"
                   min={0}
                   value={model.maxRecipientsPerRun}
@@ -606,6 +608,7 @@ export function CampaignEditPage() {
                 <label>Макс. попыток</label>
                 <input
                   className="form-input"
+                  aria-label="Максимум попыток отправки кампании"
                   type="number"
                   min={1}
                   value={model.maxAttempts}
