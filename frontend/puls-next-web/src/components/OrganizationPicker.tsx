@@ -325,6 +325,9 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
                 <button
                   type="button"
                   className={`secondary-button button-inline${draftSelection[row.id] ? ' active' : ''}`}
+                  aria-label={draftSelection[row.id]
+                    ? `Убрать организацию ${row.name} из черновика получателей`
+                    : `Добавить организацию ${row.name} в черновик получателей`}
                   onClick={() => toggleDraftItem(row)}
                 >
                   {draftSelection[row.id] ? 'Выбрано' : 'Выбрать'}

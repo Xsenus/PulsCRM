@@ -147,6 +147,8 @@ describe('OrganizationPicker', () => {
 
     const newOrganizationCheckbox = document.body.querySelector<HTMLInputElement>('[aria-label="Добавить организацию Новая организация в черновик получателей"]');
     expect(newOrganizationCheckbox).toBeInstanceOf(HTMLInputElement);
+    const newOrganizationDraftControls = Array.from(document.body.querySelectorAll('[aria-label="Добавить организацию Новая организация в черновик получателей"]'));
+    expect(newOrganizationDraftControls.some((element) => element instanceof HTMLButtonElement)).toBe(true);
 
     await act(async () => {
       newOrganizationCheckbox?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
