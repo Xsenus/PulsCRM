@@ -67,6 +67,9 @@ describe('OrganizationPicker', () => {
 
     const summary = view.querySelector('.organization-recipient-summary');
 
+    expect(summary?.getAttribute('role')).toBe('list');
+    expect(summary?.getAttribute('aria-label')).toBe('Сводка выбранных организаций');
+    expect(summary?.querySelectorAll('[role="listitem"]')).toHaveLength(5);
     expect(summary?.textContent).toContain('Организаций2');
     expect(summary?.textContent).toContain('Известных email2');
     expect(summary?.textContent).toContain('С email1');
@@ -74,5 +77,21 @@ describe('OrganizationPicker', () => {
     expect(summary?.textContent).toContain('Контактов4');
     expect(view.textContent).toContain('Первая организация');
     expect(view.textContent).toContain('Вторая организация');
+
+    const selectedList = view.querySelector('[aria-label="Выбранные организации для рассылки"]');
+    expect(selectedList?.getAttribute('role')).toBe('list');
+    expect(selectedList?.querySelectorAll('[role="listitem"]')).toHaveLength(2);
+    expect(view.querySelector('[aria-label="Убрать организацию Первая организация из получателей"]')).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it('keeps empty selected organizations state outside the accessible list', () => {
+    const view = render(<OrganizationPicker value={[]} onChange={vi.fn()} />);
+
+    expect(view.textContent).toContain('Организации пока не выбраны.');
+    expect(view.querySelector('[aria-label="Выбранные организации для рассылки"]')).toBeNull();
+
+    const summary = view.querySelector('[aria-label="Сводка выбранных организаций"]');
+    expect(summary?.getAttribute('role')).toBe('list');
+    expect(summary?.querySelectorAll('[role="listitem"]')).toHaveLength(5);
   });
 });

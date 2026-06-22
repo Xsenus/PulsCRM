@@ -138,53 +138,56 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
         </button>
       </div>
 
-      <div className="organization-recipient-summary" aria-label="Сводка выбранных организаций">
-        <div className="organization-recipient-summary-item">
+      <div className="organization-recipient-summary" role="list" aria-label="Сводка выбранных организаций">
+        <div className="organization-recipient-summary-item" role="listitem">
           <span>Организаций</span>
           <strong>{selectionSummary.organizationCount}</strong>
         </div>
-        <div className="organization-recipient-summary-item">
+        <div className="organization-recipient-summary-item" role="listitem">
           <span>Известных email</span>
           <strong>{selectionSummary.knownEmailCount}</strong>
         </div>
-        <div className="organization-recipient-summary-item">
+        <div className="organization-recipient-summary-item" role="listitem">
           <span>С email</span>
           <strong>{selectionSummary.organizationsWithEmail}</strong>
         </div>
-        <div className="organization-recipient-summary-item">
+        <div className="organization-recipient-summary-item" role="listitem">
           <span>Без email</span>
           <strong>{selectionSummary.organizationsWithoutEmail}</strong>
         </div>
-        <div className="organization-recipient-summary-item">
+        <div className="organization-recipient-summary-item" role="listitem">
           <span>Контактов</span>
           <strong>{selectionSummary.contactCount}</strong>
         </div>
       </div>
 
-      <div className="selected-org-list">
-        {value.length === 0 ? <div className="empty-state">Организации пока не выбраны.</div> : null}
-
-        {value.map((organization) => (
-          <div key={organization.id} className="selected-org-card">
-            <div>
-              <div className="selected-org-name">{organization.name}</div>
-              <div className="selected-org-meta">
-                {organization.inn ? `ИНН ${organization.inn}` : 'Без ИНН'}
-                {organization.raion ? ` • ${organization.raion}` : ''}
-                {organization.orgType ? ` • ${organization.orgType}` : ''}
+      {value.length === 0 ? (
+        <div className="empty-state">Организации пока не выбраны.</div>
+      ) : (
+        <div className="selected-org-list" role="list" aria-label="Выбранные организации для рассылки">
+          {value.map((organization) => (
+            <div key={organization.id} className="selected-org-card" role="listitem">
+              <div>
+                <div className="selected-org-name">{organization.name}</div>
+                <div className="selected-org-meta">
+                  {organization.inn ? `ИНН ${organization.inn}` : 'Без ИНН'}
+                  {organization.raion ? ` • ${organization.raion}` : ''}
+                  {organization.orgType ? ` • ${organization.orgType}` : ''}
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              className="secondary-button button-inline danger-button"
-              onClick={() => onChange(value.filter((item) => item.id !== organization.id))}
-            >
-              Убрать
-            </button>
-          </div>
-        ))}
-      </div>
+              <button
+                type="button"
+                className="secondary-button button-inline danger-button"
+                onClick={() => onChange(value.filter((item) => item.id !== organization.id))}
+                aria-label={`Убрать организацию ${organization.name} из получателей`}
+              >
+                Убрать
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="field-hint">Выбранные организации будут использоваться для подбора адресов получателей.</div>
 
