@@ -185,6 +185,7 @@ export function EmployeesPage() {
       <SearchPanel
         value={search}
         placeholder="Поиск по логину, ФИО, email или телефону"
+        inputAriaLabel="Поиск сотрудников по логину, ФИО, email или телефону"
         onChange={setSearch}
         onSearch={applySearch}
         onClear={clearSearch}
