@@ -235,6 +235,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
             <button
               type="button"
               className={`raion-link${selectedRaionId === undefined ? ' active' : ''}`}
+              aria-pressed={selectedRaionId === undefined}
               onClick={() => {
                 setSelectedRaionId(undefined);
                 setPage(1);
@@ -250,6 +251,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
                   key={raion.id ?? `none-${raion.name}`}
                   type="button"
                   className={`raion-link${selectedRaionId === raion.id ? ' active' : ''}`}
+                  aria-pressed={selectedRaionId === raion.id}
                   onClick={() => {
                     setSelectedRaionId(raion.id);
                     setPage(1);

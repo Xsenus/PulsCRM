@@ -62,7 +62,10 @@ beforeEach(() => {
     ],
     totalCount: 2
   });
-  apiMocks.getOrganizationRaions.mockResolvedValue([]);
+  apiMocks.getOrganizationRaions.mockResolvedValue([
+    { id: 10, name: 'Центральный', count: 4 },
+    { id: 20, name: 'Северный', count: 2 }
+  ]);
 });
 
 afterEach(() => {
@@ -144,6 +147,17 @@ describe('OrganizationPicker', () => {
     expect(selectionStatus?.getAttribute('aria-live')).toBe('polite');
     expect(selectionStatus?.getAttribute('aria-label')).toBe('Выбрано организаций: 1');
     expect(document.body.querySelector('[aria-label="Убрать организацию Первая организация из черновика получателей"]')).toBeInstanceOf(HTMLInputElement);
+    const allRaionsButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.raion-link')).find((button) => button.textContent?.includes('Все'));
+    const centralRaionButton = Array.from(document.body.querySelectorAll<HTMLButtonElement>('.raion-link')).find((button) => button.textContent?.includes('Центральный'));
+    expect(allRaionsButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(centralRaionButton?.getAttribute('aria-pressed')).toBe('false');
+
+    await act(async () => {
+      centralRaionButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(document.body.querySelector<HTMLButtonElement>('.raion-link')?.getAttribute('aria-pressed')).toBe('false');
+    expect(centralRaionButton?.getAttribute('aria-pressed')).toBe('true');
 
     const newOrganizationCheckbox = document.body.querySelector<HTMLInputElement>('[aria-label="Добавить организацию Новая организация в черновик получателей"]');
     expect(newOrganizationCheckbox).toBeInstanceOf(HTMLInputElement);
