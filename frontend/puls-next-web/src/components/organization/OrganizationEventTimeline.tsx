@@ -24,14 +24,18 @@ export function OrganizationEventTimeline({
     <div className="organization-timeline" role="list" aria-label="История событий организации">
       {events.map((event, index) => {
         const title = event.name || event.taskName || event.categoryName || event.categoryFullName || `Событие #${event.id}`;
-        const eventDate = formatDateTime(event.eventDateUtc) || formatDateTime(event.createdAtUtc) || EMPTY_VALUE;
+        const formattedEventDate = formatDateTime(event.eventDateUtc);
+        const formattedCreatedDate = formatDateTime(event.createdAtUtc);
+        const eventDate = formattedEventDate || formattedCreatedDate || EMPTY_VALUE;
+        const eventDateSource = formattedEventDate ? event.eventDateUtc : formattedCreatedDate ? event.createdAtUtc : undefined;
         const meta = [
           event.userName,
           event.categoryName || event.categoryFullName,
           event.isInProcess ? 'в процессе' : undefined,
           event.isCompleted === undefined ? undefined : event.isCompleted ? 'завершено' : 'не завершено'
         ].filter(Boolean);
-        const period = [formatDateTime(event.dateFromUtc), formatDateTime(event.dateToUtc)].filter(Boolean).join(' — ');
+        const dateFrom = formatDateTime(event.dateFromUtc);
+        const dateTo = formatDateTime(event.dateToUtc);
         const hasLicenseChips = Boolean(event.licenseKey || (event.licenseAmount !== undefined && event.licenseAmount !== null));
         return (
           <article key={event.id} className="organization-timeline-item" role="listitem">
@@ -43,7 +47,9 @@ export function OrganizationEventTimeline({
               <div className="organization-timeline-head">
                 <div className="organization-timeline-head-main">
                   <strong>{title}</strong>
-                  <span className="field-hint">{eventDate}</span>
+                  <span className="field-hint">
+                    {eventDateSource ? <time dateTime={eventDateSource}>{eventDate}</time> : eventDate}
+                  </span>
                 </div>
                 {hasLicenseChips ? (
                   <div className="organization-card-chip-row" role="list" aria-label={`Лицензионные признаки события: ${title}`}>
@@ -55,7 +61,13 @@ export function OrganizationEventTimeline({
                 ) : null}
               </div>
               {meta.length ? <div className="organization-timeline-meta">{meta.join(' • ')}</div> : null}
-              {period ? <div className="field-hint">Период: {period}</div> : null}
+              {dateFrom || dateTo ? (
+                <div className="field-hint">
+                  Период: {dateFrom ? <time dateTime={event.dateFromUtc}>{dateFrom}</time> : null}
+                  {dateFrom && dateTo ? ' — ' : null}
+                  {dateTo ? <time dateTime={event.dateToUtc}>{dateTo}</time> : null}
+                </div>
+              ) : null}
               {event.comment?.trim() ? <div className="organization-timeline-comment">{event.comment.trim()}</div> : null}
               {event.licenseAmountComment?.trim() ? (
                 <div className="field-hint">Комментарий суммы: {event.licenseAmountComment.trim()}</div>

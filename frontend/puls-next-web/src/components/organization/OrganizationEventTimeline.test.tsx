@@ -80,6 +80,7 @@ describe('OrganizationEventTimeline', () => {
     const lists = Array.from(view.querySelectorAll('[role="list"]'));
     const timelineList = lists[0];
     const licenseList = lists[1];
+    const times = Array.from(view.querySelectorAll('time'));
 
     expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
       'История событий организации',
@@ -94,6 +95,14 @@ describe('OrganizationEventTimeline', () => {
     expect(view.textContent).toContain('ITS-001');
     expect(view.textContent).toContain('1 234,50');
     expect(view.textContent).toContain('Период:');
+    expect(times.map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-11T06:00:00Z',
+      '2026-06-01T00:00:00Z',
+      '2026-06-30T00:00:00Z',
+      '2026-06-11T06:00:00Z',
+      '2026-06-01T00:00:00Z',
+      '2026-06-30T00:00:00Z'
+    ]);
     expect(view.textContent).toContain('Клиент подтвердил продление');
     expect(view.textContent).toContain('Комментарий суммы: Сумма согласована');
     expect(view.textContent).toContain('Контроль оплаты');
