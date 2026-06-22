@@ -105,6 +105,7 @@ describe('ScheduleBuilder', () => {
 
     const timezoneSelect = view.querySelector<HTMLSelectElement>('select.form-select');
 
+    expect(timezoneSelect?.getAttribute('aria-label')).toBe('Часовой пояс расписания');
     expect(timezoneSelect?.value).toBe(DEFAULT_CAMPAIGN_TIME_ZONE);
     expect(timezoneSelect?.textContent).toContain('Новосибирск (UTC+7)');
     expect(view.textContent).toContain('Основной часовой пояс проекта.');

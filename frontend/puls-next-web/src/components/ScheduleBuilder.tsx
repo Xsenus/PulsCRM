@@ -81,6 +81,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
           <label>Часовой пояс</label>
           <select
             className="form-select"
+            aria-label="Часовой пояс расписания"
             value={timeZoneId}
             onChange={(event) => onChange({ timeZoneId: event.target.value })}
           >
