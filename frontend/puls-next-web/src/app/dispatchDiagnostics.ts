@@ -27,6 +27,20 @@ export function canCancelDispatchItem(item: Pick<DispatchItemDto, 'status'>) {
   return item.status !== 2 && item.status !== 4;
 }
 
+export function findLatestDispatchProblemItem(items: DispatchItemDto[]) {
+  const problemItems = items.filter((item) => item.status === 3 || item.status === 5);
+
+  if (!problemItems.length) {
+    return null;
+  }
+
+  return [...problemItems].sort((left, right) => {
+    const leftDate = left.failedAtUtc || left.nextAttemptAtUtc || left.queuedAtUtc || '';
+    const rightDate = right.failedAtUtc || right.nextAttemptAtUtc || right.queuedAtUtc || '';
+    return rightDate.localeCompare(leftDate);
+  })[0];
+}
+
 export function buildDispatchItemQuery(filters: {
   status?: number;
   campaignId?: number;

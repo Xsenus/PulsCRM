@@ -3632,6 +3632,34 @@ body.is-dragging-column {
   font-weight: 900;
 }
 
+.dispatch-problem-panel {
+  display: grid;
+  gap: 12px;
+  border-color: rgba(220, 38, 38, 0.16);
+  background: #fff7f7;
+}
+
+.dispatch-problem-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dispatch-problem-details span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid #fecaca;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #7f1d1d;
+  font-size: 0.8rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .dispatch-filter-panel {
   display: grid;
   grid-template-columns: minmax(180px, 1.2fr) repeat(2, minmax(140px, 0.8fr)) auto auto;

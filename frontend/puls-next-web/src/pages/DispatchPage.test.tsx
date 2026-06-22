@@ -131,6 +131,22 @@ describe('DispatchPage', () => {
     expect(view.querySelector('[aria-label="Фильтр очереди по ID партии"]')).toBeInstanceOf(HTMLInputElement);
   });
 
+  it('shows the latest queue problem as an operator status block', async () => {
+    const view = render(<DispatchPage />);
+    await flushEffects();
+
+    const problem = view.querySelector('[aria-label="Последняя проблема очереди на текущей странице"]');
+    expect(problem?.getAttribute('role')).toBe('status');
+    expect(problem?.textContent).toContain('Последняя проблема очереди');
+    expect(problem?.textContent).toContain('client@example.test');
+    expect(problem?.textContent).toContain('SMTP timeout');
+
+    const details = problem?.querySelector('[aria-label="Детали последней проблемы очереди"]');
+    expect(details?.getAttribute('role')).toBe('list');
+    expect(details?.querySelectorAll('[role="listitem"]')).toHaveLength(4);
+    expect(details?.querySelector('time')?.getAttribute('dateTime')).toBe('2026-06-20T05:15:00.000Z');
+  });
+
   it('renders queue and batch dates as machine-readable time elements', async () => {
     const view = render(<DispatchPage />);
     await flushEffects();

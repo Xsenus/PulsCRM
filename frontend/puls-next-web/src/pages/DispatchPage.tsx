@@ -13,6 +13,7 @@ import {
   canCancelDispatchItem,
   canRetryDispatchItem,
   dispatchStatusOptions,
+  findLatestDispatchProblemItem,
   getDispatchStatusLabel,
   getDispatchStatusTone
 } from '../app/dispatchDiagnostics';
@@ -60,6 +61,10 @@ function itemProblemText(row: DispatchItemDto) {
   return row.errorMessage || row.smtpResponse || row.messageId || EMPTY_VALUE;
 }
 
+function itemProblemDescription(row: DispatchItemDto) {
+  return row.errorMessage || row.smtpResponse || 'Сообщение ожидает повторной обработки.';
+}
+
 function itemDateText(row: DispatchItemDto) {
   return renderDateTime(row.failedAtUtc || row.sentAtUtc || row.startedAtUtc || row.queuedAtUtc);
 }
@@ -104,6 +109,7 @@ export function DispatchPage() {
     failed: items.filter((item) => item.status === 3).length,
     deferred: items.filter((item) => item.status === 5).length
   }), [items]);
+  const latestProblemItem = useMemo(() => findLatestDispatchProblemItem(items), [items]);
 
   const loadItems = async () => {
     setItemsLoading(true);
@@ -320,6 +326,27 @@ export function DispatchPage() {
           <div className="metric-value">{summary.deferred}</div>
         </div>
       </div>
+
+      {latestProblemItem ? (
+        <section className="panel dispatch-problem-panel" role="status" aria-label="Последняя проблема очереди на текущей странице">
+          <div className="section-header-inline">
+            <div>
+              <h3>Последняя проблема очереди</h3>
+              <div className="field-hint">{itemProblemDescription(latestProblemItem)}</div>
+            </div>
+            <StatusBadge tone={getDispatchStatusTone(latestProblemItem.status)}>
+              {getDispatchStatusLabel(latestProblemItem.status)}
+            </StatusBadge>
+          </div>
+          <div className="dispatch-problem-details" role="list" aria-label="Детали последней проблемы очереди">
+            <span role="listitem">Получатель: {latestProblemItem.recipientEmail || 'не указан'}</span>
+            <span role="listitem">Попыток: {latestProblemItem.attemptCount}</span>
+            {latestProblemItem.failedAtUtc ? <span role="listitem">Ошибка: {renderDateTime(latestProblemItem.failedAtUtc)}</span> : null}
+            {latestProblemItem.nextAttemptAtUtc ? <span role="listitem">Следующая попытка: {renderDateTime(latestProblemItem.nextAttemptAtUtc)}</span> : null}
+            {latestProblemItem.smtpResponse && latestProblemItem.errorMessage ? <span role="listitem">SMTP: {latestProblemItem.smtpResponse}</span> : null}
+          </div>
+        </section>
+      ) : null}
 
       <SearchPanel
         value={filters.search}
