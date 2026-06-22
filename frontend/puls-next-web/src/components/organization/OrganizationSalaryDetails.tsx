@@ -55,6 +55,11 @@ function renderMail(value?: string | null) {
   return value?.trim() ? <a href={`mailto:${value.trim()}`}>{value.trim()}</a> : EMPTY_VALUE;
 }
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 export function OrganizationSalaryDetails({ details }: { details?: OrganizationSalaryDetailsData | null }) {
   return (
     <div className="panel-subsection">
@@ -122,11 +127,11 @@ export function OrganizationSalaryDetails({ details }: { details?: OrganizationS
         </div>
         <div className="detail-card" role="listitem">
           <strong>Начало работы</strong>
-          <span>{formatDateTime(details?.salaryWorkBeginUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.salaryWorkBeginUtc)}</span>
         </div>
         <div className="detail-card" role="listitem">
           <strong>Конец работы</strong>
-          <span>{formatDateTime(details?.salaryWorkEndUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.salaryWorkEndUtc)}</span>
         </div>
       </div>
       <div className="detail-list" role="list" aria-label="Комментарии зарплатного сопровождения">

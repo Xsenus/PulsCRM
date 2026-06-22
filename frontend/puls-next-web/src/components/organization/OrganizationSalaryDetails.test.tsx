@@ -73,6 +73,10 @@ describe('OrganizationSalaryDetails', () => {
     expect(view.textContent).toContain('LO-42');
     expect(view.textContent).toContain('Базовый пакет');
     expect(view.textContent).toContain('Работает стабильно');
+    expect(Array.from(view.querySelectorAll('time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-12T03:10:00Z',
+      '2026-06-13T03:10:00Z'
+    ]);
     expect(view.querySelector('a[href="tel:+73832000000"]')?.textContent).toBe('+7 (383) 200-00-00');
     expect(view.querySelector('a[href="mailto:salary@example.test"]')?.textContent).toBe('salary@example.test');
   });
