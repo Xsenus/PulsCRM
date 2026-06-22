@@ -50,6 +50,10 @@ describe('OrganizationEventViewModeTabs', () => {
     expect(tablist?.getAttribute('aria-label')).toBe('Режим просмотра событий организации');
     expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab']);
     expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Лента: переключить режим',
+      'Таблица: текущий режим'
+    ]);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, true]);
   });
 
