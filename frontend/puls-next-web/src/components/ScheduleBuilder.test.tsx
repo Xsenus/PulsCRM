@@ -87,10 +87,14 @@ describe('ScheduleBuilder', () => {
     );
 
     const previewRow = view.querySelector('.schedule-preview-item');
+    const previewTimes = Array.from(previewRow?.querySelectorAll('time') ?? []);
 
     expect(previewRow?.textContent).toContain('#1');
     expect(previewRow?.textContent).toContain('Новосибирск (UTC+7)');
     expect(previewRow?.textContent).toContain('UTC:');
+    expect(previewTimes).toHaveLength(2);
+    expect(previewTimes[0]?.getAttribute('dateTime')).toBe('2026-06-10T15:00:00.000');
+    expect(previewTimes[1]?.getAttribute('dateTime')).toBe('2026-06-10T08:00:00.000Z');
   });
 
   it('keeps unknown timezone visible and asks to select a supported one', () => {

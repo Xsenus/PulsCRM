@@ -37,6 +37,10 @@ const scheduleDescriptions: Record<number, string> = {
   3: 'Использовать cron-выражение для сложного расписания.'
 };
 
+function renderDateTime(value: string) {
+  return <time dateTime={value}>{formatDateTime(value)}</time>;
+}
+
 export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLoading = false, previewError }: ScheduleBuilderProps) {
   const validationIssues = validateScheduleBuilderValue(value);
   const canPreview = validationIssues.length === 0 && !previewLoading;
@@ -189,10 +193,10 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
             <div key={`${item.utc}-${index}`} className="schedule-preview-item">
               <div className="schedule-preview-number">#{index + 1}</div>
               <div className="schedule-preview-time">
-                <strong>{formatDateTime(item.local)}</strong>
+                <strong>{renderDateTime(item.local)}</strong>
                 <span>{selectedTimeZone?.label || timeZoneId}</span>
               </div>
-              <div className="schedule-preview-utc">UTC: {formatDateTime(item.utc)}</div>
+              <div className="schedule-preview-utc">UTC: {renderDateTime(item.utc)}</div>
             </div>
           ))}
         </div>
