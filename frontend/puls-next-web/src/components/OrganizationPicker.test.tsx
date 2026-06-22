@@ -2,11 +2,18 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react-dom/test-utils';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrganizationPicker } from './OrganizationPicker';
 import type { OrganizationListItemDto } from '../app/types';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+const apiMocks = vi.hoisted(() => ({
+  getOrganizations: vi.fn(),
+  getOrganizationRaions: vi.fn()
+}));
+
+vi.mock('../app/api', () => apiMocks);
 
 vi.mock('../app/AuthContext', () => ({
   useAuth: () => ({ user: { id: 7 } })
@@ -41,6 +48,23 @@ function organization(overrides: Partial<OrganizationListItemDto>): Organization
   };
 }
 
+async function flushAsyncUpdates() {
+  await act(async () => {
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+  });
+}
+
+beforeEach(() => {
+  apiMocks.getOrganizations.mockResolvedValue({
+    items: [
+      organization({ id: 1, name: 'Первая организация', emailCount: 2, contactCount: 3 }),
+      organization({ id: 3, name: 'Новая организация', emailCount: 1, contactCount: 1 })
+    ],
+    totalCount: 2
+  });
+  apiMocks.getOrganizationRaions.mockResolvedValue([]);
+});
+
 afterEach(() => {
   if (root && container) {
     act(() => {
@@ -51,6 +75,7 @@ afterEach(() => {
   root = null;
   container?.remove();
   container = null;
+  vi.clearAllMocks();
 });
 
 describe('OrganizationPicker', () => {
@@ -96,5 +121,25 @@ describe('OrganizationPicker', () => {
     expect(summary?.getAttribute('role')).toBe('list');
     expect(summary?.querySelectorAll('[role="listitem"]')).toHaveLength(5);
     expect(view.querySelector('[role="status"]')).toBeNull();
+  });
+
+  it('labels modal draft selection checkboxes with organization names and actions', async () => {
+    const view = render(
+      <OrganizationPicker
+        value={[organization({ id: 1, name: 'Первая организация', emailCount: 2, contactCount: 3 })]}
+        onChange={vi.fn()}
+      />
+    );
+
+    const openButton = Array.from(view.querySelectorAll('button')).find((button) => button.textContent === 'Открыть справочник');
+
+    await act(async () => {
+      openButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flushAsyncUpdates();
+
+    expect(apiMocks.getOrganizations).toHaveBeenCalled();
+    expect(document.body.querySelector('[aria-label="Убрать организацию Первая организация из черновика получателей"]')).toBeInstanceOf(HTMLInputElement);
+    expect(document.body.querySelector('[aria-label="Добавить организацию Новая организация в черновик получателей"]')).toBeInstanceOf(HTMLInputElement);
   });
 });

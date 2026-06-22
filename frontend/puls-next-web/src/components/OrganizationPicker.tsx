@@ -305,6 +305,9 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
                     <input
                       type="checkbox"
                       checked={!!draftSelection[row.id]}
+                      aria-label={draftSelection[row.id]
+                        ? `Убрать организацию ${row.name} из черновика получателей`
+                        : `Добавить организацию ${row.name} в черновик получателей`}
                       onChange={() => toggleDraftItem(row)}
                       onClick={(event) => event.stopPropagation()}
                     />
