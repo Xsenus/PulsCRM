@@ -187,6 +187,16 @@ describe('DataTable settings', () => {
     expect(stored.columns.find((column) => column.key === 'email')?.visible).toBe(false);
   });
 
+  it('labels column visibility toggles in table settings', () => {
+    const view = renderTable();
+
+    click(view.querySelector('.data-table-action-button')!);
+
+    expect(document.body.querySelector('[aria-label="Показать колонку Name"]')).toBeInstanceOf(HTMLInputElement);
+    expect(document.body.querySelector('[aria-label="Показать колонку Email"]')).toBeInstanceOf(HTMLInputElement);
+    expect(document.body.querySelector('[aria-label="Показать колонку ID"]')).toBeInstanceOf(HTMLInputElement);
+  });
+
   it('resets saved settings to default columns after confirmation', () => {
     window.localStorage.setItem('datatable-test-settings', JSON.stringify({
       columns: [

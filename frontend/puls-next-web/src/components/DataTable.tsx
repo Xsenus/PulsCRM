@@ -707,6 +707,7 @@ export function DataTable<T>({
                   <label className="checkbox-option table-settings-toggle">
                     <input
                       type="checkbox"
+                      aria-label={`Показать колонку ${titleText}`}
                       checked={definition.canHide ? column.visible : true}
                       disabled={!definition.canHide || (column.visible && visibleDraftColumnCount === 1)}
                       onChange={(event) => setDraftColumnVisibility(column.key, event.target.checked)}
