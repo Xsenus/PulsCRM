@@ -287,6 +287,7 @@ export function OrganizationsPage() {
       <SearchPanel
         value={search}
         placeholder="Поиск по названию, ИНН, району или типу"
+        inputAriaLabel="Поиск организаций по названию, ИНН, району или типу"
         onChange={setSearch}
         onSearch={applySearch}
         onClear={clearSearch}

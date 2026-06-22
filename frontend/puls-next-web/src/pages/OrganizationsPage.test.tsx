@@ -114,11 +114,13 @@ describe('OrganizationsPage', () => {
     await flushEffects();
 
     const raionSearch = view.querySelector<HTMLInputElement>('[aria-label="Поиск района организации"]');
+    const organizationSearch = view.querySelector<HTMLInputElement>('[aria-label="Поиск организаций по названию, ИНН, району или типу"]');
     const filterStatus = view.querySelector('[aria-label="Активные фильтры организаций"]');
     const centralRaion = Array.from(view.querySelectorAll<HTMLLabelElement>('.raion-checkbox-card'))
       .find((label) => label.textContent?.includes('Центральный'));
     const centralCheckbox = centralRaion?.querySelector<HTMLInputElement>('input[type="checkbox"]');
 
+    expect(organizationSearch).toBeInstanceOf(HTMLInputElement);
     expect(raionSearch).toBeInstanceOf(HTMLInputElement);
     expect(filterStatus?.getAttribute('role')).toBe('status');
     expect(filterStatus?.textContent).toContain('Показаны все организации');
