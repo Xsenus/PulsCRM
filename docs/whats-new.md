@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-22 - fallback проверки БД на LegacyDb
+
+Укреплена post-deploy проверка SQL Server в `scripts/check-mailing-db.ps1`:
+
+- если `ConnectionStrings:MailingDb` в production config содержит только XPO provider token без SQL-настроек, скрипт использует `ConnectionStrings:LegacyDb`;
+- fallback соответствует текущей архитектуре, где legacy и mailing контуры работают с одной основной SQL Server БД;
+- при отсутствии SQL-настроек в обеих строках скрипт теперь падает с явным сообщением вместо пустой строки подключения.
+
+Проверки этого этапа включают targeted script-проверку fallback на временном config, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки, локальную DB/E2E-проверку рассылки против SQL-БД и повторную проверку GitHub Actions после push.
+
 ## 2026-06-22 - проверка БД понимает XPO provider token
 
 Исправлена production-проверка `scripts/check-mailing-db.ps1` после GitHub Actions deploy:

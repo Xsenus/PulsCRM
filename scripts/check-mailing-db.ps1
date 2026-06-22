@@ -101,7 +101,35 @@ function ConvertFrom-XpoConnectionString {
     }
 
     $sqlConnectionString = ($parts -join ";")
+    if ([string]::IsNullOrWhiteSpace($sqlConnectionString)) {
+        throw "Connection string does not contain SQL Server settings after removing XPO provider token."
+    }
+
     return [System.Data.SqlClient.SqlConnectionStringBuilder]::new($sqlConnectionString)
+}
+
+function Test-ConnectionStringHasSqlSettings {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Value
+    )
+
+    foreach ($part in ($Value -split ";")) {
+        if ([string]::IsNullOrWhiteSpace($part)) {
+            continue
+        }
+
+        $trimmed = $part.Trim()
+        if ($trimmed -match "^\s*XpoProvider\s*=") {
+            continue
+        }
+
+        if ($trimmed -match "=") {
+            return $true
+        }
+    }
+
+    return $false
 }
 
 function Format-SqlStringLiteral {
@@ -209,6 +237,13 @@ if ([string]::IsNullOrWhiteSpace($ConnectionString)) {
     }
 
     $ConnectionString = Get-ConnectionStringFromConfig -ConfigPath $ApiConfigPath -Name $ConnectionStringName
+    if (-not (Test-ConnectionStringHasSqlSettings -Value $ConnectionString) -and $ConnectionStringName -ne "LegacyDb") {
+        $fallbackConnectionString = Get-ConnectionStringFromConfig -ConfigPath $ApiConfigPath -Name "LegacyDb"
+        if (Test-ConnectionStringHasSqlSettings -Value $fallbackConnectionString) {
+            Write-Host "Connection string '$ConnectionStringName' does not contain SQL Server settings. Falling back to 'LegacyDb'."
+            $ConnectionString = $fallbackConnectionString
+        }
+    }
 }
 
 $builder = ConvertFrom-XpoConnectionString -Value $ConnectionString
