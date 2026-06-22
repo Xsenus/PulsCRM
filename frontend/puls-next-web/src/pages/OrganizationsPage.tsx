@@ -334,6 +334,7 @@ export function OrganizationsPage() {
             className="form-input"
             value={raionSearch}
             placeholder="Поиск района"
+            aria-label="Поиск района организации"
             onChange={(event) => setRaionSearch(event.target.value)}
           />
 
