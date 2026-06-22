@@ -284,6 +284,7 @@ export function EmployeeEditorForm({
                   <label className={`employee-choice-card${value.isMale ? ' active' : ''}`}>
                     <input
                       type="radio"
+                      aria-label="Пол сотрудника: мужчина"
                       name="employee-gender"
                       checked={value.isMale}
                       disabled={disabled}
@@ -295,6 +296,7 @@ export function EmployeeEditorForm({
                   <label className={`employee-choice-card${!value.isMale ? ' active' : ''}`}>
                     <input
                       type="radio"
+                      aria-label="Пол сотрудника: женщина"
                       name="employee-gender"
                       checked={!value.isMale}
                       disabled={disabled}
@@ -562,6 +564,7 @@ export function EmployeeEditorForm({
             <label className="checkbox-option employee-checkbox-card">
               <input
                 type="checkbox"
+                aria-label="Сотрудник является администратором системы"
                 checked={value.isRoot}
                 disabled={disabled}
                 onChange={(event) => onChange(updateValue(value, { isRoot: event.target.checked }))}
@@ -612,6 +615,7 @@ export function EmployeeEditorForm({
                 <label className="checkbox-option employee-checkbox-card">
                   <input
                     type="checkbox"
+                    aria-label="Изменить пароль сотрудника"
                     checked={changePassword}
                     disabled={disabled}
                     onChange={(event) => onChangePasswordChange(event.target.checked)}
