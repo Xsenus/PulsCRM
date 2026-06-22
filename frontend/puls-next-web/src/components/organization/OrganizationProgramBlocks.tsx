@@ -21,9 +21,20 @@ function formatCount(value?: number | null) {
   return new Intl.NumberFormat('ru-RU').format(value ?? 0);
 }
 
-function formatAuditValue(date?: string, author?: string) {
-  const value = [formatDateTime(date), author].filter(Boolean).join(' • ');
-  return value || EMPTY_VALUE;
+function renderAuditValue(date?: string, author?: string) {
+  const formattedDate = formatDateTime(date);
+
+  if (!formattedDate && !author) {
+    return EMPTY_VALUE;
+  }
+
+  return (
+    <>
+      {formattedDate ? <time dateTime={date}>{formattedDate}</time> : null}
+      {formattedDate && author ? ' \u2022 ' : null}
+      {author}
+    </>
+  );
 }
 
 function getProgramVariantMeta(variant: number) {
@@ -63,7 +74,7 @@ export function OrganizationProgramBlocks({ items }: { items?: OrganizationInfoT
             <span className="field-hint">Рабочих мест: {formatCount(item?.places ?? 0)}</span>
             <span className="field-hint">
               {item?.updatedAtUtc
-                ? `Обновлено: ${formatAuditValue(item.updatedAtUtc, item.updatedByName)}`
+                ? <>Обновлено: {renderAuditValue(item.updatedAtUtc, item.updatedByName)}</>
                 : item?.updatedByName
                   ? `Автор: ${item.updatedByName}`
                   : 'Запись пока не заполнена'}
@@ -86,7 +97,7 @@ export function OrganizationProgramBlocks({ items }: { items?: OrganizationInfoT
                 <span>{item.organizationCreatorName || 'Производитель не указан'}</span>
                 <span className="field-hint">Рабочих мест: {formatCount(item.places)}</span>
                 <span className="field-hint">
-                  {item.updatedAtUtc ? `Обновлено: ${formatAuditValue(item.updatedAtUtc, item.updatedByName)}` : `Автор: ${item.updatedByName || EMPTY_VALUE}`}
+                  {item.updatedAtUtc ? <>Обновлено: {renderAuditValue(item.updatedAtUtc, item.updatedByName)}</> : `Автор: ${item.updatedByName || EMPTY_VALUE}`}
                 </span>
                 <span>{item.comment?.trim() || 'Комментарий не заполнен'}</span>
               </div>

@@ -62,6 +62,7 @@ describe('OrganizationProgramBlocks', () => {
     const view = render(<OrganizationProgramBlocks items={items} />);
     const lists = Array.from(view.querySelectorAll('[role="list"]'));
     const cards = Array.from(view.querySelectorAll('.organization-program-card'));
+    const times = Array.from(view.querySelectorAll('time'));
 
     expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
       'Типовые блоки программ организации',
@@ -73,6 +74,7 @@ describe('OrganizationProgramBlocks', () => {
     expect(view.querySelectorAll('[role="listitem"]')).toHaveLength(11);
     expect(view.textContent).toContain('Бухгалтерия учреждения');
     expect(view.textContent).toContain('Рабочих мест: 5');
+    expect(times.map((time) => time.getAttribute('dateTime'))).toEqual(['2026-06-12T03:00:00Z']);
     expect(view.textContent).toContain('#42');
     expect(view.textContent).toContain('Нестандартный блок');
     expect(view.textContent).toContain('Комментарий не заполнен');
