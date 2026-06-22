@@ -105,19 +105,19 @@ jobs:
             -PublishedApiConfigPath (Join-Path $env:API_SITE_PATH "appsettings.Production.json") `
             -ProductionApiUrl $env:PRODUCTION_API_URL
 
-          $dbCheckArgs = @(
-            "-ApiConfigPath", $env:API_CONFIG_PATH,
-            "-PublishedWebConfigPath", (Join-Path $env:API_SITE_PATH "web.config"),
-            "-AppPoolName", "PulsCRM.Api"
-          )
+          $dbCheckArgs = @{
+            ApiConfigPath = $env:API_CONFIG_PATH
+            PublishedWebConfigPath = Join-Path $env:API_SITE_PATH "web.config"
+            AppPoolName = "PulsCRM.Api"
+          }
           if (-not [string]::IsNullOrWhiteSpace($env:DB_MAX_FAILED_DISPATCH_ITEMS)) {
-            $dbCheckArgs += @("-MaxFailedDispatchItems", $env:DB_MAX_FAILED_DISPATCH_ITEMS)
+            $dbCheckArgs["MaxFailedDispatchItems"] = $env:DB_MAX_FAILED_DISPATCH_ITEMS
           }
           if (-not [string]::IsNullOrWhiteSpace($env:DB_MAX_QUEUE_DEPTH)) {
-            $dbCheckArgs += @("-MaxQueueDepth", $env:DB_MAX_QUEUE_DEPTH)
+            $dbCheckArgs["MaxQueueDepth"] = $env:DB_MAX_QUEUE_DEPTH
           }
           if ($env:DB_REQUIRE_TRANSPORT_PROFILE -match "^(?i:true|1|yes)$") {
-            $dbCheckArgs += "-RequireTransportProfile"
+            $dbCheckArgs["RequireTransportProfile"] = $true
           }
 
           .\scripts\check-mailing-db.ps1 @dbCheckArgs

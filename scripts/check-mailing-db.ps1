@@ -126,6 +126,7 @@ function Get-ConnectionStringEntriesFromConfig {
 function Get-ConnectionStringEntriesFromNamedValues {
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [object[]]$Variables,
 
         [Parameter(Mandatory = $true)]
