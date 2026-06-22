@@ -200,6 +200,7 @@ export function CampaignsPage() {
       <SearchPanel
         value={search}
         placeholder="Поиск по названию, теме или SMTP профилю"
+        inputAriaLabel="Поиск рассылок по названию, теме или SMTP профилю"
         onChange={setSearch}
         onSearch={applySearch}
         onClear={clearSearch}
@@ -229,7 +230,12 @@ export function CampaignsPage() {
         </div>
 
         <div className="campaign-filter-select-group">
-          <select className="form-select" value={status ?? ''} onChange={(event) => setStatus(event.target.value ? Number(event.target.value) : undefined)}>
+          <select
+            className="form-select"
+            aria-label="Фильтр рассылок по статусу"
+            value={status ?? ''}
+            onChange={(event) => setStatus(event.target.value ? Number(event.target.value) : undefined)}
+          >
             <option value="">Статус</option>
             {campaignStatusOptions.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>

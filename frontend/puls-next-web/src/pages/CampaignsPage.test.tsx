@@ -101,6 +101,22 @@ afterEach(() => {
 });
 
 describe('CampaignsPage', () => {
+  it('labels campaign search and status filters for assistive technology', async () => {
+    const view = render(
+      <MemoryRouter>
+        <CampaignsPage />
+      </MemoryRouter>
+    );
+    await flushEffects();
+
+    const quickFilters = Array.from(view.querySelectorAll<HTMLButtonElement>('.campaign-status-filter-button'));
+
+    expect(view.querySelector('[aria-label="Поиск рассылок по названию, теме или SMTP профилю"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Фильтр рассылок по статусу"]')).toBeInstanceOf(HTMLSelectElement);
+    expect(view.querySelector('[aria-label="Быстрый фильтр рассылок по статусу"]')).toBeInstanceOf(HTMLDivElement);
+    expect(quickFilters.map((button) => button.getAttribute('aria-pressed'))).toContain('true');
+  });
+
   it('renders campaign list dates as machine-readable time elements', async () => {
     const view = render(
       <MemoryRouter>
