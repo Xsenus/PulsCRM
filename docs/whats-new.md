@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-22 - стабильный timezone fallback расписания
+
+Исправлена нестабильность backend-проверки расписания на Windows Server 2016 runner:
+
+- для стандартного `Asia/Novosibirsk` добавлен fallback на Windows time zone `N. Central Asia Standard Time`;
+- preview расписания больше не откатывается в UTC на runner, где IANA-идентификатор недоступен;
+- существующий backend-тест расписания закрепляет ожидаемое локальное время по умолчанию.
+
+Проверки этого этапа включают targeted backend-тест, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки, локальную DB/E2E-проверку рассылки против SQL-БД и повторную проверку GitHub Actions после push.
+
 ## 2026-06-22 - единый актуальный roadmap
 
 Roadmap-документация приведена к одному актуальному файлу `docs/roadmap.md`:

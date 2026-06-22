@@ -117,6 +117,11 @@ public interface IScheduleCalculator
 
 public sealed class ScheduleCalculator : IScheduleCalculator
 {
+    private static readonly IReadOnlyDictionary<string, string> TimeZoneFallbacks = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        [MailingDefaults.TimeZoneId] = "N. Central Asia Standard Time"
+    };
+
     public DateTime? CalculateInitialNextRunUtc(MailCampaign campaign, DateTime nowUtc)
     {
         var startAtUtc = DateTimeHelper.NullIfMin(campaign.StartAtUtc) ?? nowUtc;
@@ -299,6 +304,18 @@ public sealed class ScheduleCalculator : IScheduleCalculator
         }
         catch
         {
+            if (TimeZoneFallbacks.TryGetValue(candidate, out var fallback))
+            {
+                try
+                {
+                    return TimeZoneInfo.FindSystemTimeZoneById(fallback);
+                }
+                catch
+                {
+                    return TimeZoneInfo.Utc;
+                }
+            }
+
             return TimeZoneInfo.Utc;
         }
     }
