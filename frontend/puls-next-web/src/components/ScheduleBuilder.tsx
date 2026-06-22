@@ -101,6 +101,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
           <label>Старт</label>
           <input
             className="form-input"
+            aria-label="Старт расписания"
             type="datetime-local"
             value={toDateTimeLocalValue(value.startAtUtc)}
             onChange={(event) => onChange({ startAtUtc: fromDateTimeLocalValue(event.target.value) })}
@@ -111,6 +112,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
           <label>Конец</label>
           <input
             className="form-input"
+            aria-label="Конец расписания"
             type="datetime-local"
             value={toDateTimeLocalValue(value.endAtUtc)}
             onChange={(event) => onChange({ endAtUtc: fromDateTimeLocalValue(event.target.value) })}
@@ -124,6 +126,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
             <label>Интервал, минут</label>
             <input
               className="form-input"
+              aria-label="Интервал расписания в минутах"
               type="number"
               min={1}
               value={value.intervalMinutes}
@@ -139,6 +142,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
             <label>Минимум, минут</label>
             <input
               className="form-input"
+              aria-label="Минимальный случайный интервал расписания в минутах"
               type="number"
               min={1}
               value={value.randomIntervalMinMinutes}
@@ -150,6 +154,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
             <label>Максимум, минут</label>
             <input
               className="form-input"
+              aria-label="Максимальный случайный интервал расписания в минутах"
               type="number"
               min={1}
               value={value.randomIntervalMaxMinutes}
@@ -165,6 +170,7 @@ export function ScheduleBuilder({ value, onChange, preview, onPreview, previewLo
             <label>Cron-выражение</label>
             <input
               className="form-input"
+              aria-label="Cron-выражение расписания"
               value={value.cronExpression || ''}
               onChange={(event) => onChange({ cronExpression: event.target.value })}
             />

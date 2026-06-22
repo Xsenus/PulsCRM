@@ -111,6 +111,75 @@ describe('ScheduleBuilder', () => {
     expect(view.textContent).toContain('Основной часовой пояс проекта.');
   });
 
+  it('labels schedule form fields for assistive technologies', () => {
+    const baseView = render(
+      <ScheduleBuilder
+        value={scheduleValue()}
+        onChange={vi.fn()}
+        preview={[]}
+        onPreview={vi.fn()}
+      />
+    );
+
+    expect(baseView.querySelector('[aria-label="Старт расписания"]')).toBeInstanceOf(HTMLInputElement);
+    expect(baseView.querySelector('[aria-label="Конец расписания"]')).toBeInstanceOf(HTMLInputElement);
+
+    act(() => {
+      root?.unmount();
+    });
+    root = null;
+    container?.remove();
+    container = null;
+
+    const fixedView = render(
+      <ScheduleBuilder
+        value={scheduleValue({ scheduleKind: 1 })}
+        onChange={vi.fn()}
+        preview={[]}
+        onPreview={vi.fn()}
+      />
+    );
+
+    expect(fixedView.querySelector('[aria-label="Интервал расписания в минутах"]')).toBeInstanceOf(HTMLInputElement);
+
+    act(() => {
+      root?.unmount();
+    });
+    root = null;
+    container?.remove();
+    container = null;
+
+    const randomView = render(
+      <ScheduleBuilder
+        value={scheduleValue({ scheduleKind: 2 })}
+        onChange={vi.fn()}
+        preview={[]}
+        onPreview={vi.fn()}
+      />
+    );
+
+    expect(randomView.querySelector('[aria-label="Минимальный случайный интервал расписания в минутах"]')).toBeInstanceOf(HTMLInputElement);
+    expect(randomView.querySelector('[aria-label="Максимальный случайный интервал расписания в минутах"]')).toBeInstanceOf(HTMLInputElement);
+
+    act(() => {
+      root?.unmount();
+    });
+    root = null;
+    container?.remove();
+    container = null;
+
+    const cronView = render(
+      <ScheduleBuilder
+        value={scheduleValue({ scheduleKind: 3, cronExpression: '0 0 9 ? * MON' })}
+        onChange={vi.fn()}
+        preview={[]}
+        onPreview={vi.fn()}
+      />
+    );
+
+    expect(cronView.querySelector('[aria-label="Cron-выражение расписания"]')).toBeInstanceOf(HTMLInputElement);
+  });
+
   it('shows timezone label in schedule preview rows', () => {
     const preview: ScheduleOccurrenceDto[] = [
       {
