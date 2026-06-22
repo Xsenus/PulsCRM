@@ -437,15 +437,15 @@ export function TransportProfilesPage() {
 
         <div className="checkbox-grid">
           <label className="checkbox-option">
-            <input type="checkbox" checked={model.useSsl} onChange={(event) => patchModel('useSsl', event.target.checked)} />
+            <input type="checkbox" aria-label="Использовать SSL для SMTP профиля" checked={model.useSsl} onChange={(event) => patchModel('useSsl', event.target.checked)} />
             <span>Использовать SSL</span>
           </label>
           <label className="checkbox-option">
-            <input type="checkbox" checked={model.isDefault} onChange={(event) => patchModel('isDefault', event.target.checked)} />
+            <input type="checkbox" aria-label="Сделать SMTP профиль профилем по умолчанию" checked={model.isDefault} onChange={(event) => patchModel('isDefault', event.target.checked)} />
             <span>Профиль по умолчанию</span>
           </label>
           <label className="checkbox-option">
-            <input type="checkbox" checked={model.isEnabled} onChange={(event) => patchModel('isEnabled', event.target.checked)} />
+            <input type="checkbox" aria-label="SMTP профиль активен" checked={model.isEnabled} onChange={(event) => patchModel('isEnabled', event.target.checked)} />
             <span>Профиль активен</span>
           </label>
         </div>

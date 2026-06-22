@@ -190,5 +190,15 @@ describe('TransportProfilesPage', () => {
     for (const label of expectedLabels) {
       expect(document.body.querySelector(`[aria-label="${label}"]`)).toBeInstanceOf(HTMLInputElement);
     }
+
+    const expectedToggleLabels = [
+      'Использовать SSL для SMTP профиля',
+      'Сделать SMTP профиль профилем по умолчанию',
+      'SMTP профиль активен'
+    ];
+
+    for (const label of expectedToggleLabels) {
+      expect(document.body.querySelector(`[aria-label="${label}"]`)).toBeInstanceOf(HTMLInputElement);
+    }
   });
 });

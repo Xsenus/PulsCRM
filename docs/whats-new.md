@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-23 - доступные флаги SMTP-профиля
+
+Продолжен backlog roadmap по accessibility-полировке настроек рассылок:
+
+- checkbox-флаги SSL, профиля по умолчанию и активности в форме `TransportProfilesPage` получили явные `aria-label`;
+- компонентный тест `TransportProfilesPage` закрепляет доступные подписи текстовых полей и переключателей SMTP-профиля;
+- логика сохранения SMTP-профиля не менялась, изменена только доступная разметка переключателей.
+
+Проверки этого этапа включают targeted frontend-тест `TransportProfilesPage`, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-23 - доступные переключатели формы сотрудника
 
 Продолжен backlog roadmap по accessibility-полировке карточки сотрудника:
