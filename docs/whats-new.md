@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-22 - проверка БД понимает XPO provider token
+
+Исправлена production-проверка `scripts/check-mailing-db.ps1` после GitHub Actions deploy:
+
+- SQL Server connection string теперь корректно извлекается не только из `XpoProvider=MSSqlServer;...`, но и из XPO-формата `MSSqlServer;...`;
+- первый provider token без `=` отбрасывается перед передачей строки в `SqlConnectionStringBuilder`;
+- проверка БД после deploy больше не падает на production config с XPO provider token.
+
+Проверки этого этапа включают targeted script-проверку `check-mailing-db.ps1` на XPO-строках, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки, локальную DB/E2E-проверку рассылки против SQL-БД и повторную проверку GitHub Actions после push.
+
 ## 2026-06-22 - стабильный timezone fallback расписания
 
 Исправлена нестабильность backend-проверки расписания на Windows Server 2016 runner:

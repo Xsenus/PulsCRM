@@ -82,9 +82,23 @@ function ConvertFrom-XpoConnectionString {
         [string]$Value
     )
 
-    $parts = $Value -split ";" |
-        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-        Where-Object { $_ -notmatch "^\s*XpoProvider\s*=" }
+    $parts = @()
+    foreach ($part in ($Value -split ";")) {
+        if ([string]::IsNullOrWhiteSpace($part)) {
+            continue
+        }
+
+        $trimmed = $part.Trim()
+        if ($trimmed -match "^\s*XpoProvider\s*=") {
+            continue
+        }
+
+        if ($parts.Count -eq 0 -and $trimmed -notmatch "=") {
+            continue
+        }
+
+        $parts += $trimmed
+    }
 
     $sqlConnectionString = ($parts -join ";")
     return [System.Data.SqlClient.SqlConnectionStringBuilder]::new($sqlConnectionString)
