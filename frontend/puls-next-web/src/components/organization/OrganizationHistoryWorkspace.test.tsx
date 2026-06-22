@@ -65,6 +65,8 @@ function makeDetails(): OrganizationDetailsDto {
         taskName: 'Продление',
         name: 'Продлить лицензию',
         comment: 'Комментарий события',
+        dateFromUtc: '2026-06-01T00:00:00Z',
+        dateToUtc: '2026-06-30T00:00:00Z',
         isInProcess: true,
         isCompleted: false
       }
@@ -131,6 +133,11 @@ describe('OrganizationHistoryWorkspace', () => {
     expect(view.querySelector('.data-table')?.textContent).toContain('Продлить лицензию');
     expect(view.querySelector('.data-table')?.textContent).toContain('Да');
     expect(view.querySelector('.data-table')?.textContent).toContain('Нет');
+    expect(Array.from(view.querySelectorAll('.data-table time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-12T03:00:00Z',
+      '2026-06-01T00:00:00Z',
+      '2026-06-30T00:00:00Z'
+    ]);
   });
 
   it('renders first snapshot and switches active snapshot', () => {
