@@ -50,6 +50,11 @@ describe('OrganizationHistoryTabs', () => {
     expect(tablist?.getAttribute('aria-label')).toBe('История организации');
     expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab', 'tab']);
     expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'События: открыть раздел',
+      'Снимки 1С: текущий раздел',
+      'Аудит: открыть раздел'
+    ]);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, true, false]);
   });
 
