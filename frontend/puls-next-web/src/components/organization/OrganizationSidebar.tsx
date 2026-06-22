@@ -78,6 +78,11 @@ function formatDateOnly(value?: string | null) {
   return new Intl.DateTimeFormat('ru-RU').format(date);
 }
 
+function renderDateOnly(value?: string | null) {
+  const formatted = formatDateOnly(value);
+  return formatted ? <time className="field-hint" dateTime={value ?? undefined}>{formatted}</time> : null;
+}
+
 function shortText(value?: string | null, maxLength = 92) {
   const normalized = value?.trim();
   if (!normalized) {
@@ -105,7 +110,7 @@ export function OrganizationSidebar({
       <div className="panel-subsection organization-sidebar-section">
         <div className="section-header-inline">
           <h4>Паспорт организации</h4>
-          {details?.updatedAtUtc ? <span className="field-hint">{formatDateOnly(details.updatedAtUtc)}</span> : null}
+          {renderDateOnly(details?.updatedAtUtc)}
         </div>
         <div className="detail-grid organization-sidebar-facts" role="list" aria-label="Паспортные данные организации">
           <div className="detail-card" role="listitem">

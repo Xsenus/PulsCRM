@@ -105,7 +105,10 @@ describe('OrganizationSidebar', () => {
     expect(view.textContent).toContain('5400000000 / 540001001');
     expect(view.textContent).toContain('1 234,50');
     expect(view.textContent).toContain('Проверить договор');
-    expect(view.querySelector('time')?.getAttribute('dateTime')).toBe('2026-06-11T06:00:00Z');
+    expect(Array.from(view.querySelectorAll('time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-11T06:00:00Z',
+      '2026-06-11T06:00:00Z'
+    ]);
     expect(view.textContent).toContain('Оператор');
     expect(view.querySelector('a[href="tel:+73832000000"]')?.textContent).toBe('+7 (383) 200-00-00');
     expect(view.querySelector('a[href="https://puls.example.test"]')?.textContent).toBe('puls.example.test');
