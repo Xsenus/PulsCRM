@@ -211,7 +211,9 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
         maxWidth={1160}
         actions={(
           <>
-            <div className="modal-actions-note">Выбрано: {selectedItems.length}</div>
+            <div className="modal-actions-note" role="status" aria-live="polite" aria-label={`Выбрано организаций: ${selectedItems.length}`}>
+              Выбрано: {selectedItems.length}
+            </div>
             <button type="button" className="secondary-button" onClick={() => setModalOpen(false)}>Отмена</button>
             <button
               type="button"

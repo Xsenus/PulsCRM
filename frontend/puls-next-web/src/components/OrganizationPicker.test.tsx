@@ -139,7 +139,20 @@ describe('OrganizationPicker', () => {
     await flushAsyncUpdates();
 
     expect(apiMocks.getOrganizations).toHaveBeenCalled();
+    const selectionStatus = document.body.querySelector('.modal-actions-note');
+    expect(selectionStatus?.getAttribute('role')).toBe('status');
+    expect(selectionStatus?.getAttribute('aria-live')).toBe('polite');
+    expect(selectionStatus?.getAttribute('aria-label')).toBe('Выбрано организаций: 1');
     expect(document.body.querySelector('[aria-label="Убрать организацию Первая организация из черновика получателей"]')).toBeInstanceOf(HTMLInputElement);
-    expect(document.body.querySelector('[aria-label="Добавить организацию Новая организация в черновик получателей"]')).toBeInstanceOf(HTMLInputElement);
+
+    const newOrganizationCheckbox = document.body.querySelector<HTMLInputElement>('[aria-label="Добавить организацию Новая организация в черновик получателей"]');
+    expect(newOrganizationCheckbox).toBeInstanceOf(HTMLInputElement);
+
+    await act(async () => {
+      newOrganizationCheckbox?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      newOrganizationCheckbox?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(document.body.querySelector('.modal-actions-note')?.getAttribute('aria-label')).toBe('Выбрано организаций: 2');
   });
 });
