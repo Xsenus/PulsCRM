@@ -76,6 +76,7 @@ describe('OrganizationSupportSummary', () => {
       'organization-status-pill organization-status-pill--warn',
       'organization-status-pill organization-status-pill--muted'
     ]);
+    expect(pills.map((pill) => pill.getAttribute('role'))).toEqual(['status', 'status', 'status']);
   });
 
   it('keeps an empty summary grid when items are missing', () => {
