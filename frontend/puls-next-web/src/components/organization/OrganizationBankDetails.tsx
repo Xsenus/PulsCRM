@@ -28,6 +28,11 @@ function textValue(value?: string | number | null) {
   return value?.toString().trim() || EMPTY_VALUE;
 }
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 export function OrganizationBankDetails({ details }: { details?: OrganizationBankDetailsData | null }) {
   return (
     <div className="panel-subsection">
@@ -79,7 +84,7 @@ export function OrganizationBankDetails({ details }: { details?: OrganizationBan
         </div>
         <div className="detail-card" role="listitem">
           <strong>Дата соглашения</strong>
-          <span>{formatDateTime(details?.pfrAgreementDateUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.pfrAgreementDateUtc)}</span>
         </div>
       </div>
       <div className="detail-list" role="list" aria-label="Комментарии ЭЦП организации">

@@ -68,6 +68,7 @@ describe('OrganizationBankDetails', () => {
     expect(view.textContent).toContain('62.01');
     expect(view.textContent).toContain('ПАО Тест Банк');
     expect(view.textContent).toContain('ПФР-42');
+    expect(view.querySelector('time')?.getAttribute('dateTime')).toBe('2026-06-12T03:10:00Z');
     expect(view.textContent).toContain('Сертификат действует');
     expect(view.textContent).toContain('Включить в договор');
   });
