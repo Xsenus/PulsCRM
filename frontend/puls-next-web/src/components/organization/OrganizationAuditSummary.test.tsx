@@ -97,6 +97,7 @@ describe('OrganizationAuditSummary', () => {
     const auditList = lists[0];
     const counterList = lists[1];
     const cards = Array.from(view.querySelectorAll('.detail-card'));
+    const auditTimes = Array.from(auditList.querySelectorAll('time'));
 
     expect(lists.map((list) => list.getAttribute('aria-label'))).toEqual([
       'Аудит карточки организации',
@@ -108,6 +109,11 @@ describe('OrganizationAuditSummary', () => {
     expect(view.textContent).toContain('Администратор');
     expect(view.textContent).toContain('Оператор');
     expect(view.textContent).toContain('Супервизор');
+    expect(auditTimes.map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-12T03:10:00Z',
+      '2026-06-12T04:20:00Z',
+      '2026-06-12T05:30:00Z'
+    ]);
     expect(cards).toHaveLength(9);
     expect(cards.map((card) => card.textContent)).toContain('Email-адресов2');
     expect(cards.map((card) => card.textContent)).toContain('Контактов1');
