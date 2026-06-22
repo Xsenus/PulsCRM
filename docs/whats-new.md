@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-22 - сводка фильтров организаций
+
+Продолжен backlog roadmap по accessibility-полировке и performance-проверкам рабочих списков:
+
+- состояние фильтров списка организаций теперь собирается через общий `buildOrganizationListFilterSummary`;
+- счетчик активных фильтров, подпись кнопки и текст summary формируются консистентно в одном helper-е;
+- summary активных фильтров в UI размечена как доступная status-область, а helper покрыт unit-тестом.
+
+Проверки этого этапа включают targeted frontend-тест фильтров организаций, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-22 - быстрый список проблем кампании
 
 Продолжен backlog roadmap по performance-проверкам для больших списков кампаний и dispatch items:

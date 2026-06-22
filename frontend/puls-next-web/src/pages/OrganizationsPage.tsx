@@ -10,7 +10,7 @@ import { getContextMenuPosition } from '../app/contextMenuPosition';
 import { useAuth } from '../app/AuthContext';
 import {
   buildOrganizationFilterPanelClassName,
-  buildRaionSelectionSummary,
+  buildOrganizationListFilterSummary,
   getRaionSelectionId
 } from '../app/organizationFilters';
 import { DEFAULT_PAGE_SIZE, loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
@@ -93,13 +93,9 @@ export function OrganizationsPage() {
     return raions.filter((raion) => raion.name.toLowerCase().includes(term));
   }, [raionSearch, raions]);
 
-  const selectedRaionSummary = useMemo(() => {
-    return buildRaionSelectionSummary(raions, selectedRaionIds);
-  }, [raions, selectedRaionIds]);
-
-  const activeFilterCount = useMemo(
-    () => (appliedSearch ? 1 : 0) + selectedRaionIds.length,
-    [appliedSearch, selectedRaionIds.length]
+  const filterSummary = useMemo(
+    () => buildOrganizationListFilterSummary(raions, selectedRaionIds, appliedSearch),
+    [appliedSearch, raions, selectedRaionIds]
   );
 
   const loadData = async () => {
@@ -310,7 +306,7 @@ export function OrganizationsPage() {
           <div className="organizations-sidebar-head">
             <div>
               <div className="organizations-sidebar-title">Районы</div>
-              <div className="field-hint">{selectedRaionSummary}</div>
+              <div className="field-hint">{filterSummary.selectedRaionSummary}</div>
             </div>
 
             <div className="organizations-sidebar-head-actions">
@@ -386,10 +382,8 @@ export function OrganizationsPage() {
           <div className="organization-list-filter-summary">
             <div>
               <div className="organization-list-filter-title">Фильтры организаций</div>
-              <div className="field-hint">
-                {activeFilterCount > 0
-                  ? `${selectedRaionSummary}${appliedSearch ? `; поиск: "${appliedSearch}"` : ''}`
-                  : 'Показаны все организации'}
+              <div className="field-hint" role="status" aria-label="Активные фильтры организаций">
+                {filterSummary.description}
               </div>
             </div>
 
@@ -401,14 +395,14 @@ export function OrganizationsPage() {
                 aria-expanded={filtersExpanded}
                 aria-controls="organizations-filter-panel"
               >
-                {filtersExpanded ? 'Скрыть фильтры' : `Фильтры${activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}`}
+                {filtersExpanded ? 'Скрыть фильтры' : filterSummary.toggleLabel}
               </button>
               <span className="status-badge status-badge-info">Найдено: {totalCount}</span>
               <button
                 type="button"
                 className="secondary-button button-inline"
                 onClick={clearOrganizationFilters}
-                disabled={activeFilterCount === 0 && !search && !raionSearch}
+                disabled={filterSummary.activeFilterCount === 0 && !search && !raionSearch}
               >
                 Сбросить фильтры
               </button>

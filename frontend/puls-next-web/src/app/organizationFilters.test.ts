@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildOrganizationFilterPanelClassName,
+  buildOrganizationListFilterSummary,
   buildOrganizationPickerFilterSummary,
   buildRaionSelectionSummary,
   getRaionSelectionId,
@@ -37,6 +38,22 @@ describe('organization raion filter helpers', () => {
     expect(buildOrganizationPickerFilterSummary(12, true)).toBe('Найдено с email: 12');
     expect(buildOrganizationPickerFilterSummary(12, false)).toBe('Найдено: 12');
     expect(buildOrganizationPickerFilterSummary(-1, true)).toBe('Найдено с email: 0');
+  });
+
+  it('builds organization list filter summary for search and raions', () => {
+    expect(buildOrganizationListFilterSummary(raions, [], '')).toEqual({
+      activeFilterCount: 0,
+      description: 'Показаны все организации',
+      selectedRaionSummary: 'Все районы',
+      toggleLabel: 'Фильтры'
+    });
+
+    expect(buildOrganizationListFilterSummary(raions, [1, WITHOUT_RAION_ID], '  школа  ')).toEqual({
+      activeFilterCount: 3,
+      description: 'Центральный, Без района; поиск: "школа"',
+      selectedRaionSummary: 'Центральный, Без района',
+      toggleLabel: 'Фильтры (3)'
+    });
   });
 
   it('marks organization filter panel visibility for compact layouts', () => {

@@ -38,6 +38,26 @@ export function buildRaionSelectionSummary(
   return `${names.slice(0, safeLimit).join(', ')} и еще ${names.length - safeLimit}`;
 }
 
+export function buildOrganizationListFilterSummary(
+  raions: Array<Pick<OrganizationRaionDto, 'id' | 'name'>>,
+  selectedRaionIds: number[],
+  appliedSearch: string
+) {
+  const selectedRaionSummary = buildRaionSelectionSummary(raions, selectedRaionIds);
+  const search = appliedSearch.trim();
+  const activeFilterCount = (search ? 1 : 0) + selectedRaionIds.length;
+  const description = activeFilterCount > 0
+    ? `${selectedRaionSummary}${search ? `; поиск: "${search}"` : ''}`
+    : 'Показаны все организации';
+
+  return {
+    activeFilterCount,
+    description,
+    selectedRaionSummary,
+    toggleLabel: `Фильтры${activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}`
+  };
+}
+
 export function buildOrganizationPickerFilterSummary(totalCount: number, onlyWithEmail: boolean) {
   const normalizedTotal = Math.max(0, Math.trunc(totalCount));
   return onlyWithEmail
