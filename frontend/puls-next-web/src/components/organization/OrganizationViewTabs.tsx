@@ -9,6 +9,10 @@ const VIEW_TABS: Array<{ key: OrganizationViewTab; label: string }> = [
   { key: 'history', label: 'История' }
 ];
 
+function buildViewTabAriaLabel(label: string, active: boolean) {
+  return `${label}: ${active ? 'текущий раздел' : 'открыть раздел'}`;
+}
+
 export function OrganizationViewTabs({
   activeTab,
   onChange
@@ -18,18 +22,23 @@ export function OrganizationViewTabs({
 }) {
   return (
     <div className="settings-tabs organization-card-tabs" role="tablist" aria-label="Разделы карточки организации">
-      {VIEW_TABS.map((tab) => (
-        <button
-          key={tab.key}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === tab.key}
-          className={`settings-tab${activeTab === tab.key ? ' active' : ''}`}
-          onClick={() => onChange(tab.key)}
-        >
-          {tab.label}
-        </button>
-      ))}
+      {VIEW_TABS.map((tab) => {
+        const active = activeTab === tab.key;
+
+        return (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={buildViewTabAriaLabel(tab.label, active)}
+            className={`settings-tab${active ? ' active' : ''}`}
+            onClick={() => onChange(tab.key)}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

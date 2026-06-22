@@ -50,6 +50,12 @@ describe('OrganizationViewTabs', () => {
     expect(tablist?.getAttribute('aria-label')).toBe('Разделы карточки организации');
     expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab', 'tab', 'tab']);
     expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'false', 'true', 'false']);
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Карточка: открыть раздел',
+      'Сопровождение: открыть раздел',
+      'Связи: текущий раздел',
+      'История: открыть раздел'
+    ]);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, false, true, false]);
   });
 
