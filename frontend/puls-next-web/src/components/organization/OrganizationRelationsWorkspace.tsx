@@ -43,6 +43,11 @@ function formatDateOnly(value?: string | null) {
   return new Intl.DateTimeFormat('ru-RU').format(date);
 }
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 function formatContractOneCState(value: number) {
   switch (value) {
     case 1:
@@ -157,8 +162,8 @@ export function OrganizationRelationsWorkspace({
           settingsKey={tableSettings.licenses}
           emptyText="Лицензий Парус пока нет"
           columns={[
-            { key: 'dateSinceUtc', title: 'Дата выдачи', width: 160, minWidth: 140, render: (row) => formatDateTime(row.dateSinceUtc) || EMPTY_VALUE },
-            { key: 'dateToUtc', title: 'Дата окончания', width: 160, minWidth: 140, render: (row) => formatDateTime(row.dateToUtc) || EMPTY_VALUE },
+            { key: 'dateSinceUtc', title: 'Дата выдачи', width: 160, minWidth: 140, render: (row) => renderDateTime(row.dateSinceUtc) },
+            { key: 'dateToUtc', title: 'Дата окончания', width: 160, minWidth: 140, render: (row) => renderDateTime(row.dateToUtc) },
             { key: 'nomenclature', title: 'Версия', width: 200, minWidth: 170, render: (row) => row.nomenclature || EMPTY_VALUE },
             { key: 'mnemoOrg', title: 'Мнемокод', width: 150, minWidth: 130, render: (row) => row.mnemoOrg || EMPTY_VALUE },
             { key: 'regNumberClient', title: 'Номер ЛО', width: 160, minWidth: 140, render: (row) => row.regNumberClient || EMPTY_VALUE },
@@ -177,7 +182,7 @@ export function OrganizationRelationsWorkspace({
           columns={[
             { key: 'payer', title: 'Провайдер', width: 200, minWidth: 170, render: (row) => row.payer || EMPTY_VALUE },
             { key: 'typeOf', title: 'Тип', width: 170, minWidth: 140, render: (row) => row.typeOf || EMPTY_VALUE },
-            { key: 'dateUtc', title: 'Дата', width: 150, minWidth: 130, render: (row) => formatDateTime(row.dateUtc) || EMPTY_VALUE },
+            { key: 'dateUtc', title: 'Дата', width: 150, minWidth: 130, render: (row) => renderDateTime(row.dateUtc) },
             { key: 'mnemoOrg', title: 'Клиент', width: 170, minWidth: 140, render: (row) => row.mnemoOrg || EMPTY_VALUE },
             { key: 'discount', title: 'Скидка', width: 120, minWidth: 110, render: (row) => formatMoney(row.discount) },
             { key: 'summa', title: 'Сумма с налогами', width: 170, minWidth: 150, render: (row) => formatMoney(row.summa) },

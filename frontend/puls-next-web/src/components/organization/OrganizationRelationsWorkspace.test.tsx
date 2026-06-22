@@ -150,13 +150,38 @@ describe('OrganizationRelationsWorkspace', () => {
     expect(text).toContain('Обработано');
   });
 
+  it('renders Parus license dates as machine-readable time values', () => {
+    const view = renderWorkspace('licenses', {
+      ...baseDetails,
+      parusLicenses: [{
+        id: 4,
+        dateSinceUtc: '2026-06-01T03:00:00Z',
+        dateToUtc: '2026-06-30T03:00:00Z',
+        nomenclature: 'Парус 10',
+        mnemoOrg: 'ORG-1',
+        regNumberClient: 'LO-42',
+        number: '5'
+      }]
+    });
+
+    const text = normalizedText(view);
+
+    expect(text).toContain('Парус 10');
+    expect(text).toContain('ORG-1');
+    expect(Array.from(view.querySelectorAll('.data-table time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-01T03:00:00Z',
+      '2026-06-30T03:00:00Z'
+    ]);
+  });
+
   it('renders Parus order money columns', () => {
     const view = renderWorkspace('orders', {
       ...baseDetails,
       parusOrders: [{
-        id: 4,
+        id: 5,
         payer: 'Провайдер',
         typeOf: 'Поставка',
+        dateUtc: '2026-06-12T04:30:00Z',
         discount: 10,
         summa: 1234.5,
         customerAmount: 1400,
@@ -170,6 +195,7 @@ describe('OrganizationRelationsWorkspace', () => {
     expect(text).toContain('10,00');
     expect(text).toContain('1 234,50');
     expect(text).toContain('1 400,00');
+    expect(view.querySelector('.data-table time')?.getAttribute('dateTime')).toBe('2026-06-12T04:30:00Z');
   });
 
   it('renders active empty state for missing details', () => {
