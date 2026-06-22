@@ -68,6 +68,19 @@ describe('EmployeeEditorForm', () => {
     expect(view.querySelector('[aria-label="Код 1С сотрудника"]')).toBeInstanceOf(HTMLInputElement);
   });
 
+  it('labels contact fields for assistive technologies', () => {
+    const view = renderEmployeeForm();
+
+    expect(view.querySelector('[aria-label="Телефон сотрудника"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Внутренний номер сотрудника"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Email сотрудника"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Сайт сотрудника"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="ICQ сотрудника"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Skype сотрудника"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Адрес сотрудника"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Комментарий сотрудника"]')).toBeInstanceOf(HTMLTextAreaElement);
+  });
+
   it('labels gender and access toggles for assistive technologies', () => {
     const view = renderEmployeeForm();
 

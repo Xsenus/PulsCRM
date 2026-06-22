@@ -364,6 +364,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-phone"
                   className="form-input"
+                  aria-label="Телефон сотрудника"
                   autoComplete="off"
                   value={value.phone ?? ''}
                   disabled={disabled}
@@ -376,6 +377,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-phone-work-redirect"
                   className="form-input"
+                  aria-label="Внутренний номер сотрудника"
                   autoComplete="off"
                   value={value.phoneWorkRedirect ?? ''}
                   disabled={disabled}
@@ -388,6 +390,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-email"
                   className="form-input"
+                  aria-label="Email сотрудника"
                   autoComplete="off"
                   value={value.email ?? ''}
                   disabled={disabled}
@@ -400,6 +403,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-site"
                   className="form-input"
+                  aria-label="Сайт сотрудника"
                   autoComplete="off"
                   value={value.site ?? ''}
                   disabled={disabled}
@@ -412,6 +416,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-icq"
                   className="form-input"
+                  aria-label="ICQ сотрудника"
                   autoComplete="off"
                   value={value.icq ?? ''}
                   disabled={disabled}
@@ -424,6 +429,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-skype"
                   className="form-input"
+                  aria-label="Skype сотрудника"
                   autoComplete="off"
                   value={value.skype ?? ''}
                   disabled={disabled}
@@ -436,6 +442,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-address"
                   className="form-input"
+                  aria-label="Адрес сотрудника"
                   autoComplete="off"
                   value={value.address ?? ''}
                   disabled={disabled}
@@ -448,6 +455,7 @@ export function EmployeeEditorForm({
                 <textarea
                   id="employee-comment"
                   className="form-textarea"
+                  aria-label="Комментарий сотрудника"
                   autoComplete="off"
                   value={value.comment ?? ''}
                   disabled={disabled}
