@@ -55,6 +55,10 @@ describe('OrganizationSnapshotTabs', () => {
     expect(tablist?.getAttribute('aria-label')).toBe('Снимки 1С организации');
     expect(buttons.map((button) => button.getAttribute('role'))).toEqual(['tab', 'tab']);
     expect(buttons.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Текущие реквизиты: открыть снимок',
+      'Архив 1С: текущий снимок'
+    ]);
     expect(buttons.map((button) => button.className.includes('active'))).toEqual([false, true]);
   });
 

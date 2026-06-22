@@ -5,6 +5,10 @@ export interface OrganizationSnapshotTabItem {
   title: string;
 }
 
+function buildSnapshotTabAriaLabel(title: string, active: boolean) {
+  return `${title}: ${active ? 'текущий снимок' : 'открыть снимок'}`;
+}
+
 export function OrganizationSnapshotTabs({
   snapshots,
   activeKey,
@@ -20,18 +24,23 @@ export function OrganizationSnapshotTabs({
       role="tablist"
       aria-label="Снимки 1С организации"
     >
-      {snapshots.map((item) => (
-        <button
-          key={item.key}
-          type="button"
-          role="tab"
-          aria-selected={activeKey === item.key}
-          className={`settings-tab${activeKey === item.key ? ' active' : ''}`}
-          onClick={() => onChange(item.key)}
-        >
-          {item.title}
-        </button>
-      ))}
+      {snapshots.map((item) => {
+        const active = activeKey === item.key;
+
+        return (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            aria-label={buildSnapshotTabAriaLabel(item.title, active)}
+            className={`settings-tab${active ? ' active' : ''}`}
+            onClick={() => onChange(item.key)}
+          >
+            {item.title}
+          </button>
+        );
+      })}
     </div>
   );
 }
