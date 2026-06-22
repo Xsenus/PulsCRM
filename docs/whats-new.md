@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-22 - доступные фильтры очереди рассылок
+
+Продолжен backlog roadmap по accessibility-полировке менее частых рабочих сценариев:
+
+- сводка очереди рассылок теперь размечена как доступный список метрик для текущей страницы;
+- фильтры очереди по статусу, ID кампании и ID партии получили явные `aria-label`;
+- unit-тест `DispatchPage` закрепляет доступную разметку summary и фильтров.
+
+Проверки этого этапа включают targeted frontend-тест страницы очереди, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-22 - fallback проверки БД на LegacyDb
 
 Укреплена post-deploy проверка SQL Server в `scripts/check-mailing-db.ps1`:

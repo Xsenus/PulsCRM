@@ -117,6 +117,20 @@ afterEach(() => {
 });
 
 describe('DispatchPage', () => {
+  it('exposes queue summary and filters with accessible labels', async () => {
+    const view = render(<DispatchPage />);
+    await flushEffects();
+
+    const summary = view.querySelector('[aria-label="Сводка сообщений очереди на текущей странице"]');
+    expect(summary?.getAttribute('role')).toBe('list');
+    expect(summary?.querySelectorAll('[role="listitem"]')).toHaveLength(4);
+    expect(summary?.textContent).toContain('Ошибки на странице');
+
+    expect(view.querySelector('[aria-label="Фильтр очереди по статусу сообщения"]')).toBeInstanceOf(HTMLSelectElement);
+    expect(view.querySelector('[aria-label="Фильтр очереди по ID кампании"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Фильтр очереди по ID партии"]')).toBeInstanceOf(HTMLInputElement);
+  });
+
   it('renders queue and batch dates as machine-readable time elements', async () => {
     const view = render(<DispatchPage />);
     await flushEffects();

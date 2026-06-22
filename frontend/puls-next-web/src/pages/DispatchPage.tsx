@@ -302,20 +302,20 @@ export function DispatchPage() {
         )}
       />
 
-      <div className="dispatch-summary-grid">
-        <div className="metric-card">
+      <div className="dispatch-summary-grid" role="list" aria-label="Сводка сообщений очереди на текущей странице">
+        <div className="metric-card" role="listitem">
           <div className="metric-label">В очереди на странице</div>
           <div className="metric-value">{summary.queued}</div>
         </div>
-        <div className="metric-card">
+        <div className="metric-card" role="listitem">
           <div className="metric-label">В работе на странице</div>
           <div className="metric-value">{summary.processing}</div>
         </div>
-        <div className="metric-card metric-card-danger">
+        <div className="metric-card metric-card-danger" role="listitem">
           <div className="metric-label">Ошибки на странице</div>
           <div className="metric-value">{summary.failed}</div>
         </div>
-        <div className="metric-card metric-card-warning">
+        <div className="metric-card metric-card-warning" role="listitem">
           <div className="metric-label">Отложено на странице</div>
           <div className="metric-value">{summary.deferred}</div>
         </div>
@@ -339,6 +339,7 @@ export function DispatchPage() {
       <div className="panel toolbar-panel dispatch-filter-panel">
         <select
           className="form-select"
+          aria-label="Фильтр очереди по статусу сообщения"
           value={filters.status ?? ''}
           onChange={(event) => setFilters((current) => ({
             ...current,
@@ -354,6 +355,7 @@ export function DispatchPage() {
         <input
           className="form-input"
           inputMode="numeric"
+          aria-label="Фильтр очереди по ID кампании"
           value={filters.campaignId ?? ''}
           placeholder="ID кампании"
           onChange={(event) => setFilters((current) => ({ ...current, campaignId: parseOptionalNumber(event.target.value) }))}
@@ -362,6 +364,7 @@ export function DispatchPage() {
         <input
           className="form-input"
           inputMode="numeric"
+          aria-label="Фильтр очереди по ID партии"
           value={filters.batchId ?? ''}
           placeholder="ID партии"
           onChange={(event) => setFilters((current) => ({ ...current, batchId: parseOptionalNumber(event.target.value) }))}
