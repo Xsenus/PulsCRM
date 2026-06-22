@@ -126,6 +126,7 @@ describe('DispatchPage', () => {
     expect(summary?.querySelectorAll('[role="listitem"]')).toHaveLength(4);
     expect(summary?.textContent).toContain('Ошибки на странице');
 
+    expect(view.querySelector('[aria-label="Поиск сообщений очереди по email, организации, ошибке или SMTP-ответу"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Фильтр очереди по статусу сообщения"]')).toBeInstanceOf(HTMLSelectElement);
     expect(view.querySelector('[aria-label="Фильтр очереди по ID кампании"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Фильтр очереди по ID партии"]')).toBeInstanceOf(HTMLInputElement);

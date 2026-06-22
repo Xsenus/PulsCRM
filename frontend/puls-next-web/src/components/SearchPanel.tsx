@@ -16,6 +16,7 @@ interface SearchPanelProps {
   refreshErrorMessage?: string;
   panelClassName?: string;
   inputClassName?: string;
+  inputAriaLabel?: string;
 }
 
 export function SearchPanel({
@@ -30,7 +31,8 @@ export function SearchPanel({
   refreshSuccessMessage = 'Обновление завершено.',
   refreshErrorMessage = 'Не удалось обновить данные.',
   panelClassName,
-  inputClassName
+  inputClassName,
+  inputAriaLabel
 }: SearchPanelProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const debounceTimeoutRef = useRef<number | null>(null);
@@ -121,6 +123,7 @@ export function SearchPanel({
           className={resolvedInputClassName}
           value={value}
           placeholder={placeholder}
+          aria-label={inputAriaLabel}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {

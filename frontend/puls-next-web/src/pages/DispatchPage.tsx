@@ -346,6 +346,7 @@ export function DispatchPage() {
       <SearchPanel
         value={filters.search}
         placeholder="Email, организация, ошибка, SMTP-ответ"
+        inputAriaLabel="Поиск сообщений очереди по email, организации, ошибке или SMTP-ответу"
         onChange={(value) => setFilters((current) => ({ ...current, search: value }))}
         onSearch={() => applySearchValue(filters.search)}
         onClear={() => {
