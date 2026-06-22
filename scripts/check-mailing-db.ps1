@@ -114,22 +114,14 @@ function Test-ConnectionStringHasSqlSettings {
         [string]$Value
     )
 
-    foreach ($part in ($Value -split ";")) {
-        if ([string]::IsNullOrWhiteSpace($part)) {
-            continue
-        }
-
-        $trimmed = $part.Trim()
-        if ($trimmed -match "^\s*XpoProvider\s*=") {
-            continue
-        }
-
-        if ($trimmed -match "=") {
-            return $true
-        }
+    try {
+        $builder = ConvertFrom-XpoConnectionString -Value $Value
+        return -not [string]::IsNullOrWhiteSpace($builder.DataSource) -and
+            -not [string]::IsNullOrWhiteSpace($builder.InitialCatalog)
     }
-
-    return $false
+    catch {
+        return $false
+    }
 }
 
 function Format-SqlStringLiteral {
