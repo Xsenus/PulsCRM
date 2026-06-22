@@ -80,6 +80,11 @@ function renderMail(value?: string | null) {
   return value?.trim() ? <a href={`mailto:${value.trim()}`}>{value.trim()}</a> : EMPTY_VALUE;
 }
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 export function OrganizationOneCDetails({
   details,
   licenseStatus
@@ -165,11 +170,11 @@ export function OrganizationOneCDetails({
         </div>
         <div className="detail-card" role="listitem">
           <strong>ИТС с</strong>
-          <span>{formatDateTime(details?.oneCItsDateFromUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.oneCItsDateFromUtc)}</span>
         </div>
         <div className="detail-card" role="listitem">
           <strong>ИТС по</strong>
-          <span>{formatDateTime(details?.oneCItsDateToUtc) || EMPTY_VALUE}</span>
+          <span>{renderDateTime(details?.oneCItsDateToUtc)}</span>
         </div>
         <div className="detail-card" role="listitem">
           <strong>ИТС завершено</strong>

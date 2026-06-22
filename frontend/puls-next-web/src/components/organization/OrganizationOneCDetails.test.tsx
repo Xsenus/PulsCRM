@@ -59,6 +59,8 @@ const details: OrganizationOneCDetailsData = {
   oneCContractVariant: 'Базовый',
   oneCItsVariant: 'ПРОФ',
   oneCItsLicenseNumber: 'ITS-42',
+  oneCItsDateFromUtc: '2026-06-01T00:00:00Z',
+  oneCItsDateToUtc: '2026-06-30T00:00:00Z',
   oneCItsCompleted: false,
   oneCItsAmount: 0,
   oneCItsAmountComment: 'Нулевая сумма',
@@ -88,6 +90,10 @@ describe('OrganizationOneCDetails', () => {
     expect(view.textContent).toContain('Срок скоро закончится');
     expect(view.textContent).toContain('осталось 10 дн.');
     expect(view.querySelector('.organization-status-pill')?.getAttribute('role')).toBe('status');
+    expect(Array.from(view.querySelectorAll('time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-01T00:00:00Z',
+      '2026-06-30T00:00:00Z'
+    ]);
     expect(view.textContent).toContain('0,00');
     expect(view.textContent).toContain('Комментарий ИТС');
     expect(view.querySelector('a[href=\"tel:+73831112233\"]')?.textContent).toBe('+7 (383) 111-22-33');
