@@ -15,6 +15,11 @@ import { StatusBadge } from '../components/StatusBadge';
 const EMPTY_VALUE = '—';
 const WORK_TABLE_STORAGE_ID = 'work-list';
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 interface WorkFilters {
   search: string;
   orgId?: number;
@@ -236,9 +241,9 @@ export function WorkPage() {
             { key: 'category', title: 'Категория', width: 170, minWidth: 140, priority: 6, render: (row) => row.category || EMPTY_VALUE },
             { key: 'message', title: 'Сообщение', width: 320, minWidth: 240, priority: 3, render: (row) => row.message || EMPTY_VALUE },
             { key: 'comment', title: 'Комментарий', width: 280, minWidth: 220, visible: false, render: (row) => row.comment || EMPTY_VALUE },
-            { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, priority: 8, render: (row) => formatDateTime(row.createdAtUtc) || EMPTY_VALUE },
-            { key: 'dateToUtc', title: 'Срок', width: 180, minWidth: 160, priority: 7, render: (row) => formatDateTime(row.dateToUtc) || EMPTY_VALUE },
-            { key: 'dateCompletedUtc', title: 'Завершено', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.dateCompletedUtc) || EMPTY_VALUE },
+            { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, priority: 8, render: (row) => renderDateTime(row.createdAtUtc) },
+            { key: 'dateToUtc', title: 'Срок', width: 180, minWidth: 160, priority: 7, render: (row) => renderDateTime(row.dateToUtc) },
+            { key: 'dateCompletedUtc', title: 'Завершено', width: 180, minWidth: 160, visible: false, render: (row) => renderDateTime(row.dateCompletedUtc) },
             {
               key: 'isCompleted',
               title: 'Статус',
