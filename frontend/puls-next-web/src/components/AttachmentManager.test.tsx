@@ -104,8 +104,10 @@ describe('AttachmentManager', () => {
     );
 
     const img = view.querySelector<HTMLImageElement>('.attachment-image-preview-media img');
+    const kindSelect = view.querySelector<HTMLSelectElement>('[aria-label="Тип вложения logo.png"]');
 
     expect(onLoadPreviewFile).toHaveBeenCalledWith(imageFile);
+    expect(kindSelect).toBeInstanceOf(HTMLSelectElement);
     expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(img?.src).toBe('blob:preview-logo');
     expect(img?.alt).toContain('logo.png');

@@ -215,6 +215,7 @@ export function AttachmentManager({ attachments, htmlBody, onChange, onUploadFil
                   <label>Тип</label>
                   <select
                     className="form-select"
+                    aria-label={`Тип вложения ${attachment.displayName || attachment.storedFile.originalFileName}`}
                     value={attachment.attachmentKind}
                     onChange={(event) => patchAttachment(index, { attachmentKind: Number(event.target.value) || 0 })}
                   >

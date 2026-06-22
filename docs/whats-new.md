@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-23 - доступный тип вложения рассылки
+
+Продолжен backlog roadmap по accessibility-полировке редактора рассылок:
+
+- select типа вложения в `AttachmentManager` получил явную `aria-label` с именем файла;
+- компонентный тест `AttachmentManager` закрепляет доступную подпись поля вместе с image preview;
+- поведение вложений и предпросмотра не менялось, изменена только доступная разметка выбора типа вложения.
+
+Проверки этого этапа включают targeted frontend-тест `AttachmentManager`, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-23 - доступный часовой пояс расписания
 
 Продолжен backlog roadmap по accessibility-полировке редактора рассылок:
