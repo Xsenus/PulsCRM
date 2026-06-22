@@ -139,4 +139,31 @@ describe('OrganizationsPage', () => {
     });
     expect(filterStatus?.textContent).toContain('Центральный');
   });
+
+  it('adds organization context to desktop row action menu labels', async () => {
+    const view = render(
+      <MemoryRouter>
+        <OrganizationsPage />
+      </MemoryRouter>
+    );
+    await flushEffects();
+
+    const row = view.querySelector<HTMLTableRowElement>('tbody tr');
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('contextmenu', {
+        bubbles: true,
+        clientX: 120,
+        clientY: 160
+      }));
+    });
+
+    const menu = view.querySelector('[role="menu"]');
+
+    expect(menu?.getAttribute('aria-label')).toBe('Действия организации Первая организация');
+    expect(menu?.querySelector('[aria-label="Создать новую организацию"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(menu?.querySelector('[aria-label="Редактировать организацию Первая организация"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(menu?.querySelector('[aria-label="Обновить список после проверки организации Первая организация"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(menu?.querySelector('[aria-label="Удалить организацию Первая организация"]')).toBeInstanceOf(HTMLButtonElement);
+  });
 });

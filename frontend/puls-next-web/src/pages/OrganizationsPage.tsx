@@ -468,18 +468,29 @@ export function OrganizationsPage() {
           className="row-context-menu"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           role="menu"
-          aria-label="Действия организации"
+          aria-label={`Действия организации ${contextMenu.row.name || `#${contextMenu.row.id}`}`}
         >
-          <button type="button" className="row-context-menu-item" onClick={() => void openCreateEditor()}>
+          <button
+            type="button"
+            className="row-context-menu-item"
+            aria-label="Создать новую организацию"
+            onClick={() => void openCreateEditor()}
+          >
             Создать
           </button>
-          <button type="button" className="row-context-menu-item" onClick={() => void openEditEditor(contextMenu.row)}>
+          <button
+            type="button"
+            className="row-context-menu-item"
+            aria-label={`Редактировать организацию ${contextMenu.row.name || `#${contextMenu.row.id}`}`}
+            onClick={() => void openEditEditor(contextMenu.row)}
+          >
             Редактировать
           </button>
           <div className="row-context-menu-divider" aria-hidden="true" />
           <button
             type="button"
             className="row-context-menu-item"
+            aria-label={`Обновить список после проверки организации ${contextMenu.row.name || `#${contextMenu.row.id}`}`}
             onClick={() => {
               setContextMenu(null);
               void refreshOrganizations().catch((error) => {
@@ -493,6 +504,7 @@ export function OrganizationsPage() {
           <button
             type="button"
             className="row-context-menu-item danger"
+            aria-label={`Удалить организацию ${contextMenu.row.name || `#${contextMenu.row.id}`}`}
             onClick={() => {
               setDeleteTarget(contextMenu.row);
               setContextMenu(null);
