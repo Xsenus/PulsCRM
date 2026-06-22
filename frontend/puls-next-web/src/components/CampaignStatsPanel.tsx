@@ -52,6 +52,10 @@ function renderDateTime(value?: string | null) {
   return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : '—';
 }
 
+function buildDispatchFilterAriaLabel(label: string, active: boolean) {
+  return `${label}: ${active ? 'текущий фильтр' : 'применить фильтр'}`;
+}
+
 export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryItem, batchesTableSettingsKey, itemsTableSettingsKey }: CampaignStatsPanelProps) {
   const [dispatchStatusFilter, setDispatchStatusFilter] = useState<DispatchStatusFilter>('all');
   const [retryingItemId, setRetryingItemId] = useState<number | null>(null);
@@ -179,6 +183,7 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryI
                   className={`settings-tab${dispatchStatusFilter === filter.id ? ' active' : ''}`}
                   role="tab"
                   aria-selected={dispatchStatusFilter === filter.id}
+                  aria-label={buildDispatchFilterAriaLabel(filter.label, dispatchStatusFilter === filter.id)}
                   onClick={() => setDispatchStatusFilter(filter.id)}
                 >
                   {filter.label}

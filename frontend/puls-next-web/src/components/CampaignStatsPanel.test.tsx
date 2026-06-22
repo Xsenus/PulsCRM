@@ -170,6 +170,14 @@ describe('CampaignStatsPanel', () => {
     expect(tablist?.getAttribute('aria-label')).toBe('Фильтр сообщений очереди');
     expect(filters.map((filter) => filter.getAttribute('role'))).toEqual(['tab', 'tab', 'tab', 'tab', 'tab', 'tab']);
     expect(filters.map((filter) => filter.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false', 'false', 'false', 'false']);
+    expect(filters.map((filter) => filter.getAttribute('aria-label'))).toEqual([
+      'Все: текущий фильтр',
+      'Очередь: применить фильтр',
+      'В работе: применить фильтр',
+      'Отправлено: применить фильтр',
+      'Ошибки: применить фильтр',
+      'Отложено: применить фильтр'
+    ]);
     expect(view.textContent).toContain('sent@example.test');
     expect(view.textContent).toContain('failed@example.test');
 
@@ -178,6 +186,14 @@ describe('CampaignStatsPanel', () => {
     });
 
     expect(filters.map((filter) => filter.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false', 'false', 'true', 'false']);
+    expect(filters.map((filter) => filter.getAttribute('aria-label'))).toEqual([
+      'Все: применить фильтр',
+      'Очередь: применить фильтр',
+      'В работе: применить фильтр',
+      'Отправлено: применить фильтр',
+      'Ошибки: текущий фильтр',
+      'Отложено: применить фильтр'
+    ]);
     expect(view.textContent).not.toContain('sent@example.test');
     expect(view.textContent).toContain('failed@example.test');
   });
