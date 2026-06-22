@@ -91,11 +91,19 @@ describe('TransportProfilesPage', () => {
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Основные', 'SMTP профили']);
     expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab']);
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
+      'Основные: открыть раздел',
+      'SMTP профили: текущий раздел'
+    ]);
     expect(view.textContent).toContain('Новый профиль');
 
     click(tabs[0]);
 
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
+      'Основные: текущий раздел',
+      'SMTP профили: открыть раздел'
+    ]);
     expect(tabs.map((tab) => tab.className.includes('active'))).toEqual([true, false]);
     expect(view.textContent).not.toContain('Новый профиль');
   });

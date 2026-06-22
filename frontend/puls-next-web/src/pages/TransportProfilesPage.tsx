@@ -41,6 +41,10 @@ function renderDateTime(value?: string | null) {
   return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
 }
 
+function buildSettingsGroupAriaLabel(label: string, active: boolean) {
+  return `${label}: ${active ? 'текущий раздел' : 'открыть раздел'}`;
+}
+
 export function TransportProfilesPage() {
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
@@ -242,6 +246,7 @@ export function TransportProfilesPage() {
           type="button"
           role="tab"
           aria-selected={activeGroup === 'general'}
+          aria-label={buildSettingsGroupAriaLabel('Основные', activeGroup === 'general')}
           className={`settings-tab${activeGroup === 'general' ? ' active' : ''}`}
           onClick={() => activateGroup('general')}
         >
@@ -251,6 +256,7 @@ export function TransportProfilesPage() {
           type="button"
           role="tab"
           aria-selected={activeGroup === 'smtp'}
+          aria-label={buildSettingsGroupAriaLabel('SMTP профили', activeGroup === 'smtp')}
           className={`settings-tab${activeGroup === 'smtp' ? ' active' : ''}`}
           onClick={() => activateGroup('smtp')}
         >
