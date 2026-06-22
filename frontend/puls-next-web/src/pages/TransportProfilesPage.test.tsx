@@ -86,8 +86,10 @@ describe('TransportProfilesPage', () => {
 
     const tablist = view.querySelector('.settings-tabs[role="tablist"]');
     const tabs = Array.from(view.querySelectorAll<HTMLButtonElement>('.settings-tab'));
+    const profileSearch = view.querySelector<HTMLInputElement>('[aria-label="Поиск SMTP профилей по профилю, серверу, логину или email"]');
 
     expect(tablist?.getAttribute('aria-label')).toBe('Группы настроек');
+    expect(profileSearch).toBeInstanceOf(HTMLInputElement);
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Основные', 'SMTP профили']);
     expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab']);
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'true']);

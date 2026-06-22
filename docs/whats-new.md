@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-23 - доступный поиск SMTP-профилей
+
+Продолжен backlog roadmap по accessibility-полировке настроек рассылок:
+
+- поиск в списке SMTP-профилей получил явную `aria-label` через общий `SearchPanel`;
+- компонентный тест `TransportProfilesPage` закрепляет доступную подпись поиска вместе с вкладками настроек;
+- поведение фильтрации SMTP-профилей не менялось, изменена только доступная разметка поля поиска.
+
+Проверки этого этапа включают targeted frontend-тест `TransportProfilesPage`, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-23 - доступный поиск организаций
 
 Продолжен backlog roadmap по accessibility-полировке справочников:

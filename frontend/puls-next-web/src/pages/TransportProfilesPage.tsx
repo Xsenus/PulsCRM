@@ -293,6 +293,7 @@ export function TransportProfilesPage() {
           <SearchPanel
             value={search}
             placeholder="Поиск по профилю, серверу, логину или email"
+            inputAriaLabel="Поиск SMTP профилей по профилю, серверу, логину или email"
             onChange={setSearch}
             onSearch={applySearch}
             onClear={clearSearch}
