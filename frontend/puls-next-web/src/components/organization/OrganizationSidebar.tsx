@@ -18,9 +18,19 @@ function formatCount(value?: number | null) {
   return new Intl.NumberFormat('ru-RU').format(value ?? 0);
 }
 
-function formatAuditValue(date?: string, author?: string) {
-  const value = [formatDateTime(date), author].filter(Boolean).join(' • ');
-  return value || EMPTY_VALUE;
+function renderAuditValue(date?: string, author?: string) {
+  const formattedDate = formatDateTime(date);
+  if (!formattedDate && !author) {
+    return EMPTY_VALUE;
+  }
+
+  return (
+    <>
+      {formattedDate ? <time dateTime={date}>{formattedDate}</time> : null}
+      {formattedDate && author ? ' • ' : null}
+      {author}
+    </>
+  );
 }
 
 function normalizeHref(url?: string) {
@@ -122,7 +132,7 @@ export function OrganizationSidebar({
         <div className="detail-list" role="list" aria-label="Статус и сопровождение организации">
           <div role="listitem">
             <strong>Последнее изменение</strong>
-            <div className="field-hint">{formatAuditValue(details?.updatedAtUtc, details?.updatedByName)}</div>
+            <div className="field-hint">{renderAuditValue(details?.updatedAtUtc, details?.updatedByName)}</div>
           </div>
           <div role="listitem">
             <strong>Юридический адрес</strong>
