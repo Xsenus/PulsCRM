@@ -102,8 +102,10 @@ describe('WorkPage', () => {
     const view = render(<WorkPage />);
     await flushEffects();
 
+    const workSearch = view.querySelector<HTMLInputElement>('[aria-label="Поиск задач по сообщению, задаче, сотруднику или организации"]');
     const tableTimes = Array.from(view.querySelectorAll<HTMLTimeElement>('table time'));
 
+    expect(workSearch).toBeInstanceOf(HTMLInputElement);
     expect(tableTimes.map((item) => item.getAttribute('dateTime'))).toEqual([
       '2026-06-12T04:30:00.000Z',
       '2026-06-15T09:00:00.000Z',

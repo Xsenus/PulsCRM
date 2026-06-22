@@ -180,6 +180,7 @@ export function WorkPage() {
       <SearchPanel
         value={filters.search}
         placeholder="Поиск по сообщению, задаче, сотруднику, организации"
+        inputAriaLabel="Поиск задач по сообщению, задаче, сотруднику или организации"
         onChange={(value) => setFilters((current) => ({ ...current, search: value }))}
         onSearch={applySearch}
         onClear={clearSearch}
