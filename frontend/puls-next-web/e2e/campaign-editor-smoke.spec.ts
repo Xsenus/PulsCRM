@@ -185,6 +185,14 @@ test('new campaign editor previews recipients, readiness and schedule', async ({
 
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 });
   await expect(page.locator('.campaign-editor-tabs')).toBeVisible({ timeout: 15_000 });
+  await expect.poll(() => page.locator('.campaign-editor-tabs [role="tab"]').evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute('aria-label')))).toEqual([
+    'Основное: текущий раздел',
+    'Получатели: открыть раздел',
+    'Письмо: открыть раздел',
+    'Расписание: открыть раздел',
+    'Проверка и запуск: открыть раздел',
+    'Статистика: открыть раздел'
+  ]);
 
   await page.locator('.campaign-main-grid .form-input').nth(0).fill('Smoke Campaign');
   await page.locator('.campaign-main-grid .form-input').nth(1).fill('Smoke subject');
@@ -225,6 +233,14 @@ test('existing campaign stats show problem attempt diagnostics', async ({ page }
 
   await expect(page.locator('.app-shell')).toBeVisible({ timeout: 15_000 });
   await page.getByRole('tab', { name: 'Статистика' }).click();
+  await expect.poll(() => page.locator('.campaign-editor-tabs [role="tab"]').evaluateAll((tabs) => tabs.map((tab) => tab.getAttribute('aria-label')))).toEqual([
+    'Основное: открыть раздел',
+    'Получатели: открыть раздел',
+    'Письмо: открыть раздел',
+    'Расписание: открыть раздел',
+    'Проверка и запуск: открыть раздел',
+    'Статистика: текущий раздел'
+  ]);
 
   const problemList = page.locator('.campaign-problem-list');
   await expect(problemList).toContainText('recipient@example.test');

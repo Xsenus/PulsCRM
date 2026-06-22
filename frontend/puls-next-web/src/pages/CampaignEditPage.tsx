@@ -55,6 +55,10 @@ const campaignEditorTabs: Array<{ id: CampaignEditorTab; label: string }> = [
   { id: 'stats', label: 'Статистика' }
 ];
 
+function buildCampaignEditorTabAriaLabel(label: string, active: boolean) {
+  return `${label}: ${active ? 'текущий раздел' : 'открыть раздел'}`;
+}
+
 function createDefaultModel(): CampaignUpsertRequest {
   return {
     name: '',
@@ -497,6 +501,7 @@ export function CampaignEditPage() {
                   className={`settings-tab${activeTab === tab.id ? ' active' : ''}`}
                   role="tab"
                   aria-selected={activeTab === tab.id}
+                  aria-label={buildCampaignEditorTabAriaLabel(tab.label, activeTab === tab.id)}
                   onClick={() => setActiveTab(tab.id)}
                 >
                   {tab.label}
