@@ -6,6 +6,7 @@
 
 - если `ConnectionStrings:MailingDb` в production config содержит только XPO provider token без SQL-настроек, скрипт использует `ConnectionStrings:LegacyDb`;
 - fallback теперь проверяет наличие SQL Server source и initial catalog, поэтому служебные параметры в `MailingDb` не блокируют переход на `LegacyDb`;
+- post-deploy проверка также умеет брать connection string из переменных окружения, опубликованного `web.config` и IIS app pool config без вывода секретов в лог;
 - fallback соответствует текущей архитектуре, где legacy и mailing контуры работают с одной основной SQL Server БД;
 - при отсутствии SQL-настроек в обеих строках скрипт теперь падает с явным сообщением вместо пустой строки подключения.
 

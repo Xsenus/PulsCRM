@@ -105,7 +105,11 @@ jobs:
             -PublishedApiConfigPath (Join-Path $env:API_SITE_PATH "appsettings.Production.json") `
             -ProductionApiUrl $env:PRODUCTION_API_URL
 
-          $dbCheckArgs = @("-ApiConfigPath", $env:API_CONFIG_PATH)
+          $dbCheckArgs = @(
+            "-ApiConfigPath", $env:API_CONFIG_PATH,
+            "-PublishedWebConfigPath", (Join-Path $env:API_SITE_PATH "web.config"),
+            "-AppPoolName", "PulsCRM.Api"
+          )
           if (-not [string]::IsNullOrWhiteSpace($env:DB_MAX_FAILED_DISPATCH_ITEMS)) {
             $dbCheckArgs += @("-MaxFailedDispatchItems", $env:DB_MAX_FAILED_DISPATCH_ITEMS)
           }

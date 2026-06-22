@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$ApiConfigPath,
+    [string]$PublishedWebConfigPath,
+    [string]$AppPoolName,
     [string]$ConnectionString,
     [string]$ConnectionStringName = "MailingDb",
     [int]$CommandTimeoutSeconds = 30,
@@ -76,6 +78,148 @@ function Get-ConnectionStringFromConfig {
     return [string]$property.Value
 }
 
+function New-ConnectionStringEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Source,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Value
+    )
+
+    return [pscustomobject]@{
+        Source = $Source
+        Name = $Name
+        Value = $Value
+    }
+}
+
+function Get-ConnectionStringEntriesFromConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath
+    )
+
+    if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+        throw "API config file was not found: $ConfigPath"
+    }
+
+    $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+    if ($null -eq $config.ConnectionStrings) {
+        throw "ConnectionStrings section was not found in $ConfigPath"
+    }
+
+    $entries = @()
+    foreach ($property in $config.ConnectionStrings.PSObject.Properties) {
+        $value = [string]$property.Value
+        if (-not [string]::IsNullOrWhiteSpace($value)) {
+            $entries += New-ConnectionStringEntry -Source "config:$ConfigPath" -Name $property.Name -Value $value
+        }
+    }
+
+    return $entries
+}
+
+function Get-ConnectionStringEntriesFromNamedValues {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$Variables,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Source
+    )
+
+    $entries = @()
+    foreach ($variable in $Variables) {
+        $name = [string]$variable.Name
+        $value = [string]$variable.Value
+        if ([string]::IsNullOrWhiteSpace($name) -or [string]::IsNullOrWhiteSpace($value)) {
+            continue
+        }
+
+        $connectionName = $null
+        if ($name -match "^ConnectionStrings__(.+)$") {
+            $connectionName = $Matches[1]
+        }
+        elseif ($name -match "^ConnectionStrings:(.+)$") {
+            $connectionName = $Matches[1]
+        }
+        elseif ($name -match "^(?:SQLCONNSTR|SQLAZURECONNSTR|CUSTOMCONNSTR)_(.+)$") {
+            $connectionName = $Matches[1]
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($connectionName)) {
+            $entries += New-ConnectionStringEntry -Source $Source -Name $connectionName -Value $value
+        }
+    }
+
+    return $entries
+}
+
+function Get-ConnectionStringEntriesFromEnvironment {
+    $variables = @(Get-ChildItem Env:)
+    return Get-ConnectionStringEntriesFromNamedValues -Variables $variables -Source "environment"
+}
+
+function Get-ConnectionStringEntriesFromWebConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return @()
+    }
+
+    [xml]$xml = Get-Content -LiteralPath $Path -Raw
+    $variables = @()
+    foreach ($node in @($xml.SelectNodes("//environmentVariable"))) {
+        $variables += [pscustomobject]@{
+            Name = [string]$node.name
+            Value = [string]$node.value
+        }
+    }
+
+    return Get-ConnectionStringEntriesFromNamedValues -Variables $variables -Source "web.config:$Path"
+}
+
+function Get-ConnectionStringEntriesFromIisAppPool {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $appCmdPath = Join-Path $env:windir "system32\inetsrv\appcmd.exe"
+    if (-not (Test-Path -LiteralPath $appCmdPath -PathType Leaf)) {
+        return @()
+    }
+
+    try {
+        $xmlText = (& $appCmdPath list apppool $Name /config /xml) -join [Environment]::NewLine
+        if ([string]::IsNullOrWhiteSpace($xmlText)) {
+            return @()
+        }
+
+        [xml]$xml = $xmlText
+        $variables = @()
+        foreach ($node in @($xml.SelectNodes("//environmentVariable"))) {
+            $variables += [pscustomobject]@{
+                Name = [string]$node.name
+                Value = [string]$node.value
+            }
+        }
+
+        return Get-ConnectionStringEntriesFromNamedValues -Variables $variables -Source "iis-app-pool:$Name"
+    }
+    catch {
+        Write-Warning "Could not read IIS app pool environment variables for '$Name': $($_.Exception.Message)"
+        return @()
+    }
+}
+
 function ConvertFrom-XpoConnectionString {
     param(
         [Parameter(Mandatory = $true)]
@@ -122,6 +266,39 @@ function Test-ConnectionStringHasSqlSettings {
     catch {
         return $false
     }
+}
+
+function Select-ConnectionStringEntry {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object[]]$Entries,
+
+        [Parameter(Mandatory = $true)]
+        [string]$PreferredName
+    )
+
+    $orderedEntries = @()
+    $preferredNames = @($PreferredName, "LegacyDb", "DefaultConnection", "Default")
+    foreach ($name in ($preferredNames | Select-Object -Unique)) {
+        $orderedEntries += @($Entries | Where-Object { [string]::Equals([string]$_.Name, $name, [StringComparison]::OrdinalIgnoreCase) })
+    }
+
+    $orderedEntries += @($Entries | Where-Object {
+        $entryName = [string]$_.Name
+        -not @($preferredNames | Where-Object { [string]::Equals($_, $entryName, [StringComparison]::OrdinalIgnoreCase) }).Count
+    })
+
+    $checked = @()
+    foreach ($entry in $orderedEntries) {
+        $label = "$($entry.Source):$($entry.Name)"
+        $checked += $label
+        if (Test-ConnectionStringHasSqlSettings -Value ([string]$entry.Value)) {
+            return $entry
+        }
+    }
+
+    $checkedLabel = if ($checked.Count -gt 0) { $checked -join ", " } else { "none" }
+    throw "No SQL Server connection string with Data Source and Initial Catalog was found. Checked entries: $checkedLabel."
 }
 
 function Format-SqlStringLiteral {
@@ -224,18 +401,24 @@ function Convert-StatusCounts {
 }
 
 if ([string]::IsNullOrWhiteSpace($ConnectionString)) {
-    if ([string]::IsNullOrWhiteSpace($ApiConfigPath)) {
-        throw "Specify either -ConnectionString or -ApiConfigPath."
+    $entries = @()
+    if (-not [string]::IsNullOrWhiteSpace($ApiConfigPath)) {
+        $entries += @(Get-ConnectionStringEntriesFromConfig -ConfigPath $ApiConfigPath)
     }
 
-    $ConnectionString = Get-ConnectionStringFromConfig -ConfigPath $ApiConfigPath -Name $ConnectionStringName
-    if (-not (Test-ConnectionStringHasSqlSettings -Value $ConnectionString) -and $ConnectionStringName -ne "LegacyDb") {
-        $fallbackConnectionString = Get-ConnectionStringFromConfig -ConfigPath $ApiConfigPath -Name "LegacyDb"
-        if (Test-ConnectionStringHasSqlSettings -Value $fallbackConnectionString) {
-            Write-Host "Connection string '$ConnectionStringName' does not contain SQL Server settings. Falling back to 'LegacyDb'."
-            $ConnectionString = $fallbackConnectionString
-        }
+    $entries += @(Get-ConnectionStringEntriesFromEnvironment)
+
+    if (-not [string]::IsNullOrWhiteSpace($PublishedWebConfigPath)) {
+        $entries += @(Get-ConnectionStringEntriesFromWebConfig -Path $PublishedWebConfigPath)
     }
+
+    if (-not [string]::IsNullOrWhiteSpace($AppPoolName)) {
+        $entries += @(Get-ConnectionStringEntriesFromIisAppPool -Name $AppPoolName)
+    }
+
+    $selectedEntry = Select-ConnectionStringEntry -Entries $entries -PreferredName $ConnectionStringName
+    Write-Host "Using connection string '$($selectedEntry.Name)' from $($selectedEntry.Source) for mailing DB check."
+    $ConnectionString = [string]$selectedEntry.Value
 }
 
 $builder = ConvertFrom-XpoConnectionString -Value $ConnectionString
