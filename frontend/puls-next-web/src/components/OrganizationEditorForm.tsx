@@ -139,6 +139,7 @@ function renderMainSection(
           <label className="checkbox-option">
             <input
               type="checkbox"
+              aria-label="Запись организации видима"
               checked={value.visible}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { visible: event.target.checked }))}
@@ -149,6 +150,7 @@ function renderMainSection(
           <label className="checkbox-option">
             <input
               type="checkbox"
+              aria-label="Организация доступна менеджеру"
               checked={value.isManager}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { isManager: event.target.checked }))}
@@ -320,6 +322,7 @@ function renderProgramsSection(
           <label className="checkbox-option">
             <input
               type="checkbox"
+              aria-label="Подключена зарплата организации"
               checked={value.salaryEnabled}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { salaryEnabled: event.target.checked }))}
@@ -330,6 +333,7 @@ function renderProgramsSection(
           <label className="checkbox-option">
             <input
               type="checkbox"
+              aria-label="Подключена 1C бухгалтерия организации"
               checked={value.oneCAccountingEnabled}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { oneCAccountingEnabled: event.target.checked }))}
@@ -340,6 +344,7 @@ function renderProgramsSection(
           <label className="checkbox-option">
             <input
               type="checkbox"
+              aria-label="Подключена 1C зарплата организации"
               checked={value.oneCSalaryEnabled}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { oneCSalaryEnabled: event.target.checked }))}
@@ -350,6 +355,7 @@ function renderProgramsSection(
           <label className="checkbox-option">
             <input
               type="checkbox"
+              aria-label="Подключена 1C ЖКХ организации"
               checked={value.oneCHousingEnabled}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { oneCHousingEnabled: event.target.checked }))}

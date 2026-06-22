@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-23 - доступные флаги формы организации
+
+Продолжен backlog roadmap по accessibility-полировке карточки организации:
+
+- checkbox-флаги основной и program-секций `OrganizationEditorForm` получили явные `aria-label`;
+- добавлен компонентный тест `OrganizationEditorForm`, закрепляющий доступные подписи флагов видимости, менеджера и подключенных продуктов;
+- логика редактирования организации не менялась, изменена только доступная разметка переключателей.
+
+Проверки этого этапа включают targeted frontend-тест `OrganizationEditorForm`, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-23 - доступные переключатели колонок таблиц
 
 Продолжен backlog roadmap по accessibility-полировке общих UI-компонентов:
