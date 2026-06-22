@@ -39,6 +39,11 @@ function campaignStatusTone(status: number): StatusBadgeTone {
   return 'info';
 }
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 export function CampaignsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -262,10 +267,10 @@ export function CampaignsPage() {
             { key: 'transportProfileName', title: 'SMTP профиль', width: 220, minWidth: 180, priority: 5, render: (row) => row.transportProfileName || EMPTY_VALUE },
             { key: 'targets', title: 'Орг.', width: 100, minWidth: 90, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.targetOrganizationsCount },
             { key: 'attachments', title: 'Вложений', width: 120, minWidth: 100, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attachmentsCount },
-            { key: 'nextRunAtUtc', title: 'Следующий запуск', width: 180, minWidth: 160, render: (row) => formatDateTime(row.nextRunAtUtc) || EMPTY_VALUE },
-            { key: 'lastRunAtUtc', title: 'Последний запуск', width: 180, minWidth: 160, render: (row) => formatDateTime(row.lastRunAtUtc) || EMPTY_VALUE },
-            { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.createdAtUtc) || EMPTY_VALUE },
-            { key: 'updatedAtUtc', title: 'Обновлено', width: 180, minWidth: 160, visible: false, render: (row) => formatDateTime(row.updatedAtUtc) || EMPTY_VALUE },
+            { key: 'nextRunAtUtc', title: 'Следующий запуск', width: 180, minWidth: 160, render: (row) => renderDateTime(row.nextRunAtUtc) },
+            { key: 'lastRunAtUtc', title: 'Последний запуск', width: 180, minWidth: 160, render: (row) => renderDateTime(row.lastRunAtUtc) },
+            { key: 'createdAtUtc', title: 'Создано', width: 180, minWidth: 160, visible: false, render: (row) => renderDateTime(row.createdAtUtc) },
+            { key: 'updatedAtUtc', title: 'Обновлено', width: 180, minWidth: 160, visible: false, render: (row) => renderDateTime(row.updatedAtUtc) },
             {
               key: 'actions',
               title: 'Действия',
