@@ -206,7 +206,13 @@ test('new campaign editor previews recipients, readiness and schedule', async ({
   await page.locator('textarea').last().fill('Hello from smoke test');
 
   await page.getByRole('tab').nth(1).click();
-  await page.locator('textarea').last().fill('manual@example.test');
+  await expect(page.getByLabel('Использовать основной email организации для рассылки')).toBeChecked();
+  await expect(page.getByLabel('Использовать адреса контактов для рассылки')).not.toBeChecked();
+  await expect(page.getByLabel('Использовать email зарплатного сопровождения для рассылки')).not.toBeChecked();
+  await expect(page.getByLabel('Использовать email 1C для рассылки')).not.toBeChecked();
+  await expect(page.getByLabel('Использовать email сайта для рассылки')).not.toBeChecked();
+  await expect(page.getByLabel('Использовать email руководителя для рассылки')).not.toBeChecked();
+  await page.getByLabel('Ручные адреса получателей рассылки').fill('manual@example.test');
   await page.locator('.page-header-actions .secondary-button').nth(0).click();
 
   await expect(page.getByText('manual@example.test').first()).toBeVisible();

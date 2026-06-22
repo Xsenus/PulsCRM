@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-23 - доступные источники получателей кампании
+
+Продолжен backlog roadmap по accessibility-полировке редактора рассылок:
+
+- checkbox-источники адресов на вкладке `Получатели` в `CampaignEditPage` получили явные `aria-label`;
+- поле ручных адресов получателей теперь доступно по явной подписи для ассистивных технологий;
+- Playwright smoke редактора кампании закрепляет доступные подписи источников адресов и ручного ввода без изменения логики preview/readiness.
+
+Проверки этого этапа включают targeted Playwright-тест `campaign-editor-smoke`, frontend-тесты, полный Playwright suite, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-23 - доступные флаги SMTP-профиля
 
 Продолжен backlog roadmap по accessibility-полировке настроек рассылок:

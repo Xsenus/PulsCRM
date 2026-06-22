@@ -647,27 +647,27 @@ export function CampaignEditPage() {
             <h3>Источники адресов</h3>
             <div className="checkbox-grid">
               <label className="checkbox-option">
-                <input type="checkbox" checked={model.useOrgPrimaryEmail} onChange={(event) => patchModel({ useOrgPrimaryEmail: event.target.checked })} />
+                <input type="checkbox" aria-label="Использовать основной email организации для рассылки" checked={model.useOrgPrimaryEmail} onChange={(event) => patchModel({ useOrgPrimaryEmail: event.target.checked })} />
                 <span>Основной email организации</span>
               </label>
               <label className="checkbox-option">
-                <input type="checkbox" checked={model.useContactEmails} onChange={(event) => patchModel({ useContactEmails: event.target.checked })} />
+                <input type="checkbox" aria-label="Использовать адреса контактов для рассылки" checked={model.useContactEmails} onChange={(event) => patchModel({ useContactEmails: event.target.checked })} />
                 <span>Адреса контактов</span>
               </label>
               <label className="checkbox-option">
-                <input type="checkbox" checked={model.useSalaryEmail} onChange={(event) => patchModel({ useSalaryEmail: event.target.checked })} />
+                <input type="checkbox" aria-label="Использовать email зарплатного сопровождения для рассылки" checked={model.useSalaryEmail} onChange={(event) => patchModel({ useSalaryEmail: event.target.checked })} />
                 <span>Зарплата / ZP</span>
               </label>
               <label className="checkbox-option">
-                <input type="checkbox" checked={model.useOneCEmail} onChange={(event) => patchModel({ useOneCEmail: event.target.checked })} />
+                <input type="checkbox" aria-label="Использовать email 1C для рассылки" checked={model.useOneCEmail} onChange={(event) => patchModel({ useOneCEmail: event.target.checked })} />
                 <span>1C / F1c</span>
               </label>
               <label className="checkbox-option">
-                <input type="checkbox" checked={model.useSiteEmail} onChange={(event) => patchModel({ useSiteEmail: event.target.checked })} />
+                <input type="checkbox" aria-label="Использовать email сайта для рассылки" checked={model.useSiteEmail} onChange={(event) => patchModel({ useSiteEmail: event.target.checked })} />
                 <span>Адрес сайта</span>
               </label>
               <label className="checkbox-option">
-                <input type="checkbox" checked={model.useDirectorEmail} onChange={(event) => patchModel({ useDirectorEmail: event.target.checked })} />
+                <input type="checkbox" aria-label="Использовать email руководителя для рассылки" checked={model.useDirectorEmail} onChange={(event) => patchModel({ useDirectorEmail: event.target.checked })} />
                 <span>Адрес руководителя</span>
               </label>
             </div>
@@ -676,6 +676,7 @@ export function CampaignEditPage() {
               <label>Ручные адреса</label>
               <textarea
                 className="form-textarea"
+                aria-label="Ручные адреса получателей рассылки"
                 value={model.manualRecipientsCsv || ''}
                 onChange={(event) => patchModel({ manualRecipientsCsv: event.target.value })}
               />
