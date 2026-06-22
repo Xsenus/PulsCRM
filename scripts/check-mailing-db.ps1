@@ -487,9 +487,9 @@ ORDER BY TABLE_NAME;
     $campaignCounts = @()
     if ($tableMap.ContainsKey("MailCampaign")) {
         $tableInfo = $tableMap["MailCampaign"]
-        $campaignCounts = Convert-StatusCounts `
+        $campaignCounts = @(Convert-StatusCounts `
             -Rows (Invoke-SqlDataTable -Connection $connection -CommandText "SELECT [Status], COUNT_BIG(*) AS [Count] FROM $(Format-QualifiedTableName -SchemaName $tableInfo.Schema -TableName $tableInfo.Name) GROUP BY [Status] ORDER BY [Status];") `
-            -Names $campaignStatusNames
+            -Names $campaignStatusNames)
     }
 
     $dispatchCounts = @()
@@ -500,9 +500,9 @@ ORDER BY TABLE_NAME;
         $tableInfo = $tableMap["MailDispatchItem"]
         $dispatchTable = Format-QualifiedTableName -SchemaName $tableInfo.Schema -TableName $tableInfo.Name
 
-        $dispatchCounts = Convert-StatusCounts `
+        $dispatchCounts = @(Convert-StatusCounts `
             -Rows (Invoke-SqlDataTable -Connection $connection -CommandText "SELECT [Status], COUNT_BIG(*) AS [Count] FROM $dispatchTable GROUP BY [Status] ORDER BY [Status];") `
-            -Names $dispatchStatusNames
+            -Names $dispatchStatusNames)
 
         $queueDepth = [int64](Invoke-SqlScalar -Connection $connection -CommandText "SELECT COUNT_BIG(*) FROM $dispatchTable WHERE [Status] IN (0, 1, 5);")
         $failedCount = [int64](Invoke-SqlScalar -Connection $connection -CommandText "SELECT COUNT_BIG(*) FROM $dispatchTable WHERE [Status] = 3;")
