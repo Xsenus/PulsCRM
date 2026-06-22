@@ -47,6 +47,11 @@ function dispatchStatusTone(status: number): StatusBadgeTone {
   return 'neutral';
 }
 
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : '—';
+}
+
 export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryItem, batchesTableSettingsKey, itemsTableSettingsKey }: CampaignStatsPanelProps) {
   const [dispatchStatusFilter, setDispatchStatusFilter] = useState<DispatchStatusFilter>('all');
   const [retryingItemId, setRetryingItemId] = useState<number | null>(null);
@@ -118,8 +123,8 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryI
                 <span>{item.errorMessage || item.smtpResponse || 'Сообщение ожидает повторной обработки.'}</span>
                 <div className="campaign-problem-meta">
                   <span>{formatAttemptCount(item.attemptCount)}</span>
-                  {item.failedAtUtc ? <span>Ошибка: {formatDateTime(item.failedAtUtc)}</span> : null}
-                  {item.nextAttemptAtUtc ? <span>Следующая попытка: {formatDateTime(item.nextAttemptAtUtc)}</span> : null}
+                  {item.failedAtUtc ? <span>Ошибка: {renderDateTime(item.failedAtUtc)}</span> : null}
+                  {item.nextAttemptAtUtc ? <span>Следующая попытка: {renderDateTime(item.nextAttemptAtUtc)}</span> : null}
                   {item.smtpResponse && item.errorMessage ? <span>SMTP: {item.smtpResponse}</span> : null}
                 </div>
               </div>
@@ -153,8 +158,8 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryI
             emptyText="Нет пакетов"
             columns={[
               { key: 'id', title: '#', width: 80, minWidth: 70, isPrimary: true, priority: 1, render: (row) => `Пакет #${row.id}` },
-              { key: 'createdAtUtc', title: 'Создан', width: 170, minWidth: 150, priority: 2, render: (row) => formatDateTime(row.createdAtUtc) || '—' },
-              { key: 'scheduledAtUtc', title: 'Запланирован', width: 170, minWidth: 150, priority: 3, render: (row) => formatDateTime(row.scheduledAtUtc) || '—' },
+              { key: 'createdAtUtc', title: 'Создан', width: 170, minWidth: 150, priority: 2, render: (row) => renderDateTime(row.createdAtUtc) },
+              { key: 'scheduledAtUtc', title: 'Запланирован', width: 170, minWidth: 150, priority: 3, render: (row) => renderDateTime(row.scheduledAtUtc) },
               { key: 'totalRecipients', title: 'Всего', width: 100, minWidth: 90, priority: 4, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.totalRecipients },
               { key: 'sentCount', title: 'Отправлено', width: 120, minWidth: 100, priority: 5, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.sentCount },
               { key: 'failedCount', title: 'Ошибок', width: 110, minWidth: 100, priority: 6, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.failedCount },
@@ -202,9 +207,9 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryI
                 )
               },
               { key: 'attemptCount', title: 'Попыток', width: 100, minWidth: 90, priority: 4, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attemptCount },
-              { key: 'queuedAtUtc', title: 'Поставлено', width: 170, minWidth: 150, priority: 5, render: (row) => formatDateTime(row.queuedAtUtc) || '—' },
-              { key: 'sentAtUtc', title: 'Отправлено', width: 170, minWidth: 150, priority: 6, render: (row) => formatDateTime(row.sentAtUtc) || '—' },
-              { key: 'nextAttemptAtUtc', title: 'След. попытка', width: 170, minWidth: 150, priority: 7, render: (row) => formatDateTime(row.nextAttemptAtUtc) || '—' },
+              { key: 'queuedAtUtc', title: 'Поставлено', width: 170, minWidth: 150, priority: 5, render: (row) => renderDateTime(row.queuedAtUtc) },
+              { key: 'sentAtUtc', title: 'Отправлено', width: 170, minWidth: 150, priority: 6, render: (row) => renderDateTime(row.sentAtUtc) },
+              { key: 'nextAttemptAtUtc', title: 'След. попытка', width: 170, minWidth: 150, priority: 7, render: (row) => renderDateTime(row.nextAttemptAtUtc) },
               { key: 'errorMessage', title: 'Ошибка', width: 280, minWidth: 220, priority: 8, render: (row) => row.errorMessage || '—' },
               { key: 'smtpResponse', title: 'SMTP ответ', width: 260, minWidth: 220, priority: 9, render: (row) => row.smtpResponse || row.messageId || '—' }
             ]}

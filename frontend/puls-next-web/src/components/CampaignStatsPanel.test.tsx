@@ -137,6 +137,28 @@ describe('CampaignStatsPanel', () => {
     expect(view.textContent).toContain(`Следующая попытка: ${formatDateTime('2026-06-13T08:10:00.000Z')}`);
     expect(view.textContent).toContain('SMTP: 550 mailbox unavailable');
     expect(view.textContent).toContain('Пакет #10');
+    expect(Array.from(view.querySelectorAll('.campaign-problem-meta time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-13T08:02:00.000Z',
+      '2026-06-13T08:10:00.000Z'
+    ]);
+
+    const [batchesSection, itemsSection] = Array.from(view.querySelectorAll('.split-layout .panel-subsection'));
+    expect(Array.from(batchesSection.querySelectorAll('time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-13T08:00:00.000Z',
+      '2026-06-13T08:00:00.000Z',
+      '2026-06-13T08:00:00.000Z',
+      '2026-06-13T08:00:00.000Z'
+    ]);
+    expect(Array.from(itemsSection.querySelectorAll('time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-13T08:00:00.000Z',
+      '2026-06-13T08:01:00.000Z',
+      '2026-06-13T08:00:00.000Z',
+      '2026-06-13T08:10:00.000Z',
+      '2026-06-13T08:00:00.000Z',
+      '2026-06-13T08:01:00.000Z',
+      '2026-06-13T08:00:00.000Z',
+      '2026-06-13T08:10:00.000Z'
+    ]);
   });
 
   it('filters recent items by failed status', () => {
