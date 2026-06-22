@@ -2,6 +2,11 @@ import type { DispatchItemDto } from './types';
 
 export type DispatchStatusFilter = 'all' | 'queued' | 'processing' | 'sent' | 'failed' | 'cancelled' | 'deferred';
 
+export interface CampaignProblemSummary {
+  latestProblemItem: DispatchItemDto | null;
+  problemItems: DispatchItemDto[];
+}
+
 const statusByFilter: Record<Exclude<DispatchStatusFilter, 'all'>, number> = {
   queued: 0,
   processing: 1,
@@ -19,27 +24,55 @@ export function filterDispatchItems(items: DispatchItemDto[], filter: DispatchSt
   return items.filter((item) => item.status === statusByFilter[filter]);
 }
 
-export function findLatestProblemItem(failedItems: DispatchItemDto[], deferredItems: DispatchItemDto[]): DispatchItemDto | null {
-  const problemItems = [...failedItems, ...deferredItems];
-  if (problemItems.length === 0) {
-    return null;
-  }
+function getProblemItemSortDate(item: DispatchItemDto) {
+  return item.failedAtUtc || item.nextAttemptAtUtc || item.queuedAtUtc || '';
+}
 
-  return problemItems.sort((left, right) => {
-    const leftDate = left.failedAtUtc || left.nextAttemptAtUtc || left.queuedAtUtc || '';
-    const rightDate = right.failedAtUtc || right.nextAttemptAtUtc || right.queuedAtUtc || '';
-    return rightDate.localeCompare(leftDate);
-  })[0];
+function compareProblemItems(left: DispatchItemDto, right: DispatchItemDto) {
+  return getProblemItemSortDate(right).localeCompare(getProblemItemSortDate(left));
+}
+
+export function buildCampaignProblemSummary(failedItems: DispatchItemDto[], deferredItems: DispatchItemDto[], limit = 8): CampaignProblemSummary {
+  const problemItems: DispatchItemDto[] = [];
+  const maxItems = Math.max(0, limit);
+  let latestProblemItem: DispatchItemDto | null = null;
+
+  const visitItem = (item: DispatchItemDto) => {
+    if (!latestProblemItem || compareProblemItems(item, latestProblemItem) < 0) {
+      latestProblemItem = item;
+    }
+
+    if (maxItems === 0) {
+      return;
+    }
+
+    const insertAt = problemItems.findIndex((existing) => compareProblemItems(item, existing) < 0);
+    if (insertAt === -1) {
+      problemItems.push(item);
+    } else {
+      problemItems.splice(insertAt, 0, item);
+    }
+
+    if (problemItems.length > maxItems) {
+      problemItems.pop();
+    }
+  };
+
+  failedItems.forEach(visitItem);
+  deferredItems.forEach(visitItem);
+
+  return {
+    latestProblemItem,
+    problemItems
+  };
+}
+
+export function findLatestProblemItem(failedItems: DispatchItemDto[], deferredItems: DispatchItemDto[]): DispatchItemDto | null {
+  return buildCampaignProblemSummary(failedItems, deferredItems, 0).latestProblemItem;
 }
 
 export function buildProblemItems(failedItems: DispatchItemDto[], deferredItems: DispatchItemDto[], limit = 8): DispatchItemDto[] {
-  return [...failedItems, ...deferredItems]
-    .sort((left, right) => {
-      const leftDate = left.failedAtUtc || left.nextAttemptAtUtc || left.queuedAtUtc || '';
-      const rightDate = right.failedAtUtc || right.nextAttemptAtUtc || right.queuedAtUtc || '';
-      return rightDate.localeCompare(leftDate);
-    })
-    .slice(0, limit);
+  return buildCampaignProblemSummary(failedItems, deferredItems, limit).problemItems;
 }
 
 export function formatAttemptCount(value?: number | null): string {

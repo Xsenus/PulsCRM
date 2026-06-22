@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { buildProblemItems, filterDispatchItems, findLatestProblemItem, formatAttemptCount, type DispatchStatusFilter } from '../app/campaignStats';
+import { buildCampaignProblemSummary, filterDispatchItems, formatAttemptCount, type DispatchStatusFilter } from '../app/campaignStats';
 import { canRetryDispatchItem } from '../app/dispatchDiagnostics';
 import { formatDateTime } from '../app/format';
 import { dispatchStatusOptions, labelOf } from '../app/lookups';
@@ -63,14 +63,11 @@ export function CampaignStatsPanel({ stats, loading = false, onRefresh, onRetryI
     () => stats ? filterDispatchItems(stats.recentItems, dispatchStatusFilter) : [],
     [dispatchStatusFilter, stats]
   );
-  const latestProblemItem = useMemo(
-    () => stats ? findLatestProblemItem(stats.failedItems, stats.deferredItems) : null,
+  const problemSummary = useMemo(
+    () => stats ? buildCampaignProblemSummary(stats.failedItems, stats.deferredItems, 8) : { latestProblemItem: null, problemItems: [] },
     [stats]
   );
-  const problemItems = useMemo(
-    () => stats ? buildProblemItems(stats.failedItems, stats.deferredItems, 8) : [],
-    [stats]
-  );
+  const { latestProblemItem, problemItems } = problemSummary;
 
   const retryProblemItem = async (item: DispatchItemDto) => {
     if (!onRetryItem || !canRetryDispatchItem(item)) {

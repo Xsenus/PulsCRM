@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-22 - быстрый список проблем кампании
+
+Продолжен backlog roadmap по performance-проверкам для больших списков кампаний и dispatch items:
+
+- статистика кампании теперь собирает последнюю проблемную отправку и ограниченный список проблем через общий `buildCampaignProblemSummary`;
+- `CampaignStatsPanel` больше не запускает два отдельных расчета для одного набора failed/deferred сообщений;
+- unit-тест закрепляет порядок top-N проблем, latest item, нулевой лимит и неизменность исходных массивов.
+
+Проверки этого этапа включают targeted frontend-тесты статистики кампании, frontend-тесты, Playwright smoke-тесты, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-22 - быстрый расчет сводки очереди
 
 Продолжен backlog roadmap по performance-проверкам для больших списков dispatch items:
