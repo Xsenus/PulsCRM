@@ -68,6 +68,10 @@ function batchProgress(row: DispatchBatchDto) {
   return `${row.sentCount}/${row.totalRecipients}`;
 }
 
+function buildDispatchTabAriaLabel(label: string, active: boolean) {
+  return `${label}: ${active ? 'текущий раздел' : 'открыть раздел'}`;
+}
+
 export function DispatchPage() {
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
@@ -373,6 +377,7 @@ export function DispatchPage() {
           className={`settings-tab${tab === 'items' ? ' active' : ''}`}
           role="tab"
           aria-selected={tab === 'items'}
+          aria-label={buildDispatchTabAriaLabel('Сообщения', tab === 'items')}
           onClick={() => setTab('items')}
         >
           Сообщения
@@ -382,6 +387,7 @@ export function DispatchPage() {
           className={`settings-tab${tab === 'batches' ? ' active' : ''}`}
           role="tab"
           aria-selected={tab === 'batches'}
+          aria-label={buildDispatchTabAriaLabel('Партии', tab === 'batches')}
           onClick={() => setTab('batches')}
         >
           Партии

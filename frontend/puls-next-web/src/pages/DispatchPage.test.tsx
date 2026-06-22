@@ -128,11 +128,23 @@ describe('DispatchPage', () => {
       '2026-06-20T06:15:00.000Z'
     ]);
 
-    const batchTab = Array.from(view.querySelectorAll<HTMLButtonElement>('.dispatch-tabs [role="tab"]'))
-      .find((button) => button.textContent?.includes('Партии'));
+    const tabs = Array.from(view.querySelectorAll<HTMLButtonElement>('.dispatch-tabs [role="tab"]'));
+    const batchTab = tabs.find((button) => button.textContent?.includes('Партии'));
     expect(batchTab).not.toBeNull();
+    expect(tabs.map((button) => button.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Сообщения: текущий раздел',
+      'Партии: открыть раздел'
+    ]);
+
     click(batchTab!);
     await flushEffects();
+
+    expect(tabs.map((button) => button.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(tabs.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Сообщения: открыть раздел',
+      'Партии: текущий раздел'
+    ]);
 
     const batchTimes = Array.from(view.querySelectorAll<HTMLTimeElement>('table time'));
 
