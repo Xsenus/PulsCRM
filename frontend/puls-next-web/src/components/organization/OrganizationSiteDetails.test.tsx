@@ -71,6 +71,7 @@ describe('OrganizationSiteDetails', () => {
     expect(view.querySelector('a[href=\"tel:+79130000000\"]')?.textContent).toBe('+7 913 000-00-00');
     expect(view.querySelector('a[href=\"mailto:site@example.test\"]')?.textContent).toBe('site@example.test');
     expect(view.textContent).toContain('Домен делегирован');
+    expect(view.querySelector('.organization-status-pill')?.getAttribute('role')).toBe('status');
     expect(view.textContent).toContain('Нет');
     expect(view.textContent).toContain('0');
     expect(view.textContent).toContain('Комментарий по сайту');

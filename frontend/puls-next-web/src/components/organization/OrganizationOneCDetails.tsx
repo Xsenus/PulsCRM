@@ -177,7 +177,7 @@ export function OrganizationOneCDetails({
         </div>
         <div className="detail-card" role="listitem">
           <strong>Статус ИТС</strong>
-          <span className={`organization-status-pill organization-status-pill--${licenseStatus.tone}`}>{licenseStatus.label}</span>
+          <span className={`organization-status-pill organization-status-pill--${licenseStatus.tone}`} role="status">{licenseStatus.label}</span>
           <span className="field-hint">{licenseStatus.hint}</span>
         </div>
         <div className="detail-card" role="listitem">

@@ -87,6 +87,7 @@ describe('OrganizationOneCDetails', () => {
     expect(view.textContent).toContain('Иван Иванов');
     expect(view.textContent).toContain('Срок скоро закончится');
     expect(view.textContent).toContain('осталось 10 дн.');
+    expect(view.querySelector('.organization-status-pill')?.getAttribute('role')).toBe('status');
     expect(view.textContent).toContain('0,00');
     expect(view.textContent).toContain('Комментарий ИТС');
     expect(view.querySelector('a[href=\"tel:+73831112233\"]')?.textContent).toBe('+7 (383) 111-22-33');
