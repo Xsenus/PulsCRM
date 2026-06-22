@@ -268,6 +268,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
             <SearchPanel
               value={search}
               placeholder="Поиск по названию, ИНН, району или типу"
+              inputAriaLabel="Поиск организаций для рассылки по названию, ИНН, району или типу"
               onChange={setSearch}
               onSearch={applySearch}
               onClear={clearSearch}

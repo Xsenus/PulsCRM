@@ -142,6 +142,7 @@ describe('OrganizationPicker', () => {
     await flushAsyncUpdates();
 
     expect(apiMocks.getOrganizations).toHaveBeenCalled();
+    expect(document.body.querySelector('[aria-label="Поиск организаций для рассылки по названию, ИНН, району или типу"]')).toBeInstanceOf(HTMLInputElement);
     const selectionStatus = document.body.querySelector('.modal-actions-note');
     expect(selectionStatus?.getAttribute('role')).toBe('status');
     expect(selectionStatus?.getAttribute('aria-live')).toBe('polite');
