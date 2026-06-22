@@ -77,6 +77,7 @@ describe('OrganizationRelationsOverview', () => {
     expect(tablist?.getAttribute('aria-label')).toBe('Связанные данные организации');
     expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab']);
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual(['Контакты: 2; выбрано', 'Договоры: 0; открыть раздел']);
     expect(previewCards[0].className).toContain('active');
     expect(tabs[0].className).toContain('active');
     expect(view.textContent).toContain('Пока пусто.');

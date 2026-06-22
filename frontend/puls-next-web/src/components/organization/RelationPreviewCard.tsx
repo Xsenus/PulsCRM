@@ -10,7 +10,7 @@ function formatCount(value?: number | null) {
   return new Intl.NumberFormat('ru-RU').format(value ?? 0);
 }
 
-function buildCardAriaLabel(title: string, count: number, active: boolean) {
+export function buildRelationPreviewAriaLabel(title: string, count: number, active: boolean) {
   return `${title}: ${formatCount(count)}; ${active ? 'выбрано' : 'открыть раздел'}`;
 }
 
@@ -34,7 +34,7 @@ export function RelationPreviewCard({
       type="button"
       className={`organization-preview-card${active ? ' active' : ''}`}
       aria-pressed={active}
-      aria-label={buildCardAriaLabel(title, count, active)}
+      aria-label={buildRelationPreviewAriaLabel(title, count, active)}
       onClick={onClick}
     >
       <div className="organization-preview-card-head">

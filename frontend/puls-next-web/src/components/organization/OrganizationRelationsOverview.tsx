@@ -1,5 +1,9 @@
 import React from 'react';
-import { RelationPreviewCard, type PreviewCardItem } from './RelationPreviewCard';
+import {
+  buildRelationPreviewAriaLabel,
+  RelationPreviewCard,
+  type PreviewCardItem
+} from './RelationPreviewCard';
 
 export type OrganizationRelationTab = 'contacts' | 'documents' | 'contracts' | 'realizations' | 'licenses' | 'orders';
 
@@ -46,18 +50,23 @@ export function OrganizationRelationsOverview({
         role="tablist"
         aria-label="Связанные данные организации"
       >
-        {cards.map((card) => (
-          <button
-            key={card.key}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === card.key}
-            className={`settings-tab${activeTab === card.key ? ' active' : ''}`}
-            onClick={() => onChange(card.key)}
-          >
-            {card.title}
-          </button>
-        ))}
+        {cards.map((card) => {
+          const active = activeTab === card.key;
+
+          return (
+            <button
+              key={card.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-label={buildRelationPreviewAriaLabel(card.title, card.count, active)}
+              className={`settings-tab${active ? ' active' : ''}`}
+              onClick={() => onChange(card.key)}
+            >
+              {card.title}
+            </button>
+          );
+        })}
       </div>
     </>
   );
