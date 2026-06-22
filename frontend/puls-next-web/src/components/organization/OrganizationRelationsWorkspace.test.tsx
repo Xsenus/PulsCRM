@@ -125,6 +125,7 @@ describe('OrganizationRelationsWorkspace', () => {
     expect(text).toContain('Исполнитель');
     expect(text).toContain('12.06.2026');
     expect(text).toContain('Нет');
+    expect(view.querySelector('.data-table time')?.getAttribute('dateTime')).toBe('2026-06-12T00:00:00Z');
   });
 
   it('renders contract 1C transfer state and money', () => {
@@ -133,6 +134,9 @@ describe('OrganizationRelationsWorkspace', () => {
       contracts: [{
         id: 3,
         name: 'Договор поддержки',
+        dateUtc: '2026-06-01T00:00:00Z',
+        dateFromUtc: '2026-06-02T00:00:00Z',
+        dateToUtc: '2026-06-30T00:00:00Z',
         oneCTransferState: 2,
         summa: 1500,
         isProlongation: false,
@@ -148,6 +152,33 @@ describe('OrganizationRelationsWorkspace', () => {
     expect(text).toContain('Договор поддержки');
     expect(text).toContain('1 500,00');
     expect(text).toContain('Обработано');
+    expect(Array.from(view.querySelectorAll('.data-table time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-06-01T00:00:00Z',
+      '2026-06-02T00:00:00Z',
+      '2026-06-30T00:00:00Z'
+    ]);
+  });
+
+  it('renders realization date as a machine-readable time value', () => {
+    const view = renderWorkspace('realizations', {
+      ...baseDetails,
+      realizations: [{
+        id: 4,
+        dateUtc: '2026-06-15T00:00:00Z',
+        number: 'REAL-15',
+        contractName: 'Договор внедрения',
+        summa: 2500,
+        isDone: true
+      }]
+    });
+
+    const text = normalizedText(view);
+
+    expect(text).toContain('REAL-15');
+    expect(text).toContain('Договор внедрения');
+    expect(text).toContain('2 500,00');
+    expect(text).toContain('Да');
+    expect(view.querySelector('.data-table time')?.getAttribute('dateTime')).toBe('2026-06-15T00:00:00Z');
   });
 
   it('renders Parus license dates as machine-readable time values', () => {

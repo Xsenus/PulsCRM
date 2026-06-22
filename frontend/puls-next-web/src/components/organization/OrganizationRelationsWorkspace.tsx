@@ -48,6 +48,11 @@ function renderDateTime(value?: string | null) {
   return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
 }
 
+function renderDateOnly(value?: string | null) {
+  const formatted = formatDateOnly(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
+}
+
 function formatContractOneCState(value: number) {
   switch (value) {
     case 1:
@@ -101,7 +106,7 @@ export function OrganizationRelationsWorkspace({
             { key: 'executorName', title: 'Исполнитель', width: 170, minWidth: 140, render: (row) => row.executorName || EMPTY_VALUE },
             { key: 'fileTypeName', title: 'Тип файла', width: 110, minWidth: 90, render: (row) => row.fileTypeName || EMPTY_VALUE },
             { key: 'attachDocumentTypeName', title: 'Тип документа', width: 170, minWidth: 140, render: (row) => row.attachDocumentTypeName || EMPTY_VALUE },
-            { key: 'dateUtc', title: 'Дата', width: 120, minWidth: 110, render: (row) => formatDateOnly(row.dateUtc) || EMPTY_VALUE },
+            { key: 'dateUtc', title: 'Дата', width: 120, minWidth: 110, render: (row) => renderDateOnly(row.dateUtc) },
             { key: 'number', title: 'Номер', width: 150, minWidth: 130, render: (row) => row.number || EMPTY_VALUE },
             { key: 'fileName', title: 'Файл', width: 220, minWidth: 180, render: (row) => row.fileName || EMPTY_VALUE },
             { key: 'name', title: 'Наименование', width: 260, minWidth: 220, render: (row) => row.name || EMPTY_VALUE },
@@ -122,9 +127,9 @@ export function OrganizationRelationsWorkspace({
           columns={[
             { key: 'executorName', title: 'Исполнитель', width: 170, minWidth: 150, render: (row) => row.executorName || EMPTY_VALUE },
             { key: 'fileTypeName', title: 'Тип', width: 110, minWidth: 90, render: (row) => row.fileTypeName || EMPTY_VALUE },
-            { key: 'dateUtc', title: 'Дата', width: 120, minWidth: 110, render: (row) => formatDateOnly(row.dateUtc) || EMPTY_VALUE },
-            { key: 'dateFromUtc', title: 'С', width: 120, minWidth: 110, render: (row) => formatDateOnly(row.dateFromUtc) || EMPTY_VALUE },
-            { key: 'dateToUtc', title: 'По', width: 120, minWidth: 110, render: (row) => formatDateOnly(row.dateToUtc) || EMPTY_VALUE },
+            { key: 'dateUtc', title: 'Дата', width: 120, minWidth: 110, render: (row) => renderDateOnly(row.dateUtc) },
+            { key: 'dateFromUtc', title: 'С', width: 120, minWidth: 110, render: (row) => renderDateOnly(row.dateFromUtc) },
+            { key: 'dateToUtc', title: 'По', width: 120, minWidth: 110, render: (row) => renderDateOnly(row.dateToUtc) },
             { key: 'number', title: 'Номер', width: 150, minWidth: 130, render: (row) => row.number || EMPTY_VALUE },
             { key: 'fileName', title: 'Файл', width: 220, minWidth: 180, render: (row) => row.fileName || EMPTY_VALUE },
             { key: 'name', title: 'Наименование', width: 260, minWidth: 220, render: (row) => row.name || EMPTY_VALUE },
@@ -143,7 +148,7 @@ export function OrganizationRelationsWorkspace({
           settingsKey={tableSettings.realizations}
           emptyText="Реализаций пока нет"
           columns={[
-            { key: 'dateUtc', title: 'Дата', width: 120, minWidth: 110, render: (row) => formatDateOnly(row.dateUtc) || EMPTY_VALUE },
+            { key: 'dateUtc', title: 'Дата', width: 120, minWidth: 110, render: (row) => renderDateOnly(row.dateUtc) },
             { key: 'number', title: 'Номер', width: 150, minWidth: 130, render: (row) => row.number || EMPTY_VALUE },
             { key: 'contractCode', title: 'Код', width: 90, minWidth: 70, render: (row) => row.contractCode || EMPTY_VALUE },
             { key: 'contractName', title: 'Договор', width: 220, minWidth: 180, render: (row) => row.contractName || EMPTY_VALUE },
