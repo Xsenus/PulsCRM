@@ -229,6 +229,7 @@ export function AttachmentManager({ attachments, htmlBody, onChange, onUploadFil
                   <label>Отображаемое имя</label>
                   <input
                     className="form-input"
+                    aria-label={`Отображаемое имя вложения ${attachment.storedFile.originalFileName}`}
                     value={attachment.displayName || ''}
                     onChange={(event) => patchAttachment(index, { displayName: event.target.value })}
                   />
@@ -238,6 +239,7 @@ export function AttachmentManager({ attachments, htmlBody, onChange, onUploadFil
                   <label>Content-ID для встроенного изображения</label>
                   <input
                     className="form-input"
+                    aria-label={`Content-ID вложения ${attachment.displayName || attachment.storedFile.originalFileName}`}
                     value={attachment.contentId || ''}
                     onChange={(event) => patchAttachment(index, { contentId: event.target.value })}
                   />
