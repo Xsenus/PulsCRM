@@ -8,7 +8,7 @@ export type OrganizationLicenseStatusTone = 'ok' | 'warn' | 'danger' | 'muted';
 export interface OrganizationLicenseStatusView {
   tone: OrganizationLicenseStatusTone;
   label: string;
-  hint: string;
+  hint: React.ReactNode;
 }
 
 export interface OrganizationOneCDetailsData {

@@ -7,7 +7,7 @@ export interface OrganizationSupportSummaryItem {
   title: string;
   tone: OrganizationSupportTone;
   value: string;
-  hint: string;
+  hint: React.ReactNode;
 }
 
 export function OrganizationSupportSummary({

@@ -120,6 +120,18 @@ describe('OrganizationSupportSection', () => {
     expect(view.textContent).toContain('1С');
     expect(view.textContent).toContain('Сайт');
     expect(view.textContent).toContain('Блоки программ');
+    expect(Array.from(view.querySelectorAll('.organization-support-summary-card .field-hint time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-01-01T00:00:00Z',
+      '2099-01-01T00:00:00Z',
+      '2026-01-01T00:00:00Z',
+      '2000-01-01T00:00:00Z'
+    ]);
+    expect(Array.from(view.querySelectorAll('.panel-subsection .detail-card .field-hint time')).map((time) => time.getAttribute('dateTime'))).toEqual([
+      '2026-01-01T00:00:00Z',
+      '2099-01-01T00:00:00Z',
+      '2026-01-01T00:00:00Z',
+      '2000-01-01T00:00:00Z'
+    ]);
   });
 
   it('renders muted summary cards and empty child blocks without saved details', () => {

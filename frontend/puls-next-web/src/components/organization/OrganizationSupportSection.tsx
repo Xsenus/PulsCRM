@@ -23,6 +23,19 @@ function formatDateOnly(value?: string | null) {
   return new Intl.DateTimeFormat('ru-RU').format(date);
 }
 
+function renderDateOnly(value?: string | null) {
+  const formatted = formatDateOnly(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : null;
+}
+
+function renderPeriodLabel(dateFrom: string, dateTo: string) {
+  return (
+    <>
+      с {renderDateOnly(dateFrom)} по {renderDateOnly(dateTo)}
+    </>
+  );
+}
+
 function getDaysUntil(value?: string | null) {
   if (!value) {
     return undefined;
@@ -59,7 +72,7 @@ function getLicenseStatus(
   }
 
   const daysLeft = getDaysUntil(dateTo);
-  const periodLabel = `с ${fromLabel} по ${toLabel}`;
+  const periodLabel = renderPeriodLabel(dateFrom, dateTo);
   if (daysLeft === undefined) {
     return {
       tone: 'muted',
@@ -72,7 +85,7 @@ function getLicenseStatus(
     return {
       tone: 'danger',
       label: labels.expired,
-      hint: `${periodLabel}, истекла ${Math.abs(daysLeft)} дн. назад.`
+      hint: <>{periodLabel}, истекла {Math.abs(daysLeft)} дн. назад.</>
     };
   }
 
@@ -80,14 +93,14 @@ function getLicenseStatus(
     return {
       tone: 'warn',
       label: labels.warning,
-      hint: `${periodLabel}, осталось ${daysLeft} дн.`
+      hint: <>{periodLabel}, осталось {daysLeft} дн.</>
     };
   }
 
   return {
     tone: 'ok',
     label: labels.active,
-    hint: `${periodLabel}, запас ${daysLeft} дн.`
+    hint: <>{periodLabel}, запас {daysLeft} дн.</>
   };
 }
 
