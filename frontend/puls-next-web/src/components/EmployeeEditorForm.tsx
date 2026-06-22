@@ -249,6 +249,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-login"
                   className="form-input"
+                  aria-label="Логин сотрудника"
                   autoComplete="off"
                   value={value.login}
                   disabled={disabled}
@@ -261,6 +262,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-full-name"
                   className="form-input"
+                  aria-label="ФИО сотрудника"
                   autoComplete="off"
                   value={value.fullName ?? ''}
                   disabled={disabled}
@@ -312,6 +314,7 @@ export function EmployeeEditorForm({
                 <select
                   id="employee-group"
                   className="form-select"
+                  aria-label="Группа сотрудника"
                   value={value.userGroupId ?? ''}
                   disabled={disabled}
                   onChange={(event) => onChange(updateValue(value, {
@@ -330,6 +333,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-position"
                   className="form-input"
+                  aria-label="Должность сотрудника"
                   autoComplete="off"
                   value={value.position ?? ''}
                   disabled={disabled}
@@ -342,6 +346,7 @@ export function EmployeeEditorForm({
                 <input
                   id="employee-s1c-code"
                   className="form-input"
+                  aria-label="Код 1С сотрудника"
                   autoComplete="off"
                   value={value.s1cCode ?? ''}
                   disabled={disabled}
