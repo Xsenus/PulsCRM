@@ -51,8 +51,9 @@ function parseOptionalNumber(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function formatNullableDate(value?: string) {
-  return formatDateTime(value) || EMPTY_VALUE;
+function renderDateTime(value?: string | null) {
+  const formatted = formatDateTime(value);
+  return formatted ? <time dateTime={value ?? undefined}>{formatted}</time> : EMPTY_VALUE;
 }
 
 function itemProblemText(row: DispatchItemDto) {
@@ -60,7 +61,7 @@ function itemProblemText(row: DispatchItemDto) {
 }
 
 function itemDateText(row: DispatchItemDto) {
-  return formatNullableDate(row.failedAtUtc || row.sentAtUtc || row.startedAtUtc || row.queuedAtUtc);
+  return renderDateTime(row.failedAtUtc || row.sentAtUtc || row.startedAtUtc || row.queuedAtUtc);
 }
 
 function batchProgress(row: DispatchBatchDto) {
@@ -415,7 +416,7 @@ export function DispatchPage() {
               { key: 'legacyOrgName', title: 'Организация', width: 260, minWidth: 220, priority: 4, render: (row) => row.legacyOrgName || EMPTY_VALUE },
               { key: 'attemptCount', title: 'Попытки', width: 110, minWidth: 96, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.attemptCount },
               { key: 'eventDate', title: 'Последнее событие', width: 180, minWidth: 160, render: itemDateText },
-              { key: 'nextAttemptAtUtc', title: 'Следующая попытка', width: 180, minWidth: 160, render: (row) => formatNullableDate(row.nextAttemptAtUtc) },
+              { key: 'nextAttemptAtUtc', title: 'Следующая попытка', width: 180, minWidth: 160, render: (row) => renderDateTime(row.nextAttemptAtUtc) },
               { key: 'problem', title: 'Ошибка / SMTP', width: 300, minWidth: 220, render: (row) => <span className="dispatch-row-message">{itemProblemText(row)}</span> },
               { key: 'messageId', title: 'Message ID', width: 220, minWidth: 180, visible: false, render: (row) => row.messageId || EMPTY_VALUE },
               { key: 'legacyOrgId', title: 'ID организации', width: 130, minWidth: 110, visible: false, render: (row) => row.legacyOrgId || EMPTY_VALUE },
@@ -458,9 +459,9 @@ export function DispatchPage() {
             columns={[
               { key: 'id', title: 'ID', width: 90, minWidth: 80, priority: 1, isPrimary: true, render: (row) => row.id },
               { key: 'triggerKind', title: 'Источник', width: 140, minWidth: 120, priority: 2, render: (row) => row.triggerKind === 1 ? 'Вручную' : row.triggerKind === 2 ? 'Повтор' : 'Расписание' },
-              { key: 'scheduledAtUtc', title: 'План', width: 180, minWidth: 160, render: (row) => formatNullableDate(row.scheduledAtUtc) },
-              { key: 'createdAtUtc', title: 'Создана', width: 180, minWidth: 160, priority: 3, render: (row) => formatNullableDate(row.createdAtUtc) },
-              { key: 'completedAtUtc', title: 'Завершена', width: 180, minWidth: 160, render: (row) => formatNullableDate(row.completedAtUtc) },
+              { key: 'scheduledAtUtc', title: 'План', width: 180, minWidth: 160, render: (row) => renderDateTime(row.scheduledAtUtc) },
+              { key: 'createdAtUtc', title: 'Создана', width: 180, minWidth: 160, priority: 3, render: (row) => renderDateTime(row.createdAtUtc) },
+              { key: 'completedAtUtc', title: 'Завершена', width: 180, minWidth: 160, render: (row) => renderDateTime(row.completedAtUtc) },
               { key: 'progress', title: 'Отправлено', width: 130, minWidth: 110, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: batchProgress },
               { key: 'queuedCount', title: 'Очередь', width: 110, minWidth: 96, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.queuedCount },
               { key: 'failedCount', title: 'Ошибки', width: 110, minWidth: 96, headerClassName: 'organization-cell-right', className: 'organization-cell-right', render: (row) => row.failedCount },
