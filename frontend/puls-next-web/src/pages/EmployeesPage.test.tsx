@@ -107,4 +107,31 @@ describe('EmployeesPage', () => {
     expect(view.textContent).toContain('Иванов Иван');
     expect(apiMocks.getEmployees).toHaveBeenLastCalledWith('', 0, 25);
   });
+
+  it('adds employee context to desktop row action menu labels', async () => {
+    const view = render(
+      <MemoryRouter>
+        <EmployeesPage />
+      </MemoryRouter>
+    );
+    await flushEffects();
+
+    const row = view.querySelector<HTMLTableRowElement>('tbody tr');
+
+    await act(async () => {
+      row?.dispatchEvent(new MouseEvent('contextmenu', {
+        bubbles: true,
+        clientX: 120,
+        clientY: 160
+      }));
+    });
+
+    const menu = view.querySelector('[role="menu"]');
+
+    expect(menu?.getAttribute('aria-label')).toBe('Действия сотрудника Иванов Иван');
+    expect(menu?.querySelector('[aria-label="Создать нового сотрудника"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(menu?.querySelector('[aria-label="Редактировать сотрудника Иванов Иван"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(menu?.querySelector('[aria-label="Обновить список после проверки сотрудника Иванов Иван"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(menu?.querySelector('[aria-label="Удалить сотрудника Иванов Иван"]')).toBeInstanceOf(HTMLButtonElement);
+  });
 });

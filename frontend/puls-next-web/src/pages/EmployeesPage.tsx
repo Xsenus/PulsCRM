@@ -263,10 +263,12 @@ export function EmployeesPage() {
           className="row-context-menu"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           role="menu"
+          aria-label={`Действия сотрудника ${contextMenu.row.fullName || contextMenu.row.login || `#${contextMenu.row.id}`}`}
         >
           <button
             type="button"
             className="row-context-menu-item"
+            aria-label="Создать нового сотрудника"
             onClick={() => {
               setContextMenu(null);
               navigate('/employees/new');
@@ -277,6 +279,7 @@ export function EmployeesPage() {
           <button
             type="button"
             className="row-context-menu-item"
+            aria-label={`Редактировать сотрудника ${contextMenu.row.fullName || contextMenu.row.login || `#${contextMenu.row.id}`}`}
             onClick={() => {
               setContextMenu(null);
               setSelectedRowId(contextMenu.row.id);
@@ -289,6 +292,7 @@ export function EmployeesPage() {
           <button
             type="button"
             className="row-context-menu-item"
+            aria-label={`Обновить список после проверки сотрудника ${contextMenu.row.fullName || contextMenu.row.login || `#${contextMenu.row.id}`}`}
             onClick={() => {
               setContextMenu(null);
               void refreshEmployees().catch((error) => {
@@ -302,6 +306,7 @@ export function EmployeesPage() {
           <button
             type="button"
             className="row-context-menu-item danger"
+            aria-label={`Удалить сотрудника ${contextMenu.row.fullName || contextMenu.row.login || `#${contextMenu.row.id}`}`}
             onClick={() => {
               setContextMenu(null);
               setSelectedRowId(contextMenu.row.id);
