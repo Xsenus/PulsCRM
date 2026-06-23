@@ -115,6 +115,14 @@ describe('CampaignsPage', () => {
     expect(view.querySelector('[aria-label="Фильтр рассылок по статусу"]')).toBeInstanceOf(HTMLSelectElement);
     expect(view.querySelector('[aria-label="Быстрый фильтр рассылок по статусу"]')).toBeInstanceOf(HTMLDivElement);
     expect(quickFilters.map((button) => button.getAttribute('aria-pressed'))).toContain('true');
+    expect(quickFilters.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Все: текущий фильтр',
+      'Черновик: применить фильтр',
+      'Активна: применить фильтр',
+      'На паузе: применить фильтр',
+      'Завершена: применить фильтр',
+      'Архив: применить фильтр'
+    ]);
   });
 
   it('renders campaign list dates as machine-readable time elements', async () => {

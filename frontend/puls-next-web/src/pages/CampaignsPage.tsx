@@ -23,6 +23,10 @@ const campaignStatusQuickFilters: Array<{ label: string; value?: number }> = [
   ...campaignStatusOptions
 ];
 
+function buildCampaignQuickStatusFilterAriaLabel(label: string, active: boolean) {
+  return `${label}: ${active ? 'текущий фильтр' : 'применить фильтр'}`;
+}
+
 function campaignStatusTone(status: number): StatusBadgeTone {
   if (status === 1) {
     return 'success';
@@ -222,6 +226,7 @@ export function CampaignsPage() {
                 className={`campaign-status-filter-button${isActive ? ' active' : ''}`}
                 onClick={() => applyStatusFilter(option.value)}
                 aria-pressed={isActive}
+                aria-label={buildCampaignQuickStatusFilterAriaLabel(option.label, isActive)}
               >
                 {option.label}
               </button>
