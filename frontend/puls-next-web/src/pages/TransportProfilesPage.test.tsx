@@ -208,4 +208,41 @@ describe('TransportProfilesPage', () => {
       expect(document.body.querySelector(`[aria-label="${label}"]`)).toBeInstanceOf(HTMLInputElement);
     }
   });
+
+  it('labels delete confirmation actions with SMTP profile context', async () => {
+    apiMocks.getTransportProfiles.mockResolvedValue([
+      {
+        id: 42,
+        name: 'SMTP основной',
+        host: 'smtp.example.test',
+        port: 587,
+        useSsl: true,
+        username: 'smtp-user',
+        senderEmail: 'sender@example.test',
+        senderName: 'Puls CRM',
+        replyToEmail: 'reply@example.test',
+        maxConnections: 2,
+        messagesPerMinute: 60,
+        isDefault: true,
+        isEnabled: true,
+        createdAtUtc: '2026-06-15T06:30:00.000Z',
+        updatedAtUtc: '2026-06-18T09:45:00.000Z'
+      }
+    ]);
+
+    const view = render(<TransportProfilesPage />);
+    await flushEffects();
+
+    const rowActionsButton = view.querySelector<HTMLButtonElement>('.row-actions-menu-trigger');
+    expect(rowActionsButton).not.toBeNull();
+    click(rowActionsButton!);
+    await flushEffects();
+
+    const actions = Array.from(view.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+    click(actions[2]);
+    await flushEffects();
+
+    expect(document.body.querySelector('[aria-label="Отменить удаление SMTP профиля SMTP основной"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(document.body.querySelector('[aria-label="Удалить SMTP профиль SMTP основной"]')).toBeInstanceOf(HTMLButtonElement);
+  });
 });

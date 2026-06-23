@@ -482,10 +482,22 @@ export function TransportProfilesPage() {
         onClose={() => !deleteBusy && setDeleteTarget(null)}
         actions={(
           <>
-            <button type="button" className="secondary-button" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>
+            <button
+              type="button"
+              className="secondary-button"
+              aria-label={deleteTarget ? `Отменить удаление SMTP профиля ${deleteTarget.name}` : 'Отменить удаление SMTP профиля'}
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleteBusy}
+            >
               Отмена
             </button>
-            <button type="button" className="primary-button danger-button" onClick={() => void remove()} disabled={deleteBusy}>
+            <button
+              type="button"
+              className="primary-button danger-button"
+              aria-label={deleteTarget ? `Удалить SMTP профиль ${deleteTarget.name}` : 'Удалить SMTP профиль'}
+              onClick={() => void remove()}
+              disabled={deleteBusy}
+            >
               {deleteBusy ? 'Удаление...' : 'Удалить'}
             </button>
           </>
