@@ -68,6 +68,27 @@ describe('OrganizationEditorForm', () => {
     expect(view.querySelector('[aria-label="Организация доступна менеджеру"]')).toBeInstanceOf(HTMLInputElement);
   });
 
+  it('labels contacts section fields for assistive technologies', () => {
+    const view = render(
+      <OrganizationEditorForm
+        value={organizationValue}
+        lookups={null}
+        section="contacts"
+        onChange={vi.fn()}
+      />
+    );
+
+    expect(view.querySelector('[aria-label="Телефон организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Сайт организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Основной email организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Email руководителя организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Email зарплаты организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Email 1C организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Email сайта организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Юридический адрес организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Фактический адрес организации"]')).toBeInstanceOf(HTMLInputElement);
+  });
+
   it('labels programs section flag toggles for assistive technologies', () => {
     const view = render(
       <OrganizationEditorForm

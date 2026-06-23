@@ -213,6 +213,7 @@ function renderContactsSection(
             <input
               id="org-phone"
               className="form-input"
+              aria-label="Телефон организации"
               value={value.phone ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { phone: event.target.value || undefined }))}
@@ -224,6 +225,7 @@ function renderContactsSection(
             <input
               id="org-site"
               className="form-input"
+              aria-label="Сайт организации"
               value={value.site ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { site: event.target.value || undefined }))}
@@ -235,6 +237,7 @@ function renderContactsSection(
             <input
               id="org-primary-email"
               className="form-input"
+              aria-label="Основной email организации"
               value={value.primaryEmail ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { primaryEmail: event.target.value || undefined }))}
@@ -246,6 +249,7 @@ function renderContactsSection(
             <input
               id="org-director-email"
               className="form-input"
+              aria-label="Email руководителя организации"
               value={value.directorEmail ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { directorEmail: event.target.value || undefined }))}
@@ -257,6 +261,7 @@ function renderContactsSection(
             <input
               id="org-salary-email"
               className="form-input"
+              aria-label="Email зарплаты организации"
               value={value.salaryEmail ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { salaryEmail: event.target.value || undefined }))}
@@ -268,6 +273,7 @@ function renderContactsSection(
             <input
               id="org-onec-email"
               className="form-input"
+              aria-label="Email 1C организации"
               value={value.oneCEmail ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { oneCEmail: event.target.value || undefined }))}
@@ -279,6 +285,7 @@ function renderContactsSection(
             <input
               id="org-site-email"
               className="form-input"
+              aria-label="Email сайта организации"
               value={value.siteEmail ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { siteEmail: event.target.value || undefined }))}
@@ -295,6 +302,7 @@ function renderContactsSection(
             <input
               id="org-address-legal"
               className="form-input"
+              aria-label="Юридический адрес организации"
               value={value.addressLegal ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { addressLegal: event.target.value || undefined }))}
@@ -306,6 +314,7 @@ function renderContactsSection(
             <input
               id="org-address-actual"
               className="form-input"
+              aria-label="Фактический адрес организации"
               value={value.addressActual ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { addressActual: event.target.value || undefined }))}
