@@ -87,6 +87,8 @@ describe('EmployeeEditorForm', () => {
     expect(view.querySelector('[aria-label="Пол сотрудника: мужчина"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Пол сотрудника: женщина"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Сотрудник является администратором системы"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Набор правил сотрудника"]')).toBeInstanceOf(HTMLSelectElement);
+    expect(view.querySelector('[aria-label="Группа приватности сотрудника"]')).toBeInstanceOf(HTMLSelectElement);
     expect(view.querySelector('[aria-label="Изменить пароль сотрудника"]')).toBeInstanceOf(HTMLInputElement);
   });
 });

@@ -591,6 +591,7 @@ export function EmployeeEditorForm({
                 <select
                   id="employee-rule"
                   className="form-select"
+                  aria-label="Набор правил сотрудника"
                   value={value.ruleId ?? ''}
                   disabled={disabled}
                   onChange={(event) => onChange(updateValue(value, {
@@ -609,6 +610,7 @@ export function EmployeeEditorForm({
                 <select
                   id="employee-privacy-group"
                   className="form-select"
+                  aria-label="Группа приватности сотрудника"
                   value={value.privacyGroupId ?? ''}
                   disabled={disabled}
                   onChange={(event) => onChange(updateValue(value, {
