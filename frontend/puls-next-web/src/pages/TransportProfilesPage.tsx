@@ -380,12 +380,31 @@ export function TransportProfilesPage() {
         actions={(
           <>
             {editingId ? (
-              <button type="button" className="secondary-button" disabled={testingId === editingId} onClick={() => void runTest(editingId)}>
+              <button
+                type="button"
+                className="secondary-button"
+                aria-label={`Проверить SMTP профиль #${editingId}`}
+                disabled={testingId === editingId}
+                onClick={() => void runTest(editingId)}
+              >
                 {testingId === editingId ? <LoadingButtonLabel label="Проверяем" /> : 'Проверить SMTP'}
               </button>
             ) : null}
-            <button type="button" className="secondary-button" onClick={() => setModalOpen(false)}>Закрыть</button>
-            <button type="button" className="primary-button action-button" disabled={saving} onClick={() => void save()}>
+            <button
+              type="button"
+              className="secondary-button"
+              aria-label={editingId ? `Закрыть форму SMTP профиля #${editingId}` : 'Закрыть форму нового SMTP профиля'}
+              onClick={() => setModalOpen(false)}
+            >
+              Закрыть
+            </button>
+            <button
+              type="button"
+              className="primary-button action-button"
+              aria-label={editingId ? `Сохранить SMTP профиль #${editingId}` : 'Сохранить новый SMTP профиль'}
+              disabled={saving}
+              onClick={() => void save()}
+            >
               {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Сохранить'}
             </button>
           </>

@@ -160,6 +160,9 @@ describe('TransportProfilesPage', () => {
 
     const metaTimes = Array.from(document.body.querySelectorAll<HTMLTimeElement>('.settings-form-meta time'));
 
+    expect(document.body.querySelector('[aria-label="Проверить SMTP профиль #42"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(document.body.querySelector('[aria-label="Закрыть форму SMTP профиля #42"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(document.body.querySelector('[aria-label="Сохранить SMTP профиль #42"]')).toBeInstanceOf(HTMLButtonElement);
     expect(metaTimes.map((item) => item.getAttribute('dateTime'))).toEqual([
       '2026-06-15T06:30:00.000Z',
       '2026-06-18T09:45:00.000Z'
@@ -191,6 +194,9 @@ describe('TransportProfilesPage', () => {
     for (const label of expectedLabels) {
       expect(document.body.querySelector(`[aria-label="${label}"]`)).toBeInstanceOf(HTMLInputElement);
     }
+
+    expect(document.body.querySelector('[aria-label="Закрыть форму нового SMTP профиля"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(document.body.querySelector('[aria-label="Сохранить новый SMTP профиль"]')).toBeInstanceOf(HTMLButtonElement);
 
     const expectedToggleLabels = [
       'Использовать SSL для SMTP профиля',
