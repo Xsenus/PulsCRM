@@ -347,6 +347,7 @@ export function TransportProfilesPage() {
                 className: 'organization-cell-right',
                 render: (row) => (
                   <RowActionsMenu
+                    label={`Действия SMTP профиля ${row.name}`}
                     actions={[
                       { key: 'edit', label: 'Редактировать', primary: true, onClick: () => openEdit(row) },
                       { key: 'test', label: testingId === row.id ? 'Проверяем...' : 'Проверить', disabled: testingId === row.id, busy: testingId === row.id, onClick: () => runTest(row.id) },

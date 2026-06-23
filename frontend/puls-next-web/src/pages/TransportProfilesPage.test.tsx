@@ -150,6 +150,7 @@ describe('TransportProfilesPage', () => {
 
     const rowActionsButton = view.querySelector<HTMLButtonElement>('.row-actions-menu-trigger');
     expect(rowActionsButton).not.toBeNull();
+    expect(rowActionsButton?.getAttribute('aria-label')).toBe('Действия SMTP профиля SMTP основной');
     click(rowActionsButton!);
     await flushEffects();
 

@@ -1,5 +1,15 @@
 # Что нового
 
+## 2026-06-23 - доступные действия строки SMTP профиля
+
+Продолжен backlog roadmap по accessibility-полировке раздела настроек:
+
+- кнопка открытия меню действий строки на `TransportProfilesPage` получила контекстное доступное имя с названием SMTP профиля;
+- тест `TransportProfilesPage` закрепляет подпись action-trigger для строки SMTP профиля вместе с переходом в форму редактирования;
+- логика редактирования, проверки и удаления SMTP профиля не менялась, изменена только доступная разметка меню строки.
+
+Проверки этого этапа включают targeted frontend-тест `TransportProfilesPage`, frontend-тесты, полный Playwright suite, production-сборку, backend-тесты, backend-сборку, `npm audit`, NuGet vulnerability scan, проверку кодировки и локальную DB/E2E-проверку рассылки против SQL-БД.
+
 ## 2026-06-23 - доступное удаление SMTP профиля
 
 Продолжен backlog roadmap по accessibility-полировке раздела настроек:
