@@ -277,6 +277,111 @@ public sealed class OrganizationParusOrderDto
     public decimal CustomerAmount { get; set; }
 }
 
+public sealed class ParusLicenseAnalyticsDto
+{
+    public DateTime DateFromUtc { get; set; }
+    public DateTime DateToUtc { get; set; }
+    public ParusLicenseAnalyticsSummaryDto Summary { get; set; } = new();
+    public IReadOnlyCollection<ParusLicenseAnalyticsPeriodDto> Periods { get; set; } = Array.Empty<ParusLicenseAnalyticsPeriodDto>();
+    public IReadOnlyCollection<ParusLicenseAnalyticsProductDto> Products { get; set; } = Array.Empty<ParusLicenseAnalyticsProductDto>();
+    public IReadOnlyCollection<ParusLicenseAnalyticsGroupDto> Groups { get; set; } = Array.Empty<ParusLicenseAnalyticsGroupDto>();
+    public IReadOnlyCollection<ParusLicenseAnalyticsOrganizationGroupDto> OrganizationGroups { get; set; } = Array.Empty<ParusLicenseAnalyticsOrganizationGroupDto>();
+}
+
+public class ParusLicenseAnalyticsSummaryDto
+{
+    public int LicenseGroups { get; set; }
+    public int LicenseRecords { get; set; }
+    public int Clients { get; set; }
+    public int ActiveAtPeriodEnd { get; set; }
+    public int ExpiredAtPeriodEnd { get; set; }
+    public int Renewed { get; set; }
+    public int WithoutRenewal { get; set; }
+    public int ExpiringInPeriod { get; set; }
+    public int NewLicenses { get; set; }
+}
+
+public sealed class ParusLicenseAnalyticsPeriodDto : ParusLicenseAnalyticsSummaryDto
+{
+    public int Year { get; set; }
+    public DateTime DateFromUtc { get; set; }
+    public DateTime DateToUtc { get; set; }
+}
+
+public sealed class ParusLicenseAnalyticsProductDto
+{
+    public string Name { get; set; } = string.Empty;
+    public int LicenseGroups { get; set; }
+    public int LicenseRecords { get; set; }
+    public int Clients { get; set; }
+    public int ActiveAtPeriodEnd { get; set; }
+    public int ExpiredAtPeriodEnd { get; set; }
+    public int Renewed { get; set; }
+    public int WithoutRenewal { get; set; }
+}
+
+public sealed class ParusLicenseAnalyticsGroupDto
+{
+    public string Key { get; set; } = string.Empty;
+    public string Number { get; set; } = string.Empty;
+    public string? Nomenclature { get; set; }
+    public string? Modification { get; set; }
+    public string? Product { get; set; }
+    public int ClientId { get; set; }
+    public string ClientName { get; set; } = string.Empty;
+    public string? Inn { get; set; }
+    public string? MnemoOrg { get; set; }
+    public string? Payer { get; set; }
+    public string? RegNumberClient { get; set; }
+    public string? RegNumberAbonement { get; set; }
+    public DateTime? FirstDateSinceUtc { get; set; }
+    public DateTime? LastDateToUtc { get; set; }
+    public int Records { get; set; }
+    public bool ActiveAtPeriodEnd { get; set; }
+    public bool ExpiredAtPeriodEnd { get; set; }
+    public bool RenewedInPeriod { get; set; }
+    public bool WithoutRenewal { get; set; }
+}
+
+public sealed class ParusLicenseAnalyticsOrganizationGroupDto
+{
+    public string Key { get; set; } = string.Empty;
+    public int ClientId { get; set; }
+    public string ClientName { get; set; } = string.Empty;
+    public string? Inn { get; set; }
+    public string? MnemoOrg { get; set; }
+    public string LicenseNumber { get; set; } = string.Empty;
+    public int PeriodsCount { get; set; }
+    public int ComponentsCount { get; set; }
+    public bool ActiveAtPeriodEnd { get; set; }
+    public bool ExpiredAtPeriodEnd { get; set; }
+    public bool RenewedInPeriod { get; set; }
+    public bool WithoutRenewal { get; set; }
+    public IReadOnlyCollection<ParusLicenseAnalyticsLicensePeriodDto> Periods { get; set; } = Array.Empty<ParusLicenseAnalyticsLicensePeriodDto>();
+}
+
+public sealed class ParusLicenseAnalyticsLicensePeriodDto
+{
+    public string Key { get; set; } = string.Empty;
+    public DateTime DateSinceUtc { get; set; }
+    public DateTime DateToUtc { get; set; }
+    public int ComponentsCount { get; set; }
+    public bool ActiveAtPeriodEnd { get; set; }
+    public bool ExpiredAtPeriodEnd { get; set; }
+    public IReadOnlyCollection<ParusLicenseAnalyticsComponentDto> Components { get; set; } = Array.Empty<ParusLicenseAnalyticsComponentDto>();
+}
+
+public sealed class ParusLicenseAnalyticsComponentDto
+{
+    public int Id { get; set; }
+    public string? Number { get; set; }
+    public string? RegNumberAbonement { get; set; }
+    public string? RegNumberClient { get; set; }
+    public string? Nomenclature { get; set; }
+    public string? Modification { get; set; }
+    public string? Product { get; set; }
+}
+
 public sealed class OrganizationContractDto
 {
     public int Id { get; set; }

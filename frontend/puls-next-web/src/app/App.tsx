@@ -7,6 +7,7 @@ import { LoginPage } from '../pages/LoginPage';
 
 const AppShell = lazy(() => import('../components/AppShell').then((module) => ({ default: module.AppShell })));
 const DashboardPage = lazy(() => import('../pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
+const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })));
 const EmployeesPage = lazy(() => import('../pages/EmployeesPage').then((module) => ({ default: module.EmployeesPage })));
 const EmployeeEditPage = lazy(() => import('../pages/EmployeeEditPage').then((module) => ({ default: module.EmployeeEditPage })));
 const OrganizationsPage = lazy(() => import('../pages/OrganizationsPage').then((module) => ({ default: module.OrganizationsPage })));
@@ -36,6 +37,8 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ShellLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/analytics" element={<Navigate to="/analytics/parus-tornado" replace />} />
+            <Route path="/analytics/parus-tornado" element={<AnalyticsPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/employees/new" element={<EmployeeEditPage />} />
             <Route path="/employees/:id/edit" element={<EmployeeEditPage />} />

@@ -72,6 +72,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IOverviewService, OverviewService>();
+        services.AddScoped<IParusLicenseAnalyticsService, ParusLicenseAnalyticsService>();
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IFileStorageService, FileStorageService>();

@@ -41,6 +41,103 @@ export interface DashboardDto {
   failedLast24Hours: number;
 }
 
+export interface ParusLicenseAnalyticsSummaryDto {
+  licenseGroups: number;
+  licenseRecords: number;
+  clients: number;
+  activeAtPeriodEnd: number;
+  expiredAtPeriodEnd: number;
+  renewed: number;
+  withoutRenewal: number;
+  expiringInPeriod: number;
+  newLicenses: number;
+}
+
+export interface ParusLicenseAnalyticsPeriodDto extends ParusLicenseAnalyticsSummaryDto {
+  year: number;
+  dateFromUtc: string;
+  dateToUtc: string;
+}
+
+export interface ParusLicenseAnalyticsProductDto {
+  name: string;
+  licenseGroups: number;
+  licenseRecords: number;
+  clients: number;
+  activeAtPeriodEnd: number;
+  expiredAtPeriodEnd: number;
+  renewed: number;
+  withoutRenewal: number;
+}
+
+export interface ParusLicenseAnalyticsGroupDto {
+  key: string;
+  number: string;
+  nomenclature?: string;
+  modification?: string;
+  product?: string;
+  clientId: number;
+  clientName: string;
+  inn?: string;
+  mnemoOrg?: string;
+  payer?: string;
+  regNumberClient?: string;
+  regNumberAbonement?: string;
+  firstDateSinceUtc?: string;
+  lastDateToUtc?: string;
+  records: number;
+  activeAtPeriodEnd: boolean;
+  expiredAtPeriodEnd: boolean;
+  renewedInPeriod: boolean;
+  withoutRenewal: boolean;
+}
+
+export interface ParusLicenseAnalyticsComponentDto {
+  id: number;
+  number?: string;
+  regNumberAbonement?: string;
+  regNumberClient?: string;
+  nomenclature?: string;
+  modification?: string;
+  product?: string;
+}
+
+export interface ParusLicenseAnalyticsLicensePeriodDto {
+  key: string;
+  dateSinceUtc: string;
+  dateToUtc: string;
+  componentsCount: number;
+  activeAtPeriodEnd: boolean;
+  expiredAtPeriodEnd: boolean;
+  components: ParusLicenseAnalyticsComponentDto[];
+}
+
+export interface ParusLicenseAnalyticsOrganizationGroupDto {
+  key: string;
+  clientId: number;
+  clientName: string;
+  inn?: string;
+  mnemoOrg?: string;
+  licenseNumber: string;
+  periodsCount: number;
+  componentsCount: number;
+  activeAtPeriodEnd: boolean;
+  expiredAtPeriodEnd: boolean;
+  renewedInPeriod: boolean;
+  withoutRenewal: boolean;
+  periods: ParusLicenseAnalyticsLicensePeriodDto[];
+}
+
+export interface ParusLicenseAnalyticsDto {
+  dateFromUtc: string;
+  dateToUtc: string;
+  summary: ParusLicenseAnalyticsSummaryDto;
+  periods: ParusLicenseAnalyticsPeriodDto[];
+  products: ParusLicenseAnalyticsProductDto[];
+  groups: ParusLicenseAnalyticsGroupDto[];
+  organizationGroups: ParusLicenseAnalyticsOrganizationGroupDto[];
+}
+
 export interface EmployeeListItemDto {
   id: number;
   login: string;

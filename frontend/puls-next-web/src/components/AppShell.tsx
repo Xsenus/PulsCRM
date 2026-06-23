@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../app/AuthContext';
 
-type MenuIconKey = 'dashboard' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
+type MenuIconKey = 'dashboard' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
 
 const SIDEBAR_STATE_KEY = 'puls-next-sidebar-collapsed';
 
-const menu: Array<{ to: string; label: string; icon: MenuIconKey }> = [
+const menu: Array<{ to?: string; label: string; icon: MenuIconKey; children?: Array<{ to: string; label: string }> }> = [
   { to: '/', label: 'Дашборд', icon: 'dashboard' },
+  { label: 'Аналитика', icon: 'analytics', children: [{ to: '/analytics/parus-tornado', label: 'Парус Торнадо' }] },
   { to: '/employees', label: 'Сотрудники', icon: 'employees' },
   { to: '/organizations', label: 'Организации', icon: 'organizations' },
   { to: '/campaigns', label: 'Рассылки', icon: 'campaigns' },
@@ -21,6 +22,12 @@ function MenuIcon({ icon }: { icon: MenuIconKey }) {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" fill="currentColor" />
+        </svg>
+      );
+    case 'analytics':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 19h14v2H5zm1-2h3V9H6zm5 0h3V4h-3zm5 0h3v-6h-3z" fill="currentColor" />
         </svg>
       );
     case 'employees':
@@ -142,11 +149,15 @@ function getCurrentSection(pathname: string) {
     return 'Рассылки';
   }
 
+  if (pathname.startsWith('/analytics')) {
+    return 'Парус Торнадо';
+  }
+
   if (pathname.startsWith('/dispatch')) {
     return 'Очередь рассылок';
   }
 
-  return menu.find((item) => (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)))?.label || 'Раздел';
+  return menu.find((item) => item.to && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)))?.label || 'Раздел';
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -226,20 +237,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="menu">
-          {menu.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              title={collapsed ? item.label : undefined}
-              className={({ isActive }) => `menu-link ${isActive ? 'active' : ''}`}
-            >
-              <span className="menu-link-icon">
-                <MenuIcon icon={item.icon} />
-              </span>
-              <span className="menu-link-label">{item.label}</span>
-            </NavLink>
-          ))}
+          {menu.map((item) => {
+            if (item.children?.length) {
+              const active = item.children.some((child) => location.pathname.startsWith(child.to));
+
+              return (
+                <div key={item.label} className={`menu-group ${active ? 'active' : ''}`}>
+                  <div className={`menu-link menu-link-parent ${active ? 'active' : ''}`} title={collapsed ? item.label : undefined}>
+                    <span className="menu-link-icon">
+                      <MenuIcon icon={item.icon} />
+                    </span>
+                    <span className="menu-link-label">{item.label}</span>
+                  </div>
+                  <div className="menu-submenu">
+                    {item.children.map((child) => (
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        className={({ isActive }) => `menu-submenu-link ${isActive ? 'active' : ''}`}
+                      >
+                        {child.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to ?? '/'}
+                end={item.to === '/'}
+                title={collapsed ? item.label : undefined}
+                className={({ isActive }) => `menu-link ${isActive ? 'active' : ''}`}
+              >
+                <span className="menu-link-icon">
+                  <MenuIcon icon={item.icon} />
+                </span>
+                <span className="menu-link-label">{item.label}</span>
+              </NavLink>
+            );
+          })}
         </nav>
       </aside>
 

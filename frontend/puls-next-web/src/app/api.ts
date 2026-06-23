@@ -32,7 +32,8 @@ import type {
   DispatchItemDto,
   DispatchItemListQuery,
   CurrentUserDto,
-  LoginUserOptionDto
+  LoginUserOptionDto,
+  ParusLicenseAnalyticsDto
 } from './types';
 import { getApiErrorStatus, throwApiError } from './apiErrors';
 
@@ -124,6 +125,17 @@ export async function getLoginUsers(search = '', take = 12): Promise<LoginUserOp
 export async function getDashboard(): Promise<DashboardDto> {
   try {
     const { data } = await api.get<DashboardDto>('/api/dashboard');
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function getParusLicenseAnalytics(dateFromUtc: string, dateToUtc: string): Promise<ParusLicenseAnalyticsDto> {
+  try {
+    const { data } = await api.get<ParusLicenseAnalyticsDto>('/api/analytics/parus-licenses', {
+      params: { dateFromUtc, dateToUtc }
+    });
     return data;
   } catch (error) {
     unwrapError(error);

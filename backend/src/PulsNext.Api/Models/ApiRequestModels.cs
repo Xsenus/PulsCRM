@@ -126,6 +126,22 @@ public sealed class OrganizationRaionsQuery
 }
 
 /// <summary>
+/// Параметры периода для аналитики лицензий Парус.
+/// </summary>
+public sealed class ParusLicenseAnalyticsQuery
+{
+    /// <summary>
+    /// Начало периода в UTC. Если не задано, используется 1 января текущего года.
+    /// </summary>
+    public DateTime? DateFromUtc { get; set; }
+
+    /// <summary>
+    /// Конец периода в UTC. Если не задано, используется 31 декабря года начала периода.
+    /// </summary>
+    public DateTime? DateToUtc { get; set; }
+}
+
+/// <summary>
 /// Параметры списка рабочих задач.
 /// </summary>
 public sealed class WorkListQuery
