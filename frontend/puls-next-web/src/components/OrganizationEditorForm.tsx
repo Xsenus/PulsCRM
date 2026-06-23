@@ -37,6 +37,7 @@ function renderMainSection(
             <input
               id="org-name"
               className="form-input"
+              aria-label="Название организации"
               value={value.name}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { name: event.target.value }))}
@@ -48,6 +49,7 @@ function renderMainSection(
             <input
               id="org-small-name"
               className="form-input"
+              aria-label="Краткое название организации"
               value={value.smallName ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { smallName: event.target.value || undefined }))}
@@ -59,6 +61,7 @@ function renderMainSection(
             <input
               id="org-full-name"
               className="form-input"
+              aria-label="Полное название организации"
               value={value.fullName ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { fullName: event.target.value || undefined }))}
@@ -70,6 +73,7 @@ function renderMainSection(
             <input
               id="org-inn"
               className="form-input"
+              aria-label="ИНН организации"
               value={value.inn ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { inn: event.target.value || undefined }))}
@@ -81,6 +85,7 @@ function renderMainSection(
             <input
               id="org-ogrn"
               className="form-input"
+              aria-label="ОГРН организации"
               value={value.ogrn ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { ogrn: event.target.value || undefined }))}
@@ -92,6 +97,7 @@ function renderMainSection(
             <input
               id="org-kpp"
               className="form-input"
+              aria-label="КПП организации"
               value={value.kpp ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { kpp: event.target.value || undefined }))}
@@ -103,6 +109,7 @@ function renderMainSection(
             <select
               id="org-raion"
               className="form-select"
+              aria-label="Район организации"
               value={value.raionId ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, {
@@ -121,6 +128,7 @@ function renderMainSection(
             <select
               id="org-type"
               className="form-select"
+              aria-label="Тип организации"
               value={value.orgTypeId ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, {

@@ -56,6 +56,14 @@ describe('OrganizationEditorForm', () => {
       />
     );
 
+    expect(view.querySelector('[aria-label="Название организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Краткое название организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Полное название организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="ИНН организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="ОГРН организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="КПП организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Район организации"]')).toBeInstanceOf(HTMLSelectElement);
+    expect(view.querySelector('[aria-label="Тип организации"]')).toBeInstanceOf(HTMLSelectElement);
     expect(view.querySelector('[aria-label="Запись организации видима"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Организация доступна менеджеру"]')).toBeInstanceOf(HTMLInputElement);
   });

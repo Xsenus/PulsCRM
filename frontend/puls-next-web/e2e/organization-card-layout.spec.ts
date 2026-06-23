@@ -173,7 +173,7 @@ test('organization card confirms leaving with unsaved changes', async ({ page })
 
   await expect(page.getByRole('heading', { name: organizationDetails.name })).toBeVisible();
 
-  const nameInput = page.getByRole('textbox', { name: 'Название', exact: true });
+  const nameInput = page.getByRole('textbox', { name: 'Название организации', exact: true });
   await nameInput.fill('Измененное название');
   await expect(page.getByText('Черновик изменен')).toBeVisible();
 
