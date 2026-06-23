@@ -1122,27 +1122,50 @@ select {
   width: 100%;
 }
 
-.analytics-date-trigger {
+.analytics-date-control {
   width: 100%;
   min-height: 44px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 12px;
+  gap: 6px;
+  padding: 0 7px 0 12px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: #ffffff;
   color: var(--text);
-  font: inherit;
-  cursor: pointer;
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
 }
 
-.analytics-date-trigger:hover,
-.analytics-date-trigger[aria-expanded="true"] {
+.analytics-date-control:hover,
+.analytics-date-control:focus-within,
+.analytics-date-control.open {
   border-color: rgba(37, 99, 235, 0.35);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.analytics-date-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+}
+
+.analytics-date-trigger {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--brand-2);
+  cursor: pointer;
+  padding: 0;
 }
 
 .analytics-date-icon {
@@ -1287,11 +1310,14 @@ select {
   flex-wrap: nowrap;
   align-self: end;
   min-width: max-content;
+  min-height: 44px;
+  align-items: center;
 }
 
 .analytics-filter-actions .primary-button,
 .analytics-filter-actions .secondary-button {
   width: auto;
+  min-height: 44px;
   white-space: nowrap;
 }
 
@@ -4988,7 +5014,7 @@ body.is-dragging-column {
   }
 
   .analytics-date-field,
-  .analytics-date-trigger {
+  .analytics-date-control {
     width: min(280px, 100%);
   }
 

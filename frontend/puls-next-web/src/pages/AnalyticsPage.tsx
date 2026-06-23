@@ -39,6 +39,29 @@ function formatCount(value: number) {
   return new Intl.NumberFormat('ru-RU').format(value);
 }
 
+function formatInputDate(value: string) {
+  return dayjs(value).format('DD.MM.YYYY');
+}
+
+function parseInputDate(value: string) {
+  const match = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, day, month, year] = match;
+  const parsed = dayjs(`${year}-${month}-${day}`);
+  return parsed.isValid() && parsed.format('DD.MM.YYYY') === value
+    ? parsed.format('YYYY-MM-DD')
+    : null;
+}
+
+function formatTypedDate(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+  return parts.join('.');
+}
+
 function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -71,8 +94,8 @@ function TextHeader({ label }: { label: string }) {
 
 function AnalyticsDatePicker({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState(() => formatInputDate(value));
   const [visibleMonth, setVisibleMonth] = useState(() => dayjs(value).startOf('month'));
-  const selectedDate = dayjs(value);
   const monthStart = visibleMonth.startOf('month');
   const firstDayOffset = (monthStart.day() + 6) % 7;
   const daysInMonth = visibleMonth.daysInMonth();
@@ -82,8 +105,16 @@ function AnalyticsDatePicker({ id, label, value, onChange }: { id: string; label
   ];
 
   useEffect(() => {
+    setInputValue(formatInputDate(value));
     setVisibleMonth(dayjs(value).startOf('month'));
   }, [value]);
+
+  const commitInput = (nextValue: string) => {
+    const parsed = parseInputDate(nextValue);
+    if (parsed) {
+      onChange(parsed);
+    }
+  };
 
   return (
     <div className="field analytics-date-field">
@@ -101,17 +132,34 @@ function AnalyticsDatePicker({ id, label, value, onChange }: { id: string; label
           }
         }}
       >
-        <button
-          type="button"
-          id={id}
-          className="analytics-date-trigger"
-          aria-labelledby={`${id}-label`}
-          aria-expanded={open}
-          onClick={() => setOpen((current) => !current)}
-        >
-          <span>{selectedDate.format('DD.MM.YYYY')}</span>
-          <span className="analytics-date-icon" aria-hidden="true">▦</span>
-        </button>
+        <div className={`analytics-date-control${open ? ' open' : ''}`}>
+          <input
+            id={id}
+            className="analytics-date-input"
+            inputMode="numeric"
+            aria-labelledby={`${id}-label`}
+            value={inputValue}
+            onChange={(event) => {
+              const nextValue = formatTypedDate(event.target.value);
+              setInputValue(nextValue);
+              commitInput(nextValue);
+            }}
+            onBlur={() => {
+              if (!parseInputDate(inputValue)) {
+                setInputValue(formatInputDate(value));
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="analytics-date-trigger"
+            aria-label={`Открыть календарь: ${label}`}
+            aria-expanded={open}
+            onClick={() => setOpen((current) => !current)}
+          >
+            <span className="analytics-date-icon" aria-hidden="true">▦</span>
+          </button>
+        </div>
         {open ? (
           <div className="analytics-calendar-popover">
             <div className="analytics-calendar-header">
