@@ -247,7 +247,7 @@ export function CampaignsPage() {
             ))}
           </select>
 
-          <button type="button" className="primary-button toolbar-button" onClick={applyFilters}>Применить</button>
+          <button type="button" className="primary-button toolbar-button" aria-label="Применить фильтр рассылок по статусу" onClick={applyFilters}>Применить</button>
         </div>
       </div>
 
