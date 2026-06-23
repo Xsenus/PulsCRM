@@ -198,7 +198,7 @@ export function CampaignsPage() {
     <div className="page">
       <PageHeader
         title="Рассылки"
-        actions={<button type="button" className="primary-button" onClick={() => navigate('/campaigns/new')}>Новая кампания</button>}
+        actions={<button type="button" className="primary-button" aria-label="Создать новую кампанию рассылки" onClick={() => navigate('/campaigns/new')}>Новая кампания</button>}
       />
 
       <SearchPanel

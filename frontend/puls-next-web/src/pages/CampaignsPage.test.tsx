@@ -118,6 +118,7 @@ describe('CampaignsPage', () => {
     const quickFilters = Array.from(view.querySelectorAll<HTMLButtonElement>('.campaign-status-filter-button'));
 
     expect(view.querySelector('[aria-label="Поиск рассылок по названию, теме или SMTP профилю"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Создать новую кампанию рассылки"]')).toBeInstanceOf(HTMLButtonElement);
     expect(view.querySelector('[aria-label="Фильтр рассылок по статусу"]')).toBeInstanceOf(HTMLSelectElement);
     expect(view.querySelector('[aria-label="Применить фильтр рассылок по статусу"]')).toBeInstanceOf(HTMLButtonElement);
     expect(view.querySelector('[aria-label="Быстрый фильтр рассылок по статусу"]')).toBeInstanceOf(HTMLDivElement);
