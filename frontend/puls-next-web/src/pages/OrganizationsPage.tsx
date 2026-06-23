@@ -353,6 +353,9 @@ export function OrganizationsPage() {
                     <input
                       type="checkbox"
                       checked={checked}
+                      aria-label={checked
+                        ? `Убрать район ${raion.name} из фильтра организаций`
+                        : `Добавить район ${raion.name} в фильтр организаций`}
                       onChange={() => toggleRaion(selectionId)}
                     />
                     <span>{raion.name}</span>

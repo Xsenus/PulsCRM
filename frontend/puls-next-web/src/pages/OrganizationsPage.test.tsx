@@ -125,6 +125,7 @@ describe('OrganizationsPage', () => {
     expect(filterStatus?.getAttribute('role')).toBe('status');
     expect(filterStatus?.textContent).toContain('Показаны все организации');
     expect(centralCheckbox?.checked).toBe(false);
+    expect(centralCheckbox?.getAttribute('aria-label')).toBe('Добавить район Центральный в фильтр организаций');
 
     await act(async () => {
       centralCheckbox?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -133,6 +134,7 @@ describe('OrganizationsPage', () => {
     await flushEffects();
 
     expect(centralCheckbox?.checked).toBe(true);
+    expect(centralCheckbox?.getAttribute('aria-label')).toBe('Убрать район Центральный из фильтра организаций');
     expect(apiMocks.getOrganizations).toHaveBeenLastCalledWith({
       search: '',
       raionIds: [10],
