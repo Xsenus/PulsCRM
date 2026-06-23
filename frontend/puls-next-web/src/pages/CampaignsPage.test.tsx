@@ -59,6 +59,12 @@ async function flushEffects() {
   });
 }
 
+function click(element: Element) {
+  act(() => {
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+}
+
 beforeEach(() => {
   apiMocks.changeCampaignStatus.mockResolvedValue({});
   apiMocks.deleteCampaign.mockResolvedValue(undefined);
@@ -142,5 +148,21 @@ describe('CampaignsPage', () => {
       '2026-06-10T08:30:00.000Z',
       '2026-06-18T12:45:00.000Z'
     ]);
+  });
+
+  it('labels delete confirmation actions with campaign context', async () => {
+    const view = render(
+      <MemoryRouter>
+        <CampaignsPage />
+      </MemoryRouter>
+    );
+    await flushEffects();
+
+    click(view.querySelector('.row-actions-menu-trigger')!);
+    click(view.querySelectorAll<HTMLButtonElement>('.row-actions-menu-item')[3]);
+    await flushEffects();
+
+    expect(document.body.querySelector('[aria-label="Отменить удаление кампании Недельная рассылка"]')).toBeInstanceOf(HTMLButtonElement);
+    expect(document.body.querySelector('[aria-label="Удалить кампанию Недельная рассылка"]')).toBeInstanceOf(HTMLButtonElement);
   });
 });

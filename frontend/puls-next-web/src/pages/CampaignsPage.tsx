@@ -325,10 +325,22 @@ export function CampaignsPage() {
         onClose={() => !deleteBusy && setDeleteTarget(null)}
         actions={(
           <>
-            <button type="button" className="secondary-button" onClick={() => setDeleteTarget(null)} disabled={deleteBusy}>
+            <button
+              type="button"
+              className="secondary-button"
+              aria-label={deleteTarget ? `Отменить удаление кампании ${deleteTarget.name}` : 'Отменить удаление кампании'}
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleteBusy}
+            >
               Отмена
             </button>
-            <button type="button" className="primary-button danger-button" onClick={() => void handleDelete()} disabled={deleteBusy}>
+            <button
+              type="button"
+              className="primary-button danger-button"
+              aria-label={deleteTarget ? `Удалить кампанию ${deleteTarget.name}` : 'Удалить кампанию'}
+              onClick={() => void handleDelete()}
+              disabled={deleteBusy}
+            >
               {deleteBusy ? 'Удаление...' : 'Удалить'}
             </button>
           </>
