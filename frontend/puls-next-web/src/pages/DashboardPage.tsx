@@ -37,8 +37,8 @@ export function DashboardPage() {
             type="button"
             className="secondary-button button-inline icon-button search-button"
             onClick={() => void load()}
-            aria-label="Обновить"
-            title="Обновить"
+            aria-label="Обновить показатели дашборда"
+            title="Обновить показатели дашборда"
           >
             <ActionIcon kind="refresh" />
           </button>
