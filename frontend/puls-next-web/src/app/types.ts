@@ -51,6 +51,7 @@ export interface ParusLicenseAnalyticsSummaryDto {
   withoutRenewal: number;
   expiringInPeriod: number;
   newLicenses: number;
+  lost: number;
 }
 
 export interface ParusLicenseAnalyticsPeriodDto extends ParusLicenseAnalyticsSummaryDto {
@@ -68,6 +69,7 @@ export interface ParusLicenseAnalyticsProductDto {
   expiredAtPeriodEnd: number;
   renewed: number;
   withoutRenewal: number;
+  lost: number;
 }
 
 export interface ParusLicenseAnalyticsGroupDto {
@@ -109,6 +111,8 @@ export interface ParusLicenseAnalyticsLicensePeriodDto {
   componentsCount: number;
   activeAtPeriodEnd: boolean;
   expiredAtPeriodEnd: boolean;
+  hasLicenseFile: boolean;
+  licenseFileName?: string;
   components: ParusLicenseAnalyticsComponentDto[];
 }
 

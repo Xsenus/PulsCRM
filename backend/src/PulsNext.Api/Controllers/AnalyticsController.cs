@@ -25,4 +25,21 @@ public sealed class AnalyticsController(IParusLicenseAnalyticsService parusLicen
 
         return Ok(await parusLicenseAnalyticsService.GetAsync(from, to, cancellationToken));
     }
+
+    /// <summary>
+    /// Скачивает файл лицензии Парус из legacy-карточки организации.
+    /// </summary>
+    [HttpGet("parus-licenses/{clientId:int}/file")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DownloadParusLicenseFile([FromRoute] int clientId, CancellationToken cancellationToken)
+    {
+        var file = await parusLicenseAnalyticsService.GetLicenseFileAsync(clientId, cancellationToken);
+        if (file is null)
+        {
+            return NotFound();
+        }
+
+        return File(file.Content, file.ContentType, file.FileName);
+    }
 }

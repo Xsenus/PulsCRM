@@ -299,6 +299,7 @@ public class ParusLicenseAnalyticsSummaryDto
     public int WithoutRenewal { get; set; }
     public int ExpiringInPeriod { get; set; }
     public int NewLicenses { get; set; }
+    public int Lost { get; set; }
 }
 
 public sealed class ParusLicenseAnalyticsPeriodDto : ParusLicenseAnalyticsSummaryDto
@@ -318,6 +319,7 @@ public sealed class ParusLicenseAnalyticsProductDto
     public int ExpiredAtPeriodEnd { get; set; }
     public int Renewed { get; set; }
     public int WithoutRenewal { get; set; }
+    public int Lost { get; set; }
 }
 
 public sealed class ParusLicenseAnalyticsGroupDto
@@ -368,7 +370,16 @@ public sealed class ParusLicenseAnalyticsLicensePeriodDto
     public int ComponentsCount { get; set; }
     public bool ActiveAtPeriodEnd { get; set; }
     public bool ExpiredAtPeriodEnd { get; set; }
+    public bool HasLicenseFile { get; set; }
+    public string? LicenseFileName { get; set; }
     public IReadOnlyCollection<ParusLicenseAnalyticsComponentDto> Components { get; set; } = Array.Empty<ParusLicenseAnalyticsComponentDto>();
+}
+
+public sealed class ParusLicenseFileDto
+{
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = "application/octet-stream";
+    public byte[] Content { get; set; } = Array.Empty<byte>();
 }
 
 public sealed class ParusLicenseAnalyticsComponentDto

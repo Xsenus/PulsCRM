@@ -5,6 +5,7 @@ export type ActionIconKind =
   | 'back'
   | 'chevronDown'
   | 'clear'
+  | 'download'
   | 'first'
   | 'last'
   | 'next'
@@ -53,6 +54,15 @@ export function ActionIcon({ kind, className }: ActionIconProps) {
       return (
         <svg {...svgProps}>
           <path d="M7 7l10 10M17 7L7 17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'download':
+      return (
+        <svg {...svgProps}>
+          <path d="M12 4v10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 19h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         </svg>
       );
 

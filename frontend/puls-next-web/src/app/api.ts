@@ -142,6 +142,17 @@ export async function getParusLicenseAnalytics(dateFromUtc: string, dateToUtc: s
   }
 }
 
+export async function downloadParusLicenseFile(clientId: number): Promise<Blob> {
+  try {
+    const { data } = await api.get<Blob>(`/api/analytics/parus-licenses/${clientId}/file`, {
+      responseType: 'blob'
+    });
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
 export async function getEmployees(search = '', skip = 0, take = 200): Promise<PagedResult<EmployeeListItemDto>> {
   try {
     const { data } = await api.get<PagedResult<EmployeeListItemDto>>('/api/employees', {

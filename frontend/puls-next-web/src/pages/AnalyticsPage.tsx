@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
-import { getParusLicenseAnalytics } from '../app/api';
+import { downloadParusLicenseFile, getParusLicenseAnalytics } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
 import { formatDate } from '../app/format';
 import { showToast } from '../app/toast';
@@ -15,6 +15,13 @@ import { Pagination } from '../components/Pagination';
 import { StatsCards } from '../components/StatsCards';
 
 const GROUP_PAGE_SIZE_OPTIONS = [10, 25, 50];
+const WEEK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+interface InfoDetails {
+  label: string;
+  title: string;
+  description: string;
+}
 
 function startOfCurrentYear() {
   return dayjs().startOf('year').format('YYYY-MM-DD');
@@ -32,17 +39,117 @@ function formatCount(value: number) {
   return new Intl.NumberFormat('ru-RU').format(value);
 }
 
-function InfoHeader({ label, title }: { label: string; title: string }) {
+function saveBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function InfoHeader({ label, info, onOpen }: { label: string; info: InfoDetails; onOpen: (info: InfoDetails) => void }) {
   return (
     <span className="analytics-info-header">
       <span>{label}</span>
-      <span className="analytics-info-icon" title={title} aria-label={title}>i</span>
+      <button type="button" className="analytics-info-icon" aria-label={`Подробнее: ${label}`} onClick={() => onOpen(info)}>
+        i
+        <span className="analytics-info-tooltip" role="tooltip">
+          <strong>{info.title}</strong>
+          <span>{info.description}</span>
+        </span>
+      </button>
     </span>
   );
 }
 
 function TextHeader({ label }: { label: string }) {
   return <span className="analytics-info-header">{label}</span>;
+}
+
+function AnalyticsDatePicker({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [visibleMonth, setVisibleMonth] = useState(() => dayjs(value).startOf('month'));
+  const selectedDate = dayjs(value);
+  const monthStart = visibleMonth.startOf('month');
+  const firstDayOffset = (monthStart.day() + 6) % 7;
+  const daysInMonth = visibleMonth.daysInMonth();
+  const cells = [
+    ...Array.from({ length: firstDayOffset }, () => null as number | null),
+    ...Array.from({ length: daysInMonth }, (_, index) => index + 1)
+  ];
+
+  useEffect(() => {
+    setVisibleMonth(dayjs(value).startOf('month'));
+  }, [value]);
+
+  return (
+    <div className="field analytics-date-field">
+      <label id={`${id}-label`}>{label}</label>
+      <div
+        className="analytics-date-picker"
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+            setOpen(false);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            setOpen(false);
+          }
+        }}
+      >
+        <button
+          type="button"
+          id={id}
+          className="analytics-date-trigger"
+          aria-labelledby={`${id}-label`}
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+        >
+          <span>{selectedDate.format('DD.MM.YYYY')}</span>
+          <span className="analytics-date-icon" aria-hidden="true">▦</span>
+        </button>
+        {open ? (
+          <div className="analytics-calendar-popover">
+            <div className="analytics-calendar-header">
+              <button type="button" className="analytics-calendar-nav" onClick={() => setVisibleMonth((current) => current.subtract(1, 'month'))}>‹</button>
+              <strong>{visibleMonth.format('MM.YYYY')}</strong>
+              <button type="button" className="analytics-calendar-nav" onClick={() => setVisibleMonth((current) => current.add(1, 'month'))}>›</button>
+            </div>
+            <div className="analytics-calendar-grid analytics-calendar-weekdays">
+              {WEEK_DAYS.map((day) => <span key={day}>{day}</span>)}
+            </div>
+            <div className="analytics-calendar-grid">
+              {cells.map((day, index) => {
+                if (day === null) {
+                  return <span key={`empty-${index}`} className="analytics-calendar-empty" />;
+                }
+
+                const current = visibleMonth.date(day);
+                const currentValue = current.format('YYYY-MM-DD');
+                return (
+                  <button
+                    type="button"
+                    key={currentValue}
+                    className={`analytics-calendar-day${currentValue === value ? ' selected' : ''}${current.isSame(dayjs(), 'day') ? ' today' : ''}`}
+                    onClick={() => {
+                      onChange(currentValue);
+                      setOpen(false);
+                    }}
+                  >
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 function renderState({
@@ -74,6 +181,8 @@ export function AnalyticsPage() {
   const [dateTo, setDateTo] = useState(endOfCurrentYear);
   const [analytics, setAnalytics] = useState<ParusLicenseAnalyticsDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [annualAnalytics, setAnnualAnalytics] = useState(true);
+  const [infoModal, setInfoModal] = useState<InfoDetails | null>(null);
   const [groupSearch, setGroupSearch] = useState('');
   const [groupPage, setGroupPage] = useState(1);
   const [groupPageSize, setGroupPageSize] = useState(10);
@@ -107,13 +216,42 @@ export function AnalyticsPage() {
     void load();
   };
 
-  const clearToCurrentYear = () => {
-    const from = startOfCurrentYear();
-    const to = endOfCurrentYear();
-    setDateFrom(from);
-    setDateTo(to);
-    void load({ from, to });
+  const downloadLicenseFile = async (clientId: number, fileName?: string) => {
+    try {
+      const blob = await downloadParusLicenseFile(clientId);
+      saveBlob(blob, fileName || 'parus-license.dat');
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось скачать файл лицензии.'), 'error', 4000);
+    }
   };
+
+  const columnInfo = {
+    active: {
+      label: 'Действуют',
+      title: 'Действуют',
+      description: 'Считаются лицензии, у которых есть период действия, покрывающий последний день выбранного диапазона или конкретного года.'
+    },
+    expired: {
+      label: 'Просрочены',
+      title: 'Просрочены',
+      description: 'Считаются лицензии, которые попадали в диапазон, но не имеют активной записи на последний день диапазона.'
+    },
+    renewed: {
+      label: 'Продлены',
+      title: 'Продлены',
+      description: 'Считаются лицензии, у которых новая запись периода начинается внутри выбранного диапазона. Для годовой аналитики это показывает продления внутри каждого года.'
+    },
+    withoutRenewal: {
+      label: 'Без продления',
+      title: 'Без продления',
+      description: 'Считаются лицензии, у которых последний известный срок действия закончился внутри диапазона и следующей записи продления нет.'
+    },
+    lost: {
+      label: 'Ушли',
+      title: 'Ушли',
+      description: 'Считаются лицензии, которые были в выбранном году или периоде, но последний срок действия закончился внутри него и дальше продлений не найдено.'
+    }
+  } satisfies Record<string, InfoDetails>;
 
   const summary = analytics?.summary;
   const filteredGroups = useMemo(() => {
@@ -186,42 +324,20 @@ export function AnalyticsPage() {
     <div className="page analytics-page">
       <section className="panel toolbar-panel analytics-filter-panel">
         <div className="analytics-filter-main">
-          <div className="field analytics-date-field">
-            <label htmlFor="analytics-date-from">Период с</label>
+          <AnalyticsDatePicker id="analytics-date-from" label="Период с" value={dateFrom} onChange={setDateFrom} />
+          <AnalyticsDatePicker id="analytics-date-to" label="Период по" value={dateTo} onChange={setDateTo} />
+          <label className="analytics-annual-toggle">
             <input
-              id="analytics-date-from"
-              className="form-input"
-              type="date"
-              value={dateFrom}
-              onChange={(event) => setDateFrom(event.target.value)}
+              type="checkbox"
+              checked={annualAnalytics}
+              onChange={(event) => setAnnualAnalytics(event.target.checked)}
             />
-          </div>
-          <div className="field analytics-date-field">
-            <label htmlFor="analytics-date-to">Период по</label>
-            <input
-              id="analytics-date-to"
-              className="form-input"
-              type="date"
-              value={dateTo}
-              onChange={(event) => setDateTo(event.target.value)}
-            />
-          </div>
+            <span className="analytics-checkbox" aria-hidden="true" />
+            <span>Годовая аналитика</span>
+          </label>
           <div className="grid-actions analytics-filter-actions">
             <button type="button" className="primary-button button-inline" onClick={applyPeriod} disabled={loading}>
               Сформировать
-            </button>
-            <button type="button" className="secondary-button button-inline" onClick={clearToCurrentYear} disabled={loading}>
-              Текущий год
-            </button>
-            <button
-              type="button"
-              className="secondary-button button-inline icon-button search-button analytics-refresh-button"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="Обновить аналитику"
-              title="Обновить аналитику"
-            >
-              <ActionIcon kind="refresh" />
             </button>
           </div>
         </div>
@@ -244,28 +360,31 @@ export function AnalyticsPage() {
                 { label: 'Просрочены', value: formatCount(summary.expiredAtPeriodEnd), hint: 'Нет активной записи на конец периода' },
                 { label: 'Продлены', value: formatCount(summary.renewed), hint: 'Новая запись внутри периода' },
                 { label: 'Без продления', value: formatCount(summary.withoutRenewal), hint: 'Последний срок закончился в периоде' },
+                { label: 'Ушли', value: formatCount(summary.lost), hint: 'Нет продлений после окончания' },
                 { label: 'Заканчиваются', value: formatCount(summary.expiringInPeriod), hint: 'Дата окончания попала в период' },
                 { label: 'Новые', value: formatCount(summary.newLicenses), hint: 'Первая запись в периоде' }
               ]}
             />
           </div>
 
+          {annualAnalytics ? (
           <section className="panel">
             <div className="section-header-inline">
-              <h3>По годам</h3>
+              <h3>Годовая аналитика</h3>
               <span className="field-hint">{formatDate(analytics.dateFromUtc)} - {formatDate(analytics.dateToUtc)}</span>
             </div>
-            <div className="table-shell">
+            <div className="table-shell analytics-year-table-shell">
               <table className="data-table analytics-table analytics-year-table">
                 <thead>
                   <tr>
                     <th><TextHeader label="Год" /></th>
                     <th><TextHeader label="Лицензии" /></th>
                     <th><TextHeader label="Клиенты" /></th>
-                    <th><InfoHeader label="Действуют" title="Лицензии, активные на последний день года или выбранного поддиапазона." /></th>
-                    <th><InfoHeader label="Просрочены" title="Лицензии, у которых нет активной записи на конец года или выбранного поддиапазона." /></th>
-                    <th><InfoHeader label="Продлены" title="Лицензии, у которых новая запись начинается внутри этого года." /></th>
-                    <th><InfoHeader label="Без продления" title="Лицензии, у которых последний известный период заканчивается внутри этого года." /></th>
+                    <th><InfoHeader label="Действуют" info={columnInfo.active} onOpen={setInfoModal} /></th>
+                    <th><InfoHeader label="Просрочены" info={columnInfo.expired} onOpen={setInfoModal} /></th>
+                    <th><InfoHeader label="Продлены" info={columnInfo.renewed} onOpen={setInfoModal} /></th>
+                    <th><InfoHeader label="Без продления" info={columnInfo.withoutRenewal} onOpen={setInfoModal} /></th>
+                    <th><InfoHeader label="Ушли" info={columnInfo.lost} onOpen={setInfoModal} /></th>
                     <th><TextHeader label="Новые" /></th>
                   </tr>
                 </thead>
@@ -279,6 +398,7 @@ export function AnalyticsPage() {
                       <td>{formatCount(period.expiredAtPeriodEnd)}</td>
                       <td>{formatCount(period.renewed)}</td>
                       <td>{formatCount(period.withoutRenewal)}</td>
+                      <td>{formatCount(period.lost)}</td>
                       <td>{formatCount(period.newLicenses)}</td>
                     </tr>
                   ))}
@@ -286,6 +406,7 @@ export function AnalyticsPage() {
               </table>
             </div>
           </section>
+          ) : null}
 
           <section className="panel">
             <div className="section-header-inline">
@@ -352,15 +473,27 @@ export function AnalyticsPage() {
                             <div className="analytics-period-list">
                               {row.periods.map((period) => (
                                 <div key={period.key} className="analytics-period-block">
-                                  <button type="button" className="analytics-period-header" onClick={() => togglePeriod(period.key)}>
-                                    <span className={`analytics-expand-chevron${expandedPeriods.has(period.key) ? ' expanded' : ''}`}>›</span>
-                                    <span className="analytics-cell-stack">
-                                      <span className="analytics-cell-top">{formatDate(period.dateSinceUtc)} - {formatDate(period.dateToUtc)}</span>
-                                      <span className="analytics-cell-middle">{formatCount(period.componentsCount)} строк состава</span>
-                                      <span className="analytics-cell-bottom">{period.activeAtPeriodEnd ? 'Активен на конец периода' : 'Не активен на конец периода'}</span>
-                                    </span>
+                                  <div className="analytics-period-header">
+                                    <button type="button" className="analytics-period-toggle" onClick={() => togglePeriod(period.key)}>
+                                      <span className={`analytics-expand-chevron${expandedPeriods.has(period.key) ? ' expanded' : ''}`}>›</span>
+                                      <span className="analytics-cell-stack">
+                                        <span className="analytics-cell-top">{formatDate(period.dateSinceUtc)} - {formatDate(period.dateToUtc)}</span>
+                                        <span className="analytics-cell-middle">{formatCount(period.componentsCount)} строк состава</span>
+                                        <span className="analytics-cell-bottom">{period.activeAtPeriodEnd ? 'Активен на конец периода' : 'Не активен на конец периода'}</span>
+                                      </span>
+                                    </button>
                                     {renderState(period)}
-                                  </button>
+                                    <button
+                                      type="button"
+                                      className="secondary-button button-inline icon-button analytics-download-button"
+                                      onClick={() => void downloadLicenseFile(row.clientId, period.licenseFileName || `${row.licenseNumber}.lic`)}
+                                      disabled={!period.hasLicenseFile}
+                                      aria-label="Скачать файл лицензии"
+                                      title={period.hasLicenseFile ? `Скачать ${period.licenseFileName || 'файл лицензии'}` : 'Файл лицензии не найден'}
+                                    >
+                                      <ActionIcon kind="download" />
+                                    </button>
+                                  </div>
                                   {expandedPeriods.has(period.key) ? (
                                     <div className="analytics-components">
                                       <div className="analytics-components-head">
@@ -411,6 +544,30 @@ export function AnalyticsPage() {
             />
           </section>
         </>
+      ) : null}
+
+      {infoModal ? (
+        <div className="modal-overlay" role="presentation" onMouseDown={() => setInfoModal(null)}>
+          <div className="modal-window analytics-info-modal" role="dialog" aria-modal="true" aria-labelledby="analytics-info-title" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <div className="field-hint">Расчет показателя</div>
+                <h3 id="analytics-info-title" className="modal-title">{infoModal.title}</h3>
+              </div>
+              <button type="button" className="modal-close" onClick={() => setInfoModal(null)} aria-label="Закрыть">
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <p className="analytics-info-modal-text">{infoModal.description}</p>
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="primary-button button-inline" onClick={() => setInfoModal(null)}>
+                Понятно
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

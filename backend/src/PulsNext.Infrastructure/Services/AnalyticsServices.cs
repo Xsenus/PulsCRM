@@ -6,6 +6,7 @@ namespace PulsNext.Infrastructure;
 public interface IParusLicenseAnalyticsService
 {
     Task<ParusLicenseAnalyticsDto> GetAsync(DateTime dateFromUtc, DateTime dateToUtc, CancellationToken cancellationToken);
+    Task<ParusLicenseFileDto?> GetLicenseFileAsync(int clientId, CancellationToken cancellationToken);
 }
 
 public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWork) : IParusLicenseAnalyticsService
@@ -54,7 +55,8 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
                     Renewed = periodSummary.Renewed,
                     WithoutRenewal = periodSummary.WithoutRenewal,
                     ExpiringInPeriod = periodSummary.ExpiringInPeriod,
-                    NewLicenses = periodSummary.NewLicenses
+                    NewLicenses = periodSummary.NewLicenses,
+                    Lost = periodSummary.Lost
                 };
             })
             .ToArray();
@@ -70,6 +72,22 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             Products = products,
             Groups = analyticsGroups,
             OrganizationGroups = organizationGroups
+        });
+    }
+
+    public Task<ParusLicenseFileDto?> GetLicenseFileAsync(int clientId, CancellationToken cancellationToken)
+    {
+        var fileInfo = ResolveLicenseFile(clientId);
+        if (fileInfo is null)
+        {
+            return Task.FromResult<ParusLicenseFileDto?>(null);
+        }
+
+        return Task.FromResult<ParusLicenseFileDto?>(new ParusLicenseFileDto
+        {
+            FileName = fileInfo.Value.FileName,
+            ContentType = ResolveContentType(fileInfo.Value.FileName),
+            Content = fileInfo.Value.Content
         });
     }
 
@@ -177,7 +195,8 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             Renewed = activeGroups.Count(group => HasRenewalInPeriod(group, from, to)),
             WithoutRenewal = activeGroups.Count(group => IsWithoutRenewalInPeriod(group, from, to)),
             ExpiringInPeriod = activeGroups.Count(group => HasExpirationInPeriod(group, from, to)),
-            NewLicenses = activeGroups.Count(group => IsNewInPeriod(group, from, to))
+            NewLicenses = activeGroups.Count(group => IsNewInPeriod(group, from, to)),
+            Lost = activeGroups.Count(group => IsLostInPeriod(group, from, to))
         };
     }
 
@@ -195,7 +214,8 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
                 ActiveAtPeriodEnd = group.Count(item => IsActiveAt(item, to)),
                 ExpiredAtPeriodEnd = group.Count(item => IsExpiredAtPeriodEnd(item, to)),
                 Renewed = group.Count(item => HasRenewalInPeriod(item, from, to)),
-                WithoutRenewal = group.Count(item => IsWithoutRenewalInPeriod(item, from, to))
+                WithoutRenewal = group.Count(item => IsWithoutRenewalInPeriod(item, from, to)),
+                Lost = group.Count(item => IsLostInPeriod(item, from, to))
             })
             .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -224,10 +244,11 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         }
     }
 
-    private static IEnumerable<ParusLicenseAnalyticsOrganizationGroupDto> BuildOrganizationGroups(IReadOnlyCollection<LicenseGroup> groups, DateTime from, DateTime to)
+    private IEnumerable<ParusLicenseAnalyticsOrganizationGroupDto> BuildOrganizationGroups(IReadOnlyCollection<LicenseGroup> groups, DateTime from, DateTime to)
     {
         foreach (var lifecycleGroup in groups.Where(group => HasPeriodActivity(group, from, to)))
         {
+            var fileInfo = ResolveLicenseFile(lifecycleGroup.ClientId);
             var periodDtos = lifecycleGroup.Records
                 .Where(record => Overlaps(record, from, to))
                 .GroupBy(record => $"{record.DateSinceUtc:yyyyMMdd}|{record.DateToUtc:yyyyMMdd}")
@@ -249,6 +270,8 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
                         ComponentsCount = components.Length,
                         ActiveAtPeriodEnd = first.DateSinceUtc <= to && first.DateToUtc >= to,
                         ExpiredAtPeriodEnd = first.DateToUtc < to,
+                        HasLicenseFile = fileInfo is not null,
+                        LicenseFileName = fileInfo?.FileName,
                         Components = components
                     };
                 })
@@ -347,6 +370,9 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         return latest.DateToUtc >= from && latest.DateToUtc <= to;
     }
 
+    private static bool IsLostInPeriod(LicenseGroup group, DateTime from, DateTime to)
+        => IsWithoutRenewalInPeriod(group, from, to);
+
     private static bool HasExpirationInPeriod(LicenseGroup group, DateTime from, DateTime to)
         => group.Records.Any(record => record.DateToUtc >= from && record.DateToUtc <= to);
 
@@ -409,6 +435,47 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             .Select(char.ToUpperInvariant)
             .ToArray());
     }
+
+    private (string FileName, byte[] Content)? ResolveLicenseFile(int clientId)
+        => ResolveLicenseFile(legacyUnitOfWork.GetObjectByKey<LegacyOrg>(clientId));
+
+    private static (string FileName, byte[] Content)? ResolveLicenseFile(LegacyOrg? org)
+    {
+        if (org is null)
+        {
+            return null;
+        }
+
+        var ownFile = ResolveLicenseFile(org.OrgInfoOther);
+        if (ownFile is not null)
+        {
+            return ownFile;
+        }
+
+        return ResolveLicenseFile(org.OrgInfoOther?.OrgParusLicense?.OrgInfoOther);
+    }
+
+    private static (string FileName, byte[] Content)? ResolveLicenseFile(LegacyOrgInfoOther? other)
+    {
+        if (other?.ParusLicenseFileData is null || other.ParusLicenseFileData.Length == 0)
+        {
+            return null;
+        }
+
+        var fileName = NullIfWhiteSpace(other.ParusLicenseFileName) ?? "parus-license.dat";
+        return (fileName, other.ParusLicenseFileData);
+    }
+
+    private static string ResolveContentType(string fileName)
+        => Path.GetExtension(fileName).ToLowerInvariant() switch
+        {
+            ".pdf" => "application/pdf",
+            ".zip" => "application/zip",
+            ".rar" => "application/vnd.rar",
+            ".txt" => "text/plain",
+            ".lic" => "application/octet-stream",
+            _ => "application/octet-stream"
+        };
 
     private static string NormalizeBaseLicenseNumber(string value)
     {

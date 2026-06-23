@@ -32,6 +32,7 @@ public sealed class ParusLicenseAnalyticsServiceTests
         Assert.Equal(1, result.Summary.ActiveAtPeriodEnd);
         Assert.Equal(1, result.Summary.ExpiredAtPeriodEnd);
         Assert.Equal(2, result.Summary.WithoutRenewal);
+        Assert.Equal(2, result.Summary.Lost);
         Assert.Equal(1, result.Summary.NewLicenses);
         Assert.Equal(2, result.Periods.Count);
 
@@ -39,11 +40,13 @@ public sealed class ParusLicenseAnalyticsServiceTests
         Assert.Equal(2, year2025.LicenseGroups);
         Assert.Equal(1, year2025.Renewed);
         Assert.Equal(1, year2025.WithoutRenewal);
+        Assert.Equal(1, year2025.Lost);
 
         var year2026 = result.Periods.Single(x => x.Year == 2026);
         Assert.Equal(1, year2026.LicenseGroups);
         Assert.Equal(1, year2026.Renewed);
         Assert.Equal(1, year2026.ActiveAtPeriodEnd);
+        Assert.Equal(1, year2026.Lost);
 
         Assert.Contains(result.Products, x => x.Name == "Парус 10" && x.LicenseGroups == 1);
         Assert.Contains(result.Products, x => x.Name == "Парус Торнадо" && x.LicenseGroups == 1);
