@@ -105,5 +105,11 @@ describe('OrganizationEditorForm', () => {
     expect(view.querySelector('[aria-label="Подключена 1C бухгалтерия организации"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Подключена 1C зарплата организации"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Подключена 1C ЖКХ организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Контакт по зарплате организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Телефон контакта по зарплате организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Контакт по 1C организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Телефон контакта по 1C организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Контакт по сайту организации"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Телефон контакта по сайту организации"]')).toBeInstanceOf(HTMLInputElement);
   });
 });

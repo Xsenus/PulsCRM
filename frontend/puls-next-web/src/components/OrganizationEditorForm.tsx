@@ -392,6 +392,7 @@ function renderProgramsSection(
             <input
               id="salary-contact-name"
               className="form-input"
+              aria-label="Контакт по зарплате организации"
               value={value.salaryContactName ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { salaryContactName: event.target.value || undefined }))}
@@ -403,6 +404,7 @@ function renderProgramsSection(
             <input
               id="salary-contact-phone"
               className="form-input"
+              aria-label="Телефон контакта по зарплате организации"
               value={value.salaryContactPhone ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { salaryContactPhone: event.target.value || undefined }))}
@@ -414,6 +416,7 @@ function renderProgramsSection(
             <input
               id="onec-contact-name"
               className="form-input"
+              aria-label="Контакт по 1C организации"
               value={value.oneCContactName ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { oneCContactName: event.target.value || undefined }))}
@@ -425,6 +428,7 @@ function renderProgramsSection(
             <input
               id="onec-contact-phone"
               className="form-input"
+              aria-label="Телефон контакта по 1C организации"
               value={value.oneCContactPhone ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { oneCContactPhone: event.target.value || undefined }))}
@@ -436,6 +440,7 @@ function renderProgramsSection(
             <input
               id="site-contact-name"
               className="form-input"
+              aria-label="Контакт по сайту организации"
               value={value.siteContactName ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { siteContactName: event.target.value || undefined }))}
@@ -447,6 +452,7 @@ function renderProgramsSection(
             <input
               id="site-contact-phone"
               className="form-input"
+              aria-label="Телефон контакта по сайту организации"
               value={value.siteContactPhone ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { siteContactPhone: event.target.value || undefined }))}
