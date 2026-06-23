@@ -130,6 +130,7 @@ describe('DispatchPage', () => {
     expect(view.querySelector('[aria-label="Фильтр очереди по статусу сообщения"]')).toBeInstanceOf(HTMLSelectElement);
     expect(view.querySelector('[aria-label="Фильтр очереди по ID кампании"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Фильтр очереди по ID партии"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Обновить очередь рассылок"]')).toBeInstanceOf(HTMLButtonElement);
     expect(view.querySelector('[aria-label="Применить фильтры очереди рассылок"]')).toBeInstanceOf(HTMLButtonElement);
     expect(view.querySelector('[aria-label="Сбросить фильтры очереди рассылок"]')).toBeInstanceOf(HTMLButtonElement);
   });

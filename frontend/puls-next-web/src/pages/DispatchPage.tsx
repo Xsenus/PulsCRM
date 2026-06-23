@@ -293,6 +293,7 @@ export function DispatchPage() {
           <button
             type="button"
             className="secondary-button"
+            aria-label={refreshing ? 'Обновляется очередь рассылок' : 'Обновить очередь рассылок'}
             disabled={refreshing}
             onClick={() => void refresh().catch((error) => {
               showToast(getApiErrorMessage(error, 'Не удалось обновить очередь.'), 'error', 4000);
