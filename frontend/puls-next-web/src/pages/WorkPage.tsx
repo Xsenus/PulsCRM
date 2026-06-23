@@ -219,6 +219,7 @@ export function WorkPage() {
           <input
             type="checkbox"
             checked={filters.onlyOpen}
+            aria-label={filters.onlyOpen ? 'Показывать все задачи' : 'Показывать только открытые задачи'}
             onChange={(event) => setFilters((current) => ({ ...current, onlyOpen: event.target.checked }))}
           />
           <span>Только открытые</span>

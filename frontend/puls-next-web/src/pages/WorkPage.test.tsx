@@ -105,11 +105,22 @@ describe('WorkPage', () => {
     const workSearch = view.querySelector<HTMLInputElement>('[aria-label="Поиск задач по сообщению, задаче, сотруднику или организации"]');
     const organizationFilter = view.querySelector<HTMLSelectElement>('[aria-label="Фильтр задач по организации"]');
     const employeeFilter = view.querySelector<HTMLSelectElement>('[aria-label="Фильтр задач по сотруднику"]');
+    const openOnlyCheckbox = view.querySelector<HTMLInputElement>('[aria-label="Показывать все задачи"]');
     const tableTimes = Array.from(view.querySelectorAll<HTMLTimeElement>('table time'));
 
     expect(workSearch).toBeInstanceOf(HTMLInputElement);
     expect(organizationFilter).toBeInstanceOf(HTMLSelectElement);
     expect(employeeFilter).toBeInstanceOf(HTMLSelectElement);
+    expect(openOnlyCheckbox).toBeInstanceOf(HTMLInputElement);
+    expect(openOnlyCheckbox?.checked).toBe(true);
+
+    await act(async () => {
+      openOnlyCheckbox?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      openOnlyCheckbox?.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    expect(openOnlyCheckbox?.checked).toBe(false);
+    expect(openOnlyCheckbox?.getAttribute('aria-label')).toBe('Показывать только открытые задачи');
     expect(tableTimes.map((item) => item.getAttribute('dateTime'))).toEqual([
       '2026-06-12T04:30:00.000Z',
       '2026-06-15T09:00:00.000Z',
