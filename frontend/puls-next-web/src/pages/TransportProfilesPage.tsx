@@ -238,7 +238,7 @@ export function TransportProfilesPage() {
     <div className="page">
       <PageHeader
         title="Настройки"
-        actions={isSmtpGroup ? <button type="button" className="primary-button" onClick={openCreate}>Новый профиль</button> : undefined}
+        actions={isSmtpGroup ? <button type="button" className="primary-button" aria-label="Создать новый SMTP профиль" onClick={openCreate}>Новый профиль</button> : undefined}
       />
 
       <div className="settings-tabs" role="tablist" aria-label="Группы настроек">

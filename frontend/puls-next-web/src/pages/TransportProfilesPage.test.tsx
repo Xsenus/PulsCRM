@@ -87,9 +87,11 @@ describe('TransportProfilesPage', () => {
     const tablist = view.querySelector('.settings-tabs[role="tablist"]');
     const tabs = Array.from(view.querySelectorAll<HTMLButtonElement>('.settings-tab'));
     const profileSearch = view.querySelector<HTMLInputElement>('[aria-label="Поиск SMTP профилей по профилю, серверу, логину или email"]');
+    const createProfileButton = view.querySelector<HTMLButtonElement>('[aria-label="Создать новый SMTP профиль"]');
 
     expect(tablist?.getAttribute('aria-label')).toBe('Группы настроек');
     expect(profileSearch).toBeInstanceOf(HTMLInputElement);
+    expect(createProfileButton).toBeInstanceOf(HTMLButtonElement);
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Основные', 'SMTP профили']);
     expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab']);
     expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'true']);
@@ -97,7 +99,6 @@ describe('TransportProfilesPage', () => {
       'Основные: открыть раздел',
       'SMTP профили: текущий раздел'
     ]);
-    expect(view.textContent).toContain('Новый профиль');
 
     click(tabs[0]);
 
@@ -107,7 +108,7 @@ describe('TransportProfilesPage', () => {
       'SMTP профили: открыть раздел'
     ]);
     expect(tabs.map((tab) => tab.className.includes('active'))).toEqual([true, false]);
-    expect(view.textContent).not.toContain('Новый профиль');
+    expect(view.querySelector('[aria-label="Создать новый SMTP профиль"]')).toBeNull();
   });
 
   it('renders SMTP profile dates as machine-readable time elements', async () => {
