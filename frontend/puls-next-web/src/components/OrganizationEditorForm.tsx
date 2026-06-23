@@ -176,6 +176,7 @@ function renderMainSection(
             <textarea
               id="org-comment"
               className="form-textarea"
+              aria-label="Комментарий организации"
               value={value.comment ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { comment: event.target.value || undefined }))}
@@ -187,6 +188,7 @@ function renderMainSection(
             <textarea
               id="org-other-info"
               className="form-textarea"
+              aria-label="Дополнительная информация организации"
               value={value.otherInfo ?? ''}
               disabled={disabled}
               onChange={(event) => onChange(updateValue(value, { otherInfo: event.target.value || undefined }))}

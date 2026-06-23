@@ -66,6 +66,8 @@ describe('OrganizationEditorForm', () => {
     expect(view.querySelector('[aria-label="Тип организации"]')).toBeInstanceOf(HTMLSelectElement);
     expect(view.querySelector('[aria-label="Запись организации видима"]')).toBeInstanceOf(HTMLInputElement);
     expect(view.querySelector('[aria-label="Организация доступна менеджеру"]')).toBeInstanceOf(HTMLInputElement);
+    expect(view.querySelector('[aria-label="Комментарий организации"]')).toBeInstanceOf(HTMLTextAreaElement);
+    expect(view.querySelector('[aria-label="Дополнительная информация организации"]')).toBeInstanceOf(HTMLTextAreaElement);
   });
 
   it('labels contacts section fields for assistive technologies', () => {
