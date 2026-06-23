@@ -393,8 +393,8 @@ export function DispatchPage() {
           onChange={(event) => setFilters((current) => ({ ...current, batchId: parseOptionalNumber(event.target.value) }))}
         />
 
-        <button type="button" className="primary-button toolbar-button" onClick={applyFilters}>Применить</button>
-        <button type="button" className="secondary-button toolbar-button" onClick={resetFilters}>Сбросить</button>
+        <button type="button" className="primary-button toolbar-button" aria-label="Применить фильтры очереди рассылок" onClick={applyFilters}>Применить</button>
+        <button type="button" className="secondary-button toolbar-button" aria-label="Сбросить фильтры очереди рассылок" onClick={resetFilters}>Сбросить</button>
       </div>
 
       <div className="settings-tabs dispatch-tabs" role="tablist" aria-label="Раздел очереди">
