@@ -225,8 +225,8 @@ export function WorkPage() {
           <span>Только открытые</span>
         </label>
 
-        <button type="button" className="primary-button toolbar-button" onClick={applyFilters}>Применить</button>
-        <button type="button" className="secondary-button toolbar-button" onClick={resetFilters}>Сбросить</button>
+        <button type="button" className="primary-button toolbar-button" aria-label="Применить фильтры задач" onClick={applyFilters}>Применить</button>
+        <button type="button" className="secondary-button toolbar-button" aria-label="Сбросить фильтры задач" onClick={resetFilters}>Сбросить</button>
       </div>
 
       <div className="panel">

@@ -106,12 +106,16 @@ describe('WorkPage', () => {
     const organizationFilter = view.querySelector<HTMLSelectElement>('[aria-label="Фильтр задач по организации"]');
     const employeeFilter = view.querySelector<HTMLSelectElement>('[aria-label="Фильтр задач по сотруднику"]');
     const openOnlyCheckbox = view.querySelector<HTMLInputElement>('[aria-label="Показывать все задачи"]');
+    const applyFiltersButton = view.querySelector<HTMLButtonElement>('[aria-label="Применить фильтры задач"]');
+    const resetFiltersButton = view.querySelector<HTMLButtonElement>('[aria-label="Сбросить фильтры задач"]');
     const tableTimes = Array.from(view.querySelectorAll<HTMLTimeElement>('table time'));
 
     expect(workSearch).toBeInstanceOf(HTMLInputElement);
     expect(organizationFilter).toBeInstanceOf(HTMLSelectElement);
     expect(employeeFilter).toBeInstanceOf(HTMLSelectElement);
     expect(openOnlyCheckbox).toBeInstanceOf(HTMLInputElement);
+    expect(applyFiltersButton).toBeInstanceOf(HTMLButtonElement);
+    expect(resetFiltersButton).toBeInstanceOf(HTMLButtonElement);
     expect(openOnlyCheckbox?.checked).toBe(true);
 
     await act(async () => {
