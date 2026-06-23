@@ -106,6 +106,7 @@ export interface ParusLicenseAnalyticsComponentDto {
 
 export interface ParusLicenseAnalyticsLicensePeriodDto {
   key: string;
+  licenseNumber: string;
   dateSinceUtc: string;
   dateToUtc: string;
   componentsCount: number;

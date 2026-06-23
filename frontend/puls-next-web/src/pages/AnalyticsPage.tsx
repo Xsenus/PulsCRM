@@ -277,27 +277,27 @@ export function AnalyticsPage() {
     active: {
       label: 'Действуют',
       title: 'Действуют',
-      description: 'Считаются лицензии, у которых есть период действия, покрывающий последний день выбранного диапазона или конкретного года.'
+      description: 'Считаются базовые лицензии, например НА2360, у которых есть хотя бы один период действия, покрывающий последний день выбранного диапазона или конкретного года.'
     },
     expired: {
       label: 'Просрочены',
       title: 'Просрочены',
-      description: 'Считаются лицензии, которые попадали в диапазон, но не имеют активной записи на последний день диапазона.'
+      description: 'Считаются базовые лицензии, которые попадали в диапазон, но не имеют активного периода на последний день диапазона.'
     },
     renewed: {
       label: 'Продлены',
       title: 'Продлены',
-      description: 'Считаются лицензии, у которых новая запись периода начинается внутри выбранного диапазона. Для годовой аналитики это показывает продления внутри каждого года.'
+      description: 'Считаются базовые лицензии, у которых внутри диапазона начинается новый период и при этом у этой лицензии уже был более ранний период. Строки состава внутри одного периода не увеличивают счетчик.'
     },
     withoutRenewal: {
       label: 'Без продления',
       title: 'Без продления',
-      description: 'Считаются лицензии, у которых последний известный срок действия закончился внутри диапазона и следующей записи продления нет.'
+      description: 'Считаются базовые лицензии, у которых последний известный период закончился внутри диапазона и более позднего периода в базе нет.'
     },
     lost: {
       label: 'Ушли',
       title: 'Ушли',
-      description: 'Считаются лицензии, которые были в выбранном году или периоде, но последний срок действия закончился внутри него и дальше продлений не найдено.'
+      description: 'Считаются базовые лицензии, которые были в выбранном году или периоде, но завершились на последнем известном периоде и дальше не продлевались.'
     }
   } satisfies Record<string, InfoDetails>;
 
@@ -316,6 +316,7 @@ export function AnalyticsPage() {
         group.inn,
         group.mnemoOrg,
         group.licenseNumber,
+        ...group.periods.map((period) => period.licenseNumber),
         ...group.periods.flatMap((period) => period.components.flatMap((component) => [
           component.number,
           component.regNumberAbonement,
@@ -406,11 +407,11 @@ export function AnalyticsPage() {
                 { label: 'Клиенты', value: formatCount(summary.clients), hint: 'Уникальные организации' },
                 { label: 'Действуют', value: formatCount(summary.activeAtPeriodEnd), hint: `На ${formatDate(analytics.dateToUtc)}` },
                 { label: 'Просрочены', value: formatCount(summary.expiredAtPeriodEnd), hint: 'Нет активной записи на конец периода' },
-                { label: 'Продлены', value: formatCount(summary.renewed), hint: 'Новая запись внутри периода' },
-                { label: 'Без продления', value: formatCount(summary.withoutRenewal), hint: 'Последний срок закончился в периоде' },
+                { label: 'Продлены', value: formatCount(summary.renewed), hint: 'Новый период у существующей лицензии' },
+                { label: 'Без продления', value: formatCount(summary.withoutRenewal), hint: 'Последний период закончился' },
                 { label: 'Ушли', value: formatCount(summary.lost), hint: 'Нет продлений после окончания' },
                 { label: 'Заканчиваются', value: formatCount(summary.expiringInPeriod), hint: 'Дата окончания попала в период' },
-                { label: 'Новые', value: formatCount(summary.newLicenses), hint: 'Первая запись в периоде' }
+                { label: 'Новые', value: formatCount(summary.newLicenses), hint: 'Первое появление лицензии' }
               ]}
             />
           </div>
@@ -526,8 +527,8 @@ export function AnalyticsPage() {
                                       <span className={`analytics-expand-chevron${expandedPeriods.has(period.key) ? ' expanded' : ''}`}>›</span>
                                       <span className="analytics-cell-stack">
                                         <span className="analytics-cell-top">{formatDate(period.dateSinceUtc)} - {formatDate(period.dateToUtc)}</span>
-                                        <span className="analytics-cell-middle">{formatCount(period.componentsCount)} строк состава</span>
-                                        <span className="analytics-cell-bottom">{period.activeAtPeriodEnd ? 'Активен на конец периода' : 'Не активен на конец периода'}</span>
+                                        <span className="analytics-cell-middle">{period.licenseNumber}</span>
+                                        <span className="analytics-cell-bottom">{formatCount(period.componentsCount)} строк состава · {period.activeAtPeriodEnd ? 'Активен на конец периода' : 'Не активен на конец периода'}</span>
                                       </span>
                                     </button>
                                     {renderState(period)}
@@ -545,14 +546,10 @@ export function AnalyticsPage() {
                                   {expandedPeriods.has(period.key) ? (
                                     <div className="analytics-components">
                                       <div className="analytics-components-head">
-                                        <TextHeader label="Спецификация" />
                                         <TextHeader label="Состав лицензии" />
                                       </div>
                                       {period.components.map((component) => (
                                         <div key={component.id} className="analytics-component-row">
-                                          <span className="analytics-cell-stack">
-                                            <span className="analytics-cell-top">{component.regNumberAbonement || component.number || 'Без номера'}</span>
-                                          </span>
                                           <span className="analytics-cell-stack">
                                             <span className="analytics-cell-top">{component.modification || component.product || 'Парус'}</span>
                                             <span className="analytics-cell-middle">{component.nomenclature || 'Номенклатура не указана'}</span>

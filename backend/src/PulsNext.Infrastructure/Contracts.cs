@@ -365,6 +365,7 @@ public sealed class ParusLicenseAnalyticsOrganizationGroupDto
 public sealed class ParusLicenseAnalyticsLicensePeriodDto
 {
     public string Key { get; set; } = string.Empty;
+    public string LicenseNumber { get; set; } = string.Empty;
     public DateTime DateSinceUtc { get; set; }
     public DateTime DateToUtc { get; set; }
     public int ComponentsCount { get; set; }

@@ -138,8 +138,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         var clientName = license.Org?.Name ?? license.Org?.FullName ?? license.MnemoOrg ?? "Без организации";
         var baseNumber = ResolveBaseLicenseNumber(license);
         var number = FirstNotEmpty(license.RegNumberAbonement, license.Number, license.RegNumberClient, baseNumber, license.Oid.ToString());
-        var groupNumber = ResolveLicenseGroupNumber(license, number);
-        var groupKey = $"{clientId}:{groupNumber}";
+        var groupKey = $"{clientId}:{baseNumber.ToUpperInvariant()}";
 
         return new LicenseRecord(
             license.Oid,
@@ -251,8 +250,10 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             var fileInfo = ResolveLicenseFile(lifecycleGroup.ClientId);
             var periodDtos = lifecycleGroup.Records
                 .Where(record => Overlaps(record, from, to))
-                .GroupBy(record => $"{record.DateSinceUtc:yyyyMMdd}|{record.DateToUtc:yyyyMMdd}")
-                .OrderByDescending(group => group.Key)
+                .GroupBy(record => $"{record.PeriodNumber.ToUpperInvariant()}|{record.DateSinceUtc:yyyyMMdd}|{record.DateToUtc:yyyyMMdd}", StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(group => group.Max(record => record.DateToUtc))
+                .ThenByDescending(group => group.Max(record => record.DateSinceUtc))
+                .ThenBy(group => group.First().PeriodNumber, StringComparer.OrdinalIgnoreCase)
                 .Select(periodGroup =>
                 {
                     var components = periodGroup
@@ -264,7 +265,8 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
 
                     return new ParusLicenseAnalyticsLicensePeriodDto
                     {
-                        Key = $"{lifecycleGroup.Key}:{first.DateSinceUtc:yyyyMMdd}:{first.DateToUtc:yyyyMMdd}",
+                        Key = $"{lifecycleGroup.Key}:{first.PeriodNumber.ToUpperInvariant()}:{first.DateSinceUtc:yyyyMMdd}:{first.DateToUtc:yyyyMMdd}",
+                        LicenseNumber = first.PeriodNumber,
                         DateSinceUtc = first.DateSinceUtc,
                         DateToUtc = first.DateToUtc,
                         ComponentsCount = components.Length,
@@ -290,7 +292,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
                 ClientName = lifecycleGroup.DisplayClientName,
                 Inn = latest.Inn,
                 MnemoOrg = latest.MnemoOrg,
-                LicenseNumber = lifecycleGroup.DisplayNumber,
+                LicenseNumber = lifecycleGroup.DisplayBaseNumber,
                 PeriodsCount = periodDtos.Length,
                 ComponentsCount = periodDtos.Sum(period => period.ComponentsCount),
                 ActiveAtPeriodEnd = IsActiveAt(lifecycleGroup, to),
@@ -357,16 +359,16 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         => group.Records.Any(record => record.DateSinceUtc <= date && record.DateToUtc >= date);
 
     private static bool IsExpiredAtPeriodEnd(LicenseGroup group, DateTime to)
-        => group.Records.Max(record => record.DateToUtc) < to;
+        => GetLifecyclePeriods(group).Max(record => record.DateToUtc) < to;
 
     private static bool HasRenewalInPeriod(LicenseGroup group, DateTime from, DateTime to)
-        => group.Records
+        => GetLifecyclePeriods(group)
             .Select((record, index) => new { record, index })
             .Any(item => item.index > 0 && item.record.DateSinceUtc >= from && item.record.DateSinceUtc <= to);
 
     private static bool IsWithoutRenewalInPeriod(LicenseGroup group, DateTime from, DateTime to)
     {
-        var latest = group.Records.OrderBy(record => record.DateToUtc).ThenBy(record => record.DateSinceUtc).Last();
+        var latest = GetLifecyclePeriods(group).OrderBy(record => record.DateToUtc).ThenBy(record => record.DateSinceUtc).Last();
         return latest.DateToUtc >= from && latest.DateToUtc <= to;
     }
 
@@ -374,13 +376,22 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         => IsWithoutRenewalInPeriod(group, from, to);
 
     private static bool HasExpirationInPeriod(LicenseGroup group, DateTime from, DateTime to)
-        => group.Records.Any(record => record.DateToUtc >= from && record.DateToUtc <= to);
+        => GetLifecyclePeriods(group).Any(record => record.DateToUtc >= from && record.DateToUtc <= to);
 
     private static bool IsNewInPeriod(LicenseGroup group, DateTime from, DateTime to)
     {
-        var first = group.Records.OrderBy(record => record.DateSinceUtc).ThenBy(record => record.Id).First();
+        var first = GetLifecyclePeriods(group).OrderBy(record => record.DateSinceUtc).ThenBy(record => record.Id).First();
         return first.DateSinceUtc >= from && first.DateSinceUtc <= to;
     }
+
+    private static LicenseRecord[] GetLifecyclePeriods(LicenseGroup group)
+        => group.Records
+            .GroupBy(record => $"{record.PeriodNumber.ToUpperInvariant()}|{record.DateSinceUtc:yyyyMMdd}|{record.DateToUtc:yyyyMMdd}", StringComparer.OrdinalIgnoreCase)
+            .Select(periodGroup => periodGroup.OrderBy(record => record.Id).First())
+            .OrderBy(record => record.DateSinceUtc)
+            .ThenBy(record => record.DateToUtc)
+            .ThenBy(record => record.PeriodNumber, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 
     private static IEnumerable<(int Year, DateTime From, DateTime To)> BuildYearRanges(DateTime from, DateTime to)
     {
@@ -506,7 +517,10 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         DateTime DateToUtc,
         string? Nomenclature,
         string? Modification,
-        string Product);
+        string Product)
+    {
+        public string PeriodNumber => FirstNotEmpty(RegNumberAbonement, Number, BaseNumber, GroupKey);
+    }
 
     private sealed record LicenseGroup(string Key, IReadOnlyList<LicenseRecord> Records)
     {

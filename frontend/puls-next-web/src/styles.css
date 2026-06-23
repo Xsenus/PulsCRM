@@ -1584,7 +1584,7 @@ select {
 .analytics-components-head,
 .analytics-component-row {
   display: grid;
-  grid-template-columns: minmax(140px, 0.24fr) minmax(0, 0.76fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
