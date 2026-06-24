@@ -42,10 +42,8 @@ public static class ServiceCollectionExtensions
         services.Configure<LegacyDbOptions>(configuration.GetSection(LegacyDbOptions.SectionName));
         services.Configure<MailingDbOptions>(configuration.GetSection(MailingDbOptions.SectionName));
 
-        var legacyConnectionString = configuration.GetConnectionString("LegacyDb")
-            ?? throw new InvalidOperationException("ConnectionStrings:LegacyDb is not configured.");
-        var mailingConnectionString = configuration.GetConnectionString("MailingDb")
-            ?? throw new InvalidOperationException("ConnectionStrings:MailingDb is not configured.");
+        var legacyConnectionString = GetConnectionString(configuration, contentRootPath, "LegacyDb");
+        var mailingConnectionString = GetConnectionString(configuration, contentRootPath, "MailingDb");
         var autoCreateMailingSchema = configuration.GetSection(MailingDbOptions.SectionName).GetValue("AutoCreateSchema", true);
 
         services.AddHttpContextAccessor();
@@ -88,6 +86,25 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IMailSender, MailSender>();
 
         return services;
+    }
+
+    private static string GetConnectionString(IConfiguration configuration, string contentRootPath, string name)
+    {
+        var productionConfigPath = Path.Combine(contentRootPath, "appsettings.Production.json");
+        if (File.Exists(productionConfigPath))
+        {
+            var productionConfiguration = new ConfigurationBuilder()
+                .AddJsonFile(productionConfigPath, optional: false, reloadOnChange: false)
+                .Build();
+            var productionConnectionString = productionConfiguration.GetConnectionString(name);
+            if (!string.IsNullOrWhiteSpace(productionConnectionString))
+            {
+                return productionConnectionString;
+            }
+        }
+
+        return configuration.GetConnectionString(name)
+            ?? throw new InvalidOperationException($"ConnectionStrings:{name} is not configured.");
     }
 
     private static DirectoryInfo GetKeysDirectory(IConfiguration configuration, string contentRootPath)
