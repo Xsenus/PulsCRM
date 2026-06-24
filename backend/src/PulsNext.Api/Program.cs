@@ -63,6 +63,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("web", policy =>
     {
+        var configuredOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
         if (builder.Environment.IsDevelopment())
         {
             policy.SetIsOriginAllowed(_ => true)
@@ -71,7 +72,7 @@ builder.Services.AddCors(options =>
             return;
         }
 
-        policy.WithOrigins(builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173"])
+        policy.SetIsOriginAllowed(origin => IsAllowedCorsOrigin(origin, configuredOrigins))
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -153,4 +154,39 @@ static IEnumerable<string> GetSwaggerXmlDocumentationPaths()
         .Select(assembly => Path.Combine(AppContext.BaseDirectory, $"{assembly.GetName().Name}.xml"))
         .Where(File.Exists)
         .Distinct(StringComparer.OrdinalIgnoreCase);
+}
+
+static bool IsAllowedCorsOrigin(string origin, IReadOnlyCollection<string> configuredOrigins)
+{
+    if (configuredOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return false;
+    }
+
+    if (uri.Scheme != Uri.UriSchemeHttp || uri.Port != 8080)
+    {
+        return false;
+    }
+
+    if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+        || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+    if (!System.Net.IPAddress.TryParse(uri.Host, out var address))
+    {
+        return false;
+    }
+
+    var bytes = address.GetAddressBytes();
+    return bytes.Length == 4
+        && (bytes[0] == 10
+            || (bytes[0] == 172 && bytes[1] is >= 16 and <= 31)
+            || (bytes[0] == 192 && bytes[1] == 168));
 }
