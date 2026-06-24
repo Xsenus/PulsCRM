@@ -74,6 +74,87 @@ function Copy-OptionalConfig {
     Write-Host "Copied config file to $targetPath"
 }
 
+function Set-WebConfigEnvironmentVariable {
+    param(
+        [Parameter(Mandatory = $true)]
+        [xml]$WebConfig,
+
+        [Parameter(Mandatory = $true)]
+        [System.Xml.XmlElement]$EnvironmentVariables,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Value
+    )
+
+    $existing = @($EnvironmentVariables.SelectNodes("environmentVariable[@name='$Name']"))
+    foreach ($node in $existing) {
+        [void]$EnvironmentVariables.RemoveChild($node)
+    }
+
+    $item = $WebConfig.CreateElement("environmentVariable")
+    [void]$item.SetAttribute("name", $Name)
+    [void]$item.SetAttribute("value", $Value)
+    [void]$EnvironmentVariables.AppendChild($item)
+}
+
+function Sync-ConnectionStringsToWebConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ConfigPath,
+
+        [Parameter(Mandatory = $true)]
+        [string]$WebConfigPath
+    )
+
+    if (-not (Test-Path -LiteralPath $ConfigPath -PathType Leaf)) {
+        Write-Warning "Connection strings were not synced to web.config: config file was not found: $ConfigPath"
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $WebConfigPath -PathType Leaf)) {
+        Write-Warning "Connection strings were not synced to web.config: web.config was not found: $WebConfigPath"
+        return
+    }
+
+    $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
+    if ($null -eq $config.ConnectionStrings) {
+        Write-Warning "Connection strings were not synced to web.config: ConnectionStrings section was not found in $ConfigPath"
+        return
+    }
+
+    [xml]$webConfig = Get-Content -LiteralPath $WebConfigPath -Raw
+    $aspNetCore = $webConfig.SelectSingleNode("/configuration/system.webServer/aspNetCore")
+    if ($null -eq $aspNetCore) {
+        Write-Warning "Connection strings were not synced to web.config: aspNetCore element was not found in $WebConfigPath"
+        return
+    }
+
+    $environmentVariables = $aspNetCore.SelectSingleNode("environmentVariables")
+    if ($null -eq $environmentVariables) {
+        $environmentVariables = $webConfig.CreateElement("environmentVariables")
+        [void]$aspNetCore.AppendChild($environmentVariables)
+    }
+
+    Set-WebConfigEnvironmentVariable -WebConfig $webConfig -EnvironmentVariables $environmentVariables -Name "ASPNETCORE_ENVIRONMENT" -Value "Production"
+
+    $synced = 0
+    foreach ($property in $config.ConnectionStrings.PSObject.Properties) {
+        $value = [string]$property.Value
+        if ([string]::IsNullOrWhiteSpace($property.Name) -or [string]::IsNullOrWhiteSpace($value)) {
+            continue
+        }
+
+        Set-WebConfigEnvironmentVariable -WebConfig $webConfig -EnvironmentVariables $environmentVariables -Name "ConnectionStrings__$($property.Name)" -Value $value
+        $synced += 1
+    }
+
+    $webConfig.Save($WebConfigPath)
+    Write-Host "Synced $synced connection string environment variable(s) to $WebConfigPath"
+}
+
 function Invoke-RobocopyMirror {
     param(
         [Parameter(Mandatory = $true)]
@@ -328,6 +409,9 @@ Assert-Directory -Path $ApiSourcePath -Label "API source"
 Assert-Directory -Path $WebSourcePath -Label "Web source"
 
 Copy-OptionalConfig -SourcePath $ApiConfigSourcePath -TargetDirectory $ApiSourcePath
+$publishedConfigPath = Join-Path $ApiSourcePath "appsettings.Production.json"
+$publishedWebConfigPath = Join-Path $ApiSourcePath "web.config"
+Sync-ConnectionStringsToWebConfig -ConfigPath $publishedConfigPath -WebConfigPath $publishedWebConfigPath
 
 Ensure-Directory -Path $ApiTargetPath
 $appOfflinePath = Join-Path $ApiTargetPath "app_offline.htm"
