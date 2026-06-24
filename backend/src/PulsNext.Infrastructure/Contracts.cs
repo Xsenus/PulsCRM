@@ -285,7 +285,89 @@ public sealed class ParusLicenseAnalyticsDto
     public IReadOnlyCollection<ParusLicenseAnalyticsPeriodDto> Periods { get; set; } = Array.Empty<ParusLicenseAnalyticsPeriodDto>();
     public IReadOnlyCollection<ParusLicenseAnalyticsProductDto> Products { get; set; } = Array.Empty<ParusLicenseAnalyticsProductDto>();
     public IReadOnlyCollection<ParusLicenseAnalyticsGroupDto> Groups { get; set; } = Array.Empty<ParusLicenseAnalyticsGroupDto>();
+    public int OrganizationGroupsTotalCount { get; set; }
     public IReadOnlyCollection<ParusLicenseAnalyticsOrganizationGroupDto> OrganizationGroups { get; set; } = Array.Empty<ParusLicenseAnalyticsOrganizationGroupDto>();
+}
+
+public sealed class ParusLicenseInfoImportResultDto
+{
+    public string FileName { get; set; } = string.Empty;
+    public bool DryRun { get; set; }
+    public int TotalRows { get; set; }
+    public int ComponentRows { get; set; }
+    public int ImportedRows { get; set; }
+    public int DuplicateRows { get; set; }
+    public int SkippedRows { get; set; }
+    public int MissingOrganizationRows { get; set; }
+    public int InvalidRows { get; set; }
+    public int UpdatedOrganizations { get; set; }
+    public IReadOnlyCollection<string> MissingOrganizations { get; set; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> Errors { get; set; } = Array.Empty<string>();
+}
+
+public sealed class ParusLicenseFileImportResultDto
+{
+    public bool DryRun { get; set; }
+    public int TotalFiles { get; set; }
+    public int ImportedFiles { get; set; }
+    public int DuplicateFiles { get; set; }
+    public int MissingLicenseFiles { get; set; }
+    public int SkippedFiles { get; set; }
+    public long TotalBytes { get; set; }
+    public IReadOnlyCollection<ParusLicenseFileImportItemDto> Items { get; set; } = Array.Empty<ParusLicenseFileImportItemDto>();
+}
+
+public sealed class ParusLicenseFileImportItemDto
+{
+    public string FileName { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string? LicenseNumber { get; set; }
+    public int? OrganizationId { get; set; }
+    public string? OrganizationName { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
+
+public sealed class ParusLicenseCardImportResultDto
+{
+    public string FileName { get; set; } = string.Empty;
+    public bool DryRun { get; set; }
+    public int TotalRows { get; set; }
+    public int MatchedRows { get; set; }
+    public int UpdatedOrganizations { get; set; }
+    public int UnchangedOrganizations { get; set; }
+    public int DuplicateRows { get; set; }
+    public int MissingLicenseRows { get; set; }
+    public int InvalidRows { get; set; }
+    public IReadOnlyCollection<string> MissingLicenses { get; set; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> Errors { get; set; } = Array.Empty<string>();
+}
+
+public sealed class ParusLicenseImportLogItemDto
+{
+    public string Stage { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string? FileName { get; set; }
+    public string? LicenseNumber { get; set; }
+    public int? OrganizationId { get; set; }
+    public string? OrganizationName { get; set; }
+    public string Message { get; set; } = string.Empty;
+}
+
+public sealed class ParusLicenseBatchImportResultDto
+{
+    public bool DryRun { get; set; }
+    public int TotalFiles { get; set; }
+    public int ExpandedFiles { get; set; }
+    public int LicenseInfoFiles { get; set; }
+    public int CardInfoFiles { get; set; }
+    public int LicenseFiles { get; set; }
+    public int SkippedFiles { get; set; }
+    public IReadOnlyCollection<string> SkippedFileNames { get; set; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> Errors { get; set; } = Array.Empty<string>();
+    public IReadOnlyCollection<ParusLicenseInfoImportResultDto> InfoResults { get; set; } = Array.Empty<ParusLicenseInfoImportResultDto>();
+    public IReadOnlyCollection<ParusLicenseCardImportResultDto> CardResults { get; set; } = Array.Empty<ParusLicenseCardImportResultDto>();
+    public ParusLicenseFileImportResultDto? FileResult { get; set; }
+    public IReadOnlyCollection<ParusLicenseImportLogItemDto> LogItems { get; set; } = Array.Empty<ParusLicenseImportLogItemDto>();
 }
 
 public class ParusLicenseAnalyticsSummaryDto
@@ -353,12 +435,19 @@ public sealed class ParusLicenseAnalyticsOrganizationGroupDto
     public string? Inn { get; set; }
     public string? MnemoOrg { get; set; }
     public string LicenseNumber { get; set; } = string.Empty;
+    public string? LicenseComposition { get; set; }
+    public int DatabaseCount { get; set; }
+    public int OrganizationCount { get; set; }
+    public int ExtraWorkplaces { get; set; }
     public int PeriodsCount { get; set; }
     public int ComponentsCount { get; set; }
     public bool ActiveAtPeriodEnd { get; set; }
     public bool ExpiredAtPeriodEnd { get; set; }
     public bool RenewedInPeriod { get; set; }
     public bool WithoutRenewal { get; set; }
+    public bool ExpiringInPeriod { get; set; }
+    public bool NewInPeriod { get; set; }
+    public bool LostInPeriod { get; set; }
     public IReadOnlyCollection<ParusLicenseAnalyticsLicensePeriodDto> Periods { get; set; } = Array.Empty<ParusLicenseAnalyticsLicensePeriodDto>();
 }
 
@@ -387,6 +476,7 @@ public sealed class ParusLicenseAnalyticsComponentDto
 {
     public int Id { get; set; }
     public string? Number { get; set; }
+    public string? Quantity { get; set; }
     public string? RegNumberAbonement { get; set; }
     public string? RegNumberClient { get; set; }
     public string? Nomenclature { get; set; }

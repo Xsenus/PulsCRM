@@ -16,6 +16,16 @@ import { StatsCards } from '../components/StatsCards';
 
 const GROUP_PAGE_SIZE_OPTIONS = [10, 25, 50];
 const WEEK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const GROUP_STATUS_OPTIONS = [
+  { value: 'all', label: 'Все статусы' },
+  { value: 'active', label: 'Действуют' },
+  { value: 'expired', label: 'Просрочены' },
+  { value: 'renewed', label: 'Продлены' },
+  { value: 'without-renewal', label: 'Без продления' },
+  { value: 'expiring', label: 'Заканчиваются' },
+  { value: 'new', label: 'Новые' },
+  { value: 'lost', label: 'Ушли' }
+];
 
 interface InfoDetails {
   label: string;
@@ -71,6 +81,15 @@ function saveBlob(blob: Blob, fileName: string) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function formatQuantity(value?: string) {
+  if (!value) {
+    return '';
+  }
+
+  const number = Number(value.replace(',', '.'));
+  return Number.isFinite(number) ? formatCount(number) : value;
 }
 
 function InfoHeader({ label, info, onOpen }: { label: string; info: InfoDetails; onOpen: (info: InfoDetails) => void }) {
@@ -224,6 +243,15 @@ function renderState({
   return <span className="analytics-status analytics-status-muted">История</span>;
 }
 
+function buildLicenseMeta(row: ParusLicenseAnalyticsOrganizationGroupDto) {
+  return [
+    row.databaseCount > 0 ? `Баз: ${formatCount(row.databaseCount)}` : null,
+    row.organizationCount > 0 ? `Организаций в базах: ${formatCount(row.organizationCount)}` : null,
+    row.extraWorkplaces > 0 ? `Доп. мест: ${formatCount(row.extraWorkplaces)}` : null,
+    row.licenseComposition || null
+  ].filter(Boolean).join(' · ');
+}
+
 export function AnalyticsPage() {
   const [dateFrom, setDateFrom] = useState(startOfCurrentYear);
   const [dateTo, setDateTo] = useState(endOfCurrentYear);
@@ -232,10 +260,12 @@ export function AnalyticsPage() {
   const [annualAnalytics, setAnnualAnalytics] = useState(true);
   const [infoModal, setInfoModal] = useState<InfoDetails | null>(null);
   const [groupSearch, setGroupSearch] = useState('');
+  const [groupStatus, setGroupStatus] = useState('all');
   const [groupPage, setGroupPage] = useState(1);
   const [groupPageSize, setGroupPageSize] = useState(10);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [expandedPeriods, setExpandedPeriods] = useState<Set<string>>(() => new Set());
+  const [appliedRange, setAppliedRange] = useState(() => ({ from: startOfCurrentYear(), to: endOfCurrentYear() }));
 
   const normalizedRange = useMemo(() => {
     const from = dayjs(dateFrom);
@@ -245,10 +275,17 @@ export function AnalyticsPage() {
       : { from: dateFrom, to: dateTo };
   }, [dateFrom, dateTo]);
 
-  const load = async (range = normalizedRange) => {
+  const load = async (range = appliedRange, page = groupPage, search = groupSearch, status = groupStatus, pageSize = groupPageSize) => {
     setLoading(true);
     try {
-      setAnalytics(await getParusLicenseAnalytics(toApiDate(range.from), toApiDate(range.to)));
+      setAnalytics(await getParusLicenseAnalytics({
+        dateFromUtc: toApiDate(range.from),
+        dateToUtc: toApiDate(range.to),
+        search: search.trim() || undefined,
+        status,
+        skip: (page - 1) * pageSize,
+        take: pageSize
+      }));
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось загрузить аналитику лицензий.'), 'error', 4000);
     } finally {
@@ -257,11 +294,16 @@ export function AnalyticsPage() {
   };
 
   useEffect(() => {
-    void load();
-  }, []);
+    const handle = window.setTimeout(() => {
+      void load(appliedRange, groupPage, groupSearch, groupStatus, groupPageSize);
+    }, 250);
+
+    return () => window.clearTimeout(handle);
+  }, [appliedRange, groupPage, groupPageSize, groupSearch, groupStatus]);
 
   const applyPeriod = () => {
-    void load();
+    setAppliedRange(normalizedRange);
+    setGroupPage(1);
   };
 
   const downloadLicenseFile = async (clientId: number, fileName?: string) => {
@@ -302,48 +344,19 @@ export function AnalyticsPage() {
   } satisfies Record<string, InfoDetails>;
 
   const summary = analytics?.summary;
-  const filteredGroups = useMemo(() => {
-    const source = analytics?.organizationGroups ?? [];
-    const term = groupSearch.trim().toLowerCase();
-
-    if (!term) {
-      return source;
-    }
-
-    return source.filter((group) => {
-      const haystack = [
-        group.clientName,
-        group.inn,
-        group.mnemoOrg,
-        group.licenseNumber,
-        ...group.periods.map((period) => period.licenseNumber),
-        ...group.periods.flatMap((period) => period.components.flatMap((component) => [
-          component.number,
-          component.regNumberAbonement,
-          component.regNumberClient,
-          component.nomenclature,
-          component.modification
-        ]))
-      ].filter(Boolean).join(' ').toLowerCase();
-
-      return haystack.includes(term);
-    });
-  }, [analytics?.organizationGroups, groupSearch]);
-  const pagedGroups = useMemo(
-    () => filteredGroups.slice((groupPage - 1) * groupPageSize, groupPage * groupPageSize),
-    [filteredGroups, groupPage, groupPageSize]
-  );
+  const groups = analytics?.organizationGroups ?? [];
+  const groupsTotalCount = analytics?.organizationGroupsTotalCount ?? 0;
 
   useEffect(() => {
     setGroupPage(1);
-  }, [groupSearch]);
+  }, [groupSearch, groupStatus]);
 
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(filteredGroups.length / groupPageSize));
+    const totalPages = Math.max(1, Math.ceil(groupsTotalCount / groupPageSize));
     if (groupPage > totalPages) {
       setGroupPage(totalPages);
     }
-  }, [filteredGroups.length, groupPage, groupPageSize]);
+  }, [groupsTotalCount, groupPage, groupPageSize]);
 
   const toggleGroup = (key: string) => {
     setExpandedGroups((current) => {
@@ -460,7 +473,7 @@ export function AnalyticsPage() {
           <section className="panel">
             <div className="section-header-inline">
               <h3>Группы лицензий</h3>
-              <span className="field-hint">{formatCount(filteredGroups.length)} групп</span>
+              <span className="field-hint">{formatCount(groupsTotalCount)} групп</span>
             </div>
 
             <div className="analytics-groups-toolbar">
@@ -472,11 +485,24 @@ export function AnalyticsPage() {
                 aria-label="Поиск по группам лицензий"
                 onChange={(event) => setGroupSearch(event.target.value)}
               />
+              <select
+                className="form-select analytics-groups-status"
+                value={groupStatus}
+                aria-label="Фильтр по статусу"
+                onChange={(event) => setGroupStatus(event.target.value)}
+              >
+                {GROUP_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
               <button
                 type="button"
                 className="secondary-button button-inline"
-                onClick={() => setGroupSearch('')}
-                disabled={!groupSearch}
+                onClick={() => {
+                  setGroupSearch('');
+                  setGroupStatus('all');
+                }}
+                disabled={!groupSearch && groupStatus === 'all'}
               >
                 Сбросить
               </button>
@@ -494,7 +520,10 @@ export function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pagedGroups.map((row) => (
+                  {groups.map((row) => {
+                    const licenseMeta = buildLicenseMeta(row);
+
+                    return (
                     <React.Fragment key={row.key}>
                       <tr className="analytics-group-row">
                         <td>
@@ -510,6 +539,7 @@ export function AnalyticsPage() {
                         <td>
                           <span className="analytics-cell-stack">
                             <span className="analytics-cell-top">{row.licenseNumber}</span>
+                            {licenseMeta ? <span className="analytics-cell-bottom">{licenseMeta}</span> : null}
                           </span>
                         </td>
                         <td>{formatCount(row.periodsCount)}</td>
@@ -554,6 +584,9 @@ export function AnalyticsPage() {
                                             <span className="analytics-cell-top">{component.modification || component.product || 'Парус'}</span>
                                             <span className="analytics-cell-middle">{component.nomenclature || 'Номенклатура не указана'}</span>
                                           </span>
+                                          {component.quantity ? (
+                                            <span className="analytics-component-quantity">{formatQuantity(component.quantity)}</span>
+                                          ) : null}
                                         </div>
                                       ))}
                                     </div>
@@ -565,8 +598,9 @@ export function AnalyticsPage() {
                         </tr>
                       ) : null}
                     </React.Fragment>
-                  ))}
-                  {filteredGroups.length === 0 ? (
+                    );
+                  })}
+                  {groups.length === 0 ? (
                     <tr>
                       <td colSpan={5}>
                         <div className="table-empty">За выбранный период лицензии Парус 10 и Парус Торнадо не найдены.</div>
@@ -579,7 +613,7 @@ export function AnalyticsPage() {
             <Pagination
               page={groupPage}
               pageSize={groupPageSize}
-              totalCount={filteredGroups.length}
+              totalCount={groupsTotalCount}
               pageSizeOptions={GROUP_PAGE_SIZE_OPTIONS}
               onPageChange={setGroupPage}
               onPageSizeChange={(nextPageSize) => {

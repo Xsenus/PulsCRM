@@ -97,6 +97,7 @@ export interface ParusLicenseAnalyticsGroupDto {
 export interface ParusLicenseAnalyticsComponentDto {
   id: number;
   number?: string;
+  quantity?: string;
   regNumberAbonement?: string;
   regNumberClient?: string;
   nomenclature?: string;
@@ -124,12 +125,19 @@ export interface ParusLicenseAnalyticsOrganizationGroupDto {
   inn?: string;
   mnemoOrg?: string;
   licenseNumber: string;
+  licenseComposition?: string;
+  databaseCount: number;
+  organizationCount: number;
+  extraWorkplaces: number;
   periodsCount: number;
   componentsCount: number;
   activeAtPeriodEnd: boolean;
   expiredAtPeriodEnd: boolean;
   renewedInPeriod: boolean;
   withoutRenewal: boolean;
+  expiringInPeriod: boolean;
+  newInPeriod: boolean;
+  lostInPeriod: boolean;
   periods: ParusLicenseAnalyticsLicensePeriodDto[];
 }
 
@@ -140,7 +148,83 @@ export interface ParusLicenseAnalyticsDto {
   periods: ParusLicenseAnalyticsPeriodDto[];
   products: ParusLicenseAnalyticsProductDto[];
   groups: ParusLicenseAnalyticsGroupDto[];
+  organizationGroupsTotalCount: number;
   organizationGroups: ParusLicenseAnalyticsOrganizationGroupDto[];
+}
+
+export interface ParusLicenseInfoImportResultDto {
+  fileName: string;
+  dryRun: boolean;
+  totalRows: number;
+  componentRows: number;
+  importedRows: number;
+  duplicateRows: number;
+  skippedRows: number;
+  missingOrganizationRows: number;
+  invalidRows: number;
+  updatedOrganizations: number;
+  missingOrganizations: string[];
+  errors: string[];
+}
+
+export interface ParusLicenseFileImportItemDto {
+  fileName: string;
+  status: string;
+  licenseNumber?: string;
+  organizationId?: number;
+  organizationName?: string;
+  message: string;
+}
+
+export interface ParusLicenseFileImportResultDto {
+  dryRun: boolean;
+  totalFiles: number;
+  importedFiles: number;
+  duplicateFiles: number;
+  missingLicenseFiles: number;
+  skippedFiles: number;
+  totalBytes: number;
+  items: ParusLicenseFileImportItemDto[];
+}
+
+export interface ParusLicenseCardImportResultDto {
+  fileName: string;
+  dryRun: boolean;
+  totalRows: number;
+  matchedRows: number;
+  updatedOrganizations: number;
+  unchangedOrganizations: number;
+  duplicateRows: number;
+  missingLicenseRows: number;
+  invalidRows: number;
+  missingLicenses: string[];
+  errors: string[];
+}
+
+export interface ParusLicenseImportLogItemDto {
+  stage: string;
+  status: string;
+  fileName?: string;
+  licenseNumber?: string;
+  organizationId?: number;
+  organizationName?: string;
+  message: string;
+}
+
+export interface ParusLicenseBatchImportResultDto {
+  dryRun: boolean;
+  totalFiles: number;
+  expandedFiles: number;
+  licenseInfoFiles: number;
+  cardInfoFiles: number;
+  licenseFiles: number;
+  skippedFiles: number;
+  skippedFileNames: string[];
+  errors: string[];
+  infoResults: ParusLicenseInfoImportResultDto[];
+  cardResults: ParusLicenseCardImportResultDto[];
+  fileResult?: ParusLicenseFileImportResultDto;
+  logItems: ParusLicenseImportLogItemDto[];
 }
 
 export interface EmployeeListItemDto {

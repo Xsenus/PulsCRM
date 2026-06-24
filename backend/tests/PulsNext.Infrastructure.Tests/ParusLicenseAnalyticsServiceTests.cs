@@ -24,7 +24,7 @@ public sealed class ParusLicenseAnalyticsServiceTests
         legacyUnitOfWork.CommitChanges();
 
         var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
-        var result = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), CancellationToken.None);
+        var result = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, null, 0, 10, CancellationToken.None);
 
         Assert.Equal(2, result.Summary.LicenseGroups);
         Assert.Equal(3, result.Summary.LicenseRecords);
@@ -48,8 +48,8 @@ public sealed class ParusLicenseAnalyticsServiceTests
         Assert.Equal(1, year2026.ActiveAtPeriodEnd);
         Assert.Equal(1, year2026.Lost);
 
-        Assert.Contains(result.Products, x => x.Name == "Парус 10" && x.LicenseGroups == 1);
-        Assert.Contains(result.Products, x => x.Name == "Парус Торнадо" && x.LicenseGroups == 1);
+        Assert.Empty(result.Products);
+        Assert.Empty(result.Groups);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public sealed class ParusLicenseAnalyticsServiceTests
         legacyUnitOfWork.CommitChanges();
 
         var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
-        var result = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), CancellationToken.None);
+        var result = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, null, 0, 10, CancellationToken.None);
 
         Assert.Equal(1, result.Summary.LicenseGroups);
         Assert.Equal(3, result.Summary.LicenseRecords);
@@ -87,6 +87,84 @@ public sealed class ParusLicenseAnalyticsServiceTests
         Assert.Contains(group.Periods, period => period.LicenseNumber == "HA2360-2-11" && period.ComponentsCount == 2);
     }
 
+    [Fact]
+    public async Task GetAsync_UsesLicenseNumberColumnAsComponentQuantity()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+
+        var client = new LegacyOrg(legacyUnitOfWork) { Name = "Клиент" };
+        CreateLicense(
+            legacyUnitOfWork,
+            client,
+            "HA2360-2-11",
+            new DateTime(2026, 1, 1),
+            new DateTime(2026, 12, 31),
+            clientNumber: "HA-2360",
+            quantity: "5");
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
+        var result = await service.GetAsync(new DateTime(2026, 1, 1), new DateTime(2026, 12, 31), null, null, 0, 10, CancellationToken.None);
+
+        var group = Assert.Single(result.OrganizationGroups);
+        var period = Assert.Single(group.Periods);
+        var component = Assert.Single(period.Components);
+        Assert.Equal("HA2360-2-11", component.Number);
+        Assert.Equal("5", component.Quantity);
+    }
+
+    [Fact]
+    public async Task GetAsync_FiltersAndPaginatesOrganizationGroupsOnServer()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+
+        var activeClient = new LegacyOrg(legacyUnitOfWork) { Name = "Active client" };
+        var expiredClient = new LegacyOrg(legacyUnitOfWork) { Name = "Expired client" };
+
+        CreateLicense(legacyUnitOfWork, activeClient, "ACTIVE-1", new DateTime(2026, 1, 1), new DateTime(2026, 12, 31), clientNumber: "ACTIVE");
+        CreateLicense(legacyUnitOfWork, expiredClient, "EXPIRED-1", new DateTime(2025, 1, 1), new DateTime(2025, 12, 31), clientNumber: "EXPIRED");
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
+        var result = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, "active", 0, 1, CancellationToken.None);
+
+        Assert.Equal(1, result.OrganizationGroupsTotalCount);
+
+        var group = Assert.Single(result.OrganizationGroups);
+        Assert.Equal("ACTIVE", group.LicenseNumber);
+        Assert.True(group.ActiveAtPeriodEnd);
+    }
+
+    [Fact]
+    public async Task GetAsync_FiltersOrganizationGroupsByNewLostAndExpiringStatuses()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+
+        var newClient = new LegacyOrg(legacyUnitOfWork) { Name = "New client" };
+        var lostClient = new LegacyOrg(legacyUnitOfWork) { Name = "Lost client" };
+
+        CreateLicense(legacyUnitOfWork, newClient, "NEW-1", new DateTime(2026, 1, 1), new DateTime(2027, 12, 31), clientNumber: "NEW");
+        CreateLicense(legacyUnitOfWork, lostClient, "LOST-1", new DateTime(2024, 1, 1), new DateTime(2025, 6, 30), clientNumber: "LOST");
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
+
+        var newResult = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, "new", 0, 10, CancellationToken.None);
+        var newGroup = Assert.Single(newResult.OrganizationGroups);
+        Assert.Equal("NEW", newGroup.LicenseNumber);
+        Assert.True(newGroup.NewInPeriod);
+
+        var lostResult = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, "lost", 0, 10, CancellationToken.None);
+        var lostGroup = Assert.Single(lostResult.OrganizationGroups);
+        Assert.Equal("LOST", lostGroup.LicenseNumber);
+        Assert.True(lostGroup.LostInPeriod);
+
+        var expiringResult = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, "expiring", 0, 10, CancellationToken.None);
+        var expiringGroup = Assert.Single(expiringResult.OrganizationGroups);
+        Assert.Equal("LOST", expiringGroup.LicenseNumber);
+        Assert.True(expiringGroup.ExpiringInPeriod);
+    }
+
     private static LegacyUnitOfWork CreateLegacyUnitOfWork()
     {
         var dataLayer = new SimpleDataLayer(new InMemoryDataStore());
@@ -100,7 +178,8 @@ public sealed class ParusLicenseAnalyticsServiceTests
         DateTime dateSince,
         DateTime dateTo,
         string modification = "Парус 10",
-        string? clientNumber = null)
+        string? clientNumber = null,
+        string? quantity = null)
     {
         _ = new LegacyZPParusLicenseInfo(unitOfWork)
         {
@@ -110,7 +189,7 @@ public sealed class ParusLicenseAnalyticsServiceTests
             DateSince = dateSince,
             DateTo = dateTo,
             Modification = modification,
-            Number = abonementNumber
+            Number = quantity ?? abonementNumber
         };
     }
 }

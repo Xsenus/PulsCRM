@@ -33,7 +33,11 @@ import type {
   DispatchItemListQuery,
   CurrentUserDto,
   LoginUserOptionDto,
-  ParusLicenseAnalyticsDto
+  ParusLicenseAnalyticsDto,
+  ParusLicenseBatchImportResultDto,
+  ParusLicenseCardImportResultDto,
+  ParusLicenseFileImportResultDto,
+  ParusLicenseInfoImportResultDto
 } from './types';
 import { getApiErrorStatus, throwApiError } from './apiErrors';
 
@@ -131,10 +135,19 @@ export async function getDashboard(): Promise<DashboardDto> {
   }
 }
 
-export async function getParusLicenseAnalytics(dateFromUtc: string, dateToUtc: string): Promise<ParusLicenseAnalyticsDto> {
+export interface ParusLicenseAnalyticsParams {
+  dateFromUtc: string;
+  dateToUtc: string;
+  search?: string;
+  status?: string;
+  skip?: number;
+  take?: number;
+}
+
+export async function getParusLicenseAnalytics(params: ParusLicenseAnalyticsParams): Promise<ParusLicenseAnalyticsDto> {
   try {
     const { data } = await api.get<ParusLicenseAnalyticsDto>('/api/analytics/parus-licenses', {
-      params: { dateFromUtc, dateToUtc }
+      params
     });
     return data;
   } catch (error) {
@@ -147,6 +160,78 @@ export async function downloadParusLicenseFile(clientId: number): Promise<Blob> 
     const { data } = await api.get<Blob>(`/api/analytics/parus-licenses/${clientId}/file`, {
       responseType: 'blob'
     });
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function importParusLicenseInfo(file: File, dryRun: boolean): Promise<ParusLicenseInfoImportResultDto> {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('dryRun', dryRun ? 'true' : 'false');
+
+    const { data } = await api.post<ParusLicenseInfoImportResultDto>('/api/analytics/parus-licenses/import-info', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function importParusLicenseFiles(files: File[], dryRun: boolean): Promise<ParusLicenseFileImportResultDto> {
+  try {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    formData.append('dryRun', dryRun ? 'true' : 'false');
+
+    const { data } = await api.post<ParusLicenseFileImportResultDto>('/api/analytics/parus-licenses/import-files', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function importParusLicenseCards(file: File, dryRun: boolean): Promise<ParusLicenseCardImportResultDto> {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('dryRun', dryRun ? 'true' : 'false');
+
+    const { data } = await api.post<ParusLicenseCardImportResultDto>('/api/analytics/parus-licenses/import-cards', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return data;
+  } catch (error) {
+    unwrapError(error);
+  }
+}
+
+export async function importParusLicenseBatch(files: File[], dryRun: boolean): Promise<ParusLicenseBatchImportResultDto> {
+  try {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    formData.append('dryRun', dryRun ? 'true' : 'false');
+
+    const { data } = await api.post<ParusLicenseBatchImportResultDto>('/api/analytics/parus-licenses/import-batch', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
     return data;
   } catch (error) {
     unwrapError(error);

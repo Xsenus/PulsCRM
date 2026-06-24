@@ -9,6 +9,9 @@ using PulsNext.Domain.Mailing;
 using PulsNext.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+var importRequestSizeLimit = Math.Max(
+    builder.Configuration.GetSection(StorageOptions.SectionName).GetValue<long>(nameof(StorageOptions.MaxFileSizeBytes), 25 * 1024 * 1024),
+    builder.Configuration.GetSection("Import").GetValue<long>("MaxRequestSizeBytes", 200L * 1024 * 1024));
 
 builder.Services.AddPulsNextInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
 builder.Services.AddHostedService<SchedulerHostedService>();
@@ -46,10 +49,14 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = importRequestSizeLimit;
+});
+
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = builder.Configuration.GetSection(StorageOptions.SectionName)
-        .GetValue<long>(nameof(StorageOptions.MaxFileSizeBytes), 25 * 1024 * 1024);
+    options.MultipartBodyLengthLimit = importRequestSizeLimit;
 });
 
 builder.Services.AddCors(options =>

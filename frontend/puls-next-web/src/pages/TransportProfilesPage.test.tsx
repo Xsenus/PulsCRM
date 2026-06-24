@@ -10,6 +10,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const apiMocks = vi.hoisted(() => ({
   deleteTransportProfile: vi.fn(),
   getTransportProfiles: vi.fn(),
+  importParusLicenseBatch: vi.fn(),
   saveTransportProfile: vi.fn(),
   testTransportProfile: vi.fn()
 }));
@@ -32,6 +33,7 @@ vi.mock('../app/AuthContext', () => ({
 vi.mock('../app/api', () => ({
   deleteTransportProfile: apiMocks.deleteTransportProfile,
   getTransportProfiles: apiMocks.getTransportProfiles,
+  importParusLicenseBatch: apiMocks.importParusLicenseBatch,
   saveTransportProfile: apiMocks.saveTransportProfile,
   testTransportProfile: apiMocks.testTransportProfile
 }));
@@ -66,6 +68,7 @@ function click(element: Element) {
 beforeEach(() => {
   apiMocks.deleteTransportProfile.mockResolvedValue(undefined);
   apiMocks.getTransportProfiles.mockResolvedValue([]);
+  apiMocks.importParusLicenseBatch.mockResolvedValue({ dryRun: true, totalFiles: 0, expandedFiles: 0, licenseInfoFiles: 0, cardInfoFiles: 0, licenseFiles: 0, skippedFiles: 0, skippedFileNames: [], errors: [], infoResults: [], cardResults: [], fileResult: undefined, logItems: [] });
   apiMocks.saveTransportProfile.mockResolvedValue({});
   apiMocks.testTransportProfile.mockResolvedValue({ success: true, message: 'SMTP ok' });
 });
@@ -92,22 +95,24 @@ describe('TransportProfilesPage', () => {
     expect(tablist?.getAttribute('aria-label')).toBe('Группы настроек');
     expect(profileSearch).toBeInstanceOf(HTMLInputElement);
     expect(createProfileButton).toBeInstanceOf(HTMLButtonElement);
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Основные', 'SMTP профили']);
-    expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab']);
-    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Основные', 'SMTP профили', 'Парус']);
+    expect(tabs.map((tab) => tab.getAttribute('role'))).toEqual(['tab', 'tab', 'tab']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false']);
     expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
       'Основные: открыть раздел',
-      'SMTP профили: текущий раздел'
+      'SMTP профили: текущий раздел',
+      'Парус: открыть раздел'
     ]);
 
     click(tabs[0]);
 
-    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false']);
+    expect(tabs.map((tab) => tab.getAttribute('aria-selected'))).toEqual(['true', 'false', 'false']);
     expect(tabs.map((tab) => tab.getAttribute('aria-label'))).toEqual([
       'Основные: текущий раздел',
-      'SMTP профили: открыть раздел'
+      'SMTP профили: открыть раздел',
+      'Парус: открыть раздел'
     ]);
-    expect(tabs.map((tab) => tab.className.includes('active'))).toEqual([true, false]);
+    expect(tabs.map((tab) => tab.className.includes('active'))).toEqual([true, false, false]);
     expect(view.querySelector('[aria-label="Создать новый SMTP профиль"]')).toBeNull();
   });
 
@@ -245,5 +250,57 @@ describe('TransportProfilesPage', () => {
 
     expect(document.body.querySelector('[aria-label="Отменить удаление SMTP профиля SMTP основной"]')).toBeInstanceOf(HTMLButtonElement);
     expect(document.body.querySelector('[aria-label="Удалить SMTP профиль SMTP основной"]')).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it('runs unified Parus import dry-run from settings', async () => {
+    apiMocks.importParusLicenseBatch.mockResolvedValue({
+      dryRun: true,
+      totalFiles: 1,
+      expandedFiles: 1,
+      licenseInfoFiles: 0,
+      cardInfoFiles: 0,
+      licenseFiles: 0,
+      skippedFiles: 1,
+      skippedFileNames: ['cards.csv'],
+      errors: [],
+      infoResults: [],
+      cardResults: [],
+      fileResult: undefined,
+      logItems: [{
+        stage: 'cards',
+        status: 'skipped',
+        fileName: 'cards.csv',
+        message: 'Обновление карточек организаций отключено; файл не обработан.'
+      }]
+    });
+
+    const view = render(<TransportProfilesPage />);
+    await flushEffects();
+
+    const parusTab = Array.from(view.querySelectorAll<HTMLButtonElement>('.settings-tab')).find((tab) => tab.textContent === 'Парус');
+    expect(parusTab).toBeInstanceOf(HTMLButtonElement);
+    click(parusTab!);
+    await flushEffects();
+
+    const batchInput = view.querySelector<HTMLInputElement>('.settings-parus-card input[type="file"]');
+    expect(batchInput).toBeInstanceOf(HTMLInputElement);
+
+    const file = new File(['license;phone\n2360;test'], 'cards.csv', { type: 'text/csv' });
+    await act(async () => {
+      Object.defineProperty(batchInput, 'files', { value: [file], configurable: true });
+      Simulate.change(batchInput);
+      await Promise.resolve();
+    });
+
+    const parusSection = view.querySelector<HTMLElement>('.settings-parus-card');
+    expect(parusSection).toBeInstanceOf(HTMLElement);
+    const checkButton = Array.from(parusSection!.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent === 'Проверить');
+    expect(checkButton).toBeInstanceOf(HTMLButtonElement);
+    click(checkButton!);
+    await flushEffects();
+
+    expect(apiMocks.importParusLicenseBatch).toHaveBeenCalledWith([file], true);
+    expect(parusSection!.textContent).toContain('пропущено: 1');
+    expect(parusSection!.textContent).toContain('Обновление карточек организаций отключено');
   });
 });

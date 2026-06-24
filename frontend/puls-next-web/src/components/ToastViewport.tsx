@@ -22,11 +22,18 @@ export function ToastViewport() {
 
   return (
     <div className="toast-viewport">
-      {items.map((item) => (
-        <div key={item.id} className={`toast toast-${item.type}`}>
-          {item.message}
-        </div>
-      ))}
+      {items.map((item) => {
+        const [title, ...details] = item.message.split('\n').filter(Boolean);
+
+        return (
+          <div key={item.id} className={`toast toast-${item.type}`}>
+            <strong>{title}</strong>
+            {details.length > 0 ? (
+              <span>{details.join('\n')}</span>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

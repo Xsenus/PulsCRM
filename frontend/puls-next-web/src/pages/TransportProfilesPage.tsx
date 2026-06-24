@@ -1,11 +1,23 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { deleteTransportProfile, getTransportProfiles, saveTransportProfile, testTransportProfile } from '../app/api';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  deleteTransportProfile,
+  getTransportProfiles,
+  importParusLicenseBatch,
+  saveTransportProfile,
+  testTransportProfile
+} from '../app/api';
 import { useAuth } from '../app/AuthContext';
 import { getApiErrorMessage } from '../app/apiErrors';
 import { formatDateTime } from '../app/format';
 import { loadStoredPageSize, PAGE_SIZE_OPTIONS } from '../app/table';
 import { showToast } from '../app/toast';
-import type { TransportProfileDto, TransportProfileUpsertRequest } from '../app/types';
+import type {
+  ParusLicenseBatchImportResultDto,
+  ParusLicenseFileImportResultDto,
+  ParusLicenseInfoImportResultDto,
+  TransportProfileDto,
+  TransportProfileUpsertRequest
+} from '../app/types';
 import { LoadingButtonLabel } from '../components/AppLoader';
 import { DataTable } from '../components/DataTable';
 import { Modal } from '../components/Modal';
@@ -31,7 +43,7 @@ const emptyModel: TransportProfileUpsertRequest = {
   isEnabled: true
 };
 
-type SettingsGroupKey = 'general' | 'smtp';
+type SettingsGroupKey = 'general' | 'smtp' | 'parus';
 
 const EMPTY_VALUE = '—';
 const TRANSPORT_PROFILES_TABLE_STORAGE_ID = 'transport-profiles-list';
@@ -45,7 +57,106 @@ function buildSettingsGroupAriaLabel(label: string, active: boolean) {
   return `${label}: ${active ? 'текущий раздел' : 'открыть раздел'}`;
 }
 
+function formatCount(value: number) {
+  return new Intl.NumberFormat('ru-RU').format(value);
+}
+
+function formatBytes(value: number) {
+  if (value <= 0) {
+    return '0 Б';
+  }
+
+  const units = ['Б', 'КБ', 'МБ', 'ГБ'];
+  let current = value;
+  let unitIndex = 0;
+  while (current >= 1024 && unitIndex < units.length - 1) {
+    current /= 1024;
+    unitIndex += 1;
+  }
+
+  return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: unitIndex === 0 ? 0 : 1 }).format(current)} ${units[unitIndex]}`;
+}
+
+function buildInfoImportResultText(result: ParusLicenseInfoImportResultDto) {
+  return [
+    `строк состава: ${formatCount(result.componentRows)}`,
+    `${result.dryRun ? 'будет добавлено' : 'добавлено'}: ${formatCount(result.importedRows)}`,
+    `дубликатов: ${formatCount(result.duplicateRows)}`,
+    `без организации: ${formatCount(result.missingOrganizationRows)}`,
+    `ошибок: ${formatCount(result.invalidRows)}`
+  ].join(' · ');
+}
+
+function buildFileImportResultText(result: ParusLicenseFileImportResultDto) {
+  return [
+    `файлов: ${formatCount(result.totalFiles)}`,
+    `${result.dryRun ? 'будет записано' : 'записано'}: ${formatCount(result.importedFiles)}`,
+    `дубликатов: ${formatCount(result.duplicateFiles)}`,
+    `не найдено: ${formatCount(result.missingLicenseFiles)}`,
+    `объем: ${formatBytes(result.totalBytes)}`
+  ].join(' · ');
+}
+
+function buildBatchImportResultText(result: ParusLicenseBatchImportResultDto) {
+  return [
+    `файлов: ${formatCount(result.totalFiles)}`,
+    `распознано: ${formatCount(result.expandedFiles)}`,
+    `XML: ${formatCount(result.licenseInfoFiles)}`,
+    `lic: ${formatCount(result.licenseFiles)}`,
+    `пропущено: ${formatCount(result.skippedFiles)}`,
+    `журнал: ${formatCount(result.logItems.length)}`
+  ].join(' · ');
+}
+
+function buildBatchImportToastText(result: ParusLicenseBatchImportResultDto) {
+  const title = result.dryRun ? 'Проверка Парус завершена' : 'Импорт Парус завершен';
+  const fileSummary = `Файлы: ${formatCount(result.totalFiles)} · распознано: ${formatCount(result.expandedFiles)} · пропущено: ${formatCount(result.skippedFiles)}`;
+  const importSummary = `XML: ${formatCount(result.licenseInfoFiles)} · лицензии: ${formatCount(result.licenseFiles)} · журнал: ${formatCount(result.logItems.length)}`;
+  const warningSummary = hasBatchImportWarnings(result) ? 'Есть предупреждения, подробности ниже в журнале.' : 'Ошибок и предупреждений нет.';
+
+  return [title, fileSummary, importSummary, warningSummary].join('\n');
+}
+
+function hasBatchImportWarnings(result: ParusLicenseBatchImportResultDto) {
+  return result.errors.length > 0
+    || result.skippedFiles > 0
+    || result.infoResults.some((item) => item.invalidRows > 0 || item.missingOrganizationRows > 0)
+    || (result.fileResult?.missingLicenseFiles ?? 0) > 0
+    || (result.fileResult?.skippedFiles ?? 0) > 0;
+}
+
+const PARUS_IMPORT_STATUS_LABELS: Record<string, string> = {
+  duplicate: 'Дубликат',
+  error: 'Ошибка',
+  expanded: 'Извлечен',
+  imported: 'Добавлен',
+  missing: 'Не найдено',
+  'missing-organization': 'Нет организации',
+  processed: 'Обработан',
+  queued: 'В очереди',
+  ready: 'Будет записан',
+  skipped: 'Пропущен',
+  warning: 'Внимание'
+};
+
+const PARUS_IMPORT_STAGE_LABELS: Record<string, string> = {
+  archive: 'Архив',
+  cards: 'Карточки',
+  file: 'Файл',
+  'license-file': 'Файл лицензии',
+  'license-info': 'Информация о лицензиях'
+};
+
+function getParusImportStatusLabel(status: string) {
+  return PARUS_IMPORT_STATUS_LABELS[status] ?? status;
+}
+
+function getParusImportStageLabel(stage: string) {
+  return PARUS_IMPORT_STAGE_LABELS[stage] ?? stage;
+}
+
 export function TransportProfilesPage() {
+  const parusBatchInputRef = useRef<HTMLInputElement | null>(null);
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
   const tableSettingsKey = `puls-table-settings:${TRANSPORT_PROFILES_TABLE_STORAGE_ID}:${currentUserId}`;
@@ -65,6 +176,11 @@ export function TransportProfilesPage() {
   const [deleteTarget, setDeleteTarget] = useState<TransportProfileDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [testingId, setTestingId] = useState<number | null>(null);
+  const [parusBatchFiles, setParusBatchFiles] = useState<File[]>([]);
+  const [parusBatchLoading, setParusBatchLoading] = useState(false);
+  const [parusBatchDragging, setParusBatchDragging] = useState(false);
+  const [parusBatchProgress, setParusBatchProgress] = useState<string | null>(null);
+  const [parusBatchResult, setParusBatchResult] = useState<ParusLicenseBatchImportResultDto | null>(null);
 
   const editingProfile = useMemo(() => rows.find((item) => item.id === editingId), [editingId, rows]);
   const isSmtpGroup = activeGroup === 'smtp';
@@ -212,6 +328,31 @@ export function TransportProfilesPage() {
     }
   };
 
+  const setParusFilesFromList = (files: FileList | File[]) => {
+    setParusBatchFiles(Array.from(files));
+    setParusBatchResult(null);
+  };
+
+  const runParusBatchImport = async (dryRun: boolean) => {
+    if (parusBatchFiles.length === 0) {
+      showToast('Выберите или перетащите файлы Парус для импорта.', 'error', 3500);
+      return;
+    }
+
+    setParusBatchLoading(true);
+    setParusBatchProgress(dryRun ? 'Проверяем выбранные файлы Парус без записи в базу...' : 'Импортируем выбранные файлы Парус в базу...');
+    try {
+      const result = await importParusLicenseBatch(parusBatchFiles, dryRun);
+      setParusBatchResult(result);
+      showToast(buildBatchImportToastText(result), hasBatchImportWarnings(result) ? 'warning' : 'success', 8000);
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось выполнить общий импорт Парус.'), 'error', 5000);
+    } finally {
+      setParusBatchLoading(false);
+      setParusBatchProgress(null);
+    }
+  };
+
   const activateGroup = (group: SettingsGroupKey) => {
     setActiveGroup(group);
     if (group !== 'smtp') {
@@ -262,6 +403,16 @@ export function TransportProfilesPage() {
         >
           SMTP профили
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeGroup === 'parus'}
+          aria-label={buildSettingsGroupAriaLabel('Парус', activeGroup === 'parus')}
+          className={`settings-tab${activeGroup === 'parus' ? ' active' : ''}`}
+          onClick={() => activateGroup('parus')}
+        >
+          Парус
+        </button>
       </div>
 
       {activeGroup === 'general' ? (
@@ -282,6 +433,125 @@ export function TransportProfilesPage() {
             </div>
           </div>
         </section>
+      ) : null}
+
+      {activeGroup === 'parus' ? (
+        <section className="panel settings-parus-card settings-parus-batch-card">
+          <div className="settings-parus-card-head">
+            <div>
+              <h3>Импорт Парус</h3>
+              <div className="field-hint">В одно поле можно выбрать или перетащить XML с информацией по лицензиям, MDB/ACCDB/CSV с карточками, файлы .lic и ZIP-архивы с лицензиями. Система сама распознает типы файлов и выполнит нужные операции.</div>
+            </div>
+          </div>
+
+          <input
+            ref={parusBatchInputRef}
+            className="settings-hidden-file"
+            type="file"
+            multiple
+            accept=".xml,.mdb,.accdb,.csv,.txt,.lic,.zip,text/xml,application/xml,application/zip"
+            onChange={(event) => {
+              setParusFilesFromList(event.target.files ?? []);
+              event.target.value = '';
+            }}
+          />
+
+          <button
+            type="button"
+            className={`settings-parus-dropzone${parusBatchDragging ? ' dragging' : ''}`}
+            onClick={() => parusBatchInputRef.current?.click()}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setParusBatchDragging(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setParusBatchDragging(true);
+            }}
+            onDragLeave={() => setParusBatchDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setParusBatchDragging(false);
+              setParusFilesFromList(event.dataTransfer.files);
+            }}
+            disabled={parusBatchLoading}
+          >
+            <span className="settings-parus-dropzone-title">Выберите файлы или перетащите их сюда</span>
+            <span className="field-hint">Поддерживаются .xml, .mdb, .accdb, .csv, .txt, .lic и .zip</span>
+            <span className="settings-parus-file">{parusBatchFiles.length > 0 ? `${formatCount(parusBatchFiles.length)} файлов выбрано` : 'Файлы пока не выбраны'}</span>
+          </button>
+
+          {parusBatchFiles.length > 0 ? (
+            <div className="settings-parus-selected-list">
+              {parusBatchFiles.slice(0, 8).map((file) => (
+                <span key={`${file.name}-${file.size}`}>{file.name} · {formatBytes(file.size)}</span>
+              ))}
+              {parusBatchFiles.length > 8 ? <span>Еще {formatCount(parusBatchFiles.length - 8)} файлов</span> : null}
+            </div>
+          ) : null}
+
+          <div className="settings-parus-actions">
+            <button type="button" className="secondary-button button-inline" onClick={() => setParusFilesFromList([])} disabled={parusBatchLoading || parusBatchFiles.length === 0}>
+              Очистить
+            </button>
+            <button type="button" className="secondary-button button-inline" onClick={() => void runParusBatchImport(true)} disabled={parusBatchLoading || parusBatchFiles.length === 0}>
+              Проверить
+            </button>
+            <button type="button" className="primary-button button-inline" onClick={() => void runParusBatchImport(false)} disabled={parusBatchLoading || parusBatchFiles.length === 0}>
+              {parusBatchLoading ? 'Идет обработка' : 'Импортировать'}
+            </button>
+          </div>
+
+          {parusBatchResult ? (
+            <div className="settings-parus-result">
+              <strong>{parusBatchResult.dryRun ? 'Проверка без записи' : 'Импорт выполнен'}</strong>
+              <span>{buildBatchImportResultText(parusBatchResult)}</span>
+              {parusBatchResult.infoResults.map((result) => (
+                <span key={`info-${result.fileName}`}>Информация: {result.fileName} · {buildInfoImportResultText(result)}</span>
+              ))}
+              {parusBatchResult.fileResult ? <span>Файлы лицензий: {buildFileImportResultText(parusBatchResult.fileResult)}</span> : null}
+              {parusBatchResult.skippedFileNames.length > 0 ? (
+                <span>Пропущены: {parusBatchResult.skippedFileNames.slice(0, 8).join('; ')}</span>
+              ) : null}
+              {parusBatchResult.errors.length > 0 ? (
+                <span>Ошибки: {parusBatchResult.errors.slice(0, 4).join('; ')}</span>
+              ) : null}
+              {parusBatchResult.logItems.length ? (
+                <div className="settings-parus-log" aria-label="Журнал импорта Парус">
+                  {parusBatchResult.logItems.slice(0, 80).map((item, index) => (
+                    <div className="settings-parus-log-item" key={`${item.stage}-${item.status}-${item.fileName || index}-${index}`}>
+                      <span className={`settings-parus-log-status settings-parus-log-status-${item.status.replace(/[^a-z0-9-]/gi, '-')}`}>
+                        {getParusImportStatusLabel(item.status)}
+                      </span>
+                      <div>
+                        <strong>{item.fileName || item.licenseNumber || item.organizationName || item.stage}</strong>
+                        <span>
+                          {[
+                            getParusImportStageLabel(item.stage),
+                            item.organizationName,
+                            item.licenseNumber,
+                            item.message
+                          ].filter(Boolean).join(' · ')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {parusBatchResult.logItems.length > 80 ? (
+                    <span>Показаны первые 80 записей журнала из {formatCount(parusBatchResult.logItems.length)}.</span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      {parusBatchProgress ? (
+        <div className="settings-parus-progress-toast" role="status" aria-live="polite">
+          <strong>Обработка Парус</strong>
+          <span>{parusBatchProgress}</span>
+          <div className="settings-parus-progress-bar" />
+        </div>
       ) : null}
 
       {activeGroup === 'smtp' ? (

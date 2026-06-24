@@ -5,13 +5,27 @@ namespace PulsNext.Infrastructure;
 
 public interface IParusLicenseAnalyticsService
 {
-    Task<ParusLicenseAnalyticsDto> GetAsync(DateTime dateFromUtc, DateTime dateToUtc, CancellationToken cancellationToken);
+    Task<ParusLicenseAnalyticsDto> GetAsync(
+        DateTime dateFromUtc,
+        DateTime dateToUtc,
+        string? groupSearch,
+        string? groupStatus,
+        int groupSkip,
+        int groupTake,
+        CancellationToken cancellationToken);
     Task<ParusLicenseFileDto?> GetLicenseFileAsync(int clientId, CancellationToken cancellationToken);
 }
 
 public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWork) : IParusLicenseAnalyticsService
 {
-    public Task<ParusLicenseAnalyticsDto> GetAsync(DateTime dateFromUtc, DateTime dateToUtc, CancellationToken cancellationToken)
+    public Task<ParusLicenseAnalyticsDto> GetAsync(
+        DateTime dateFromUtc,
+        DateTime dateToUtc,
+        string? groupSearch,
+        string? groupStatus,
+        int groupSkip,
+        int groupTake,
+        CancellationToken cancellationToken)
     {
         var range = NormalizeRange(dateFromUtc, dateToUtc);
         var records = new XPQuery<LegacyZPParusLicenseInfo>(legacyUnitOfWork)
@@ -28,14 +42,15 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             .ToArray();
 
         var summary = BuildSummary(groups, range.From, range.To);
-        var analyticsGroups = BuildPeriodGroups(groups, range.From, range.To)
-            .OrderBy(group => group.ClientName)
-            .ThenBy(group => group.Number, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(group => group.FirstDateSinceUtc)
+        var allOrganizationGroups = BuildOrganizationGroupRows(groups, range.From, range.To)
+            .OrderBy(group => group.Group.DisplayClientName)
+            .ThenBy(group => group.Group.DisplayBaseNumber, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var organizationGroups = BuildOrganizationGroups(groups, range.From, range.To)
-            .OrderBy(group => group.ClientName)
-            .ThenBy(group => group.LicenseNumber, StringComparer.OrdinalIgnoreCase)
+        var filteredOrganizationGroups = FilterOrganizationGroups(allOrganizationGroups, groupSearch, groupStatus, range.From, range.To).ToArray();
+        var organizationGroups = filteredOrganizationGroups
+            .Skip(Math.Max(0, groupSkip))
+            .Take(NormalizeTake(groupTake))
+            .Select(group => BuildOrganizationGroupDto(group, range.From, range.To))
             .ToArray();
 
         var periods = BuildYearRanges(range.From, range.To)
@@ -61,16 +76,15 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             })
             .ToArray();
 
-        var products = BuildProductSummary(groups, range.From, range.To);
-
         return Task.FromResult(new ParusLicenseAnalyticsDto
         {
             DateFromUtc = range.From,
             DateToUtc = range.To,
             Summary = summary,
             Periods = periods,
-            Products = products,
-            Groups = analyticsGroups,
+            Products = Array.Empty<ParusLicenseAnalyticsProductDto>(),
+            Groups = Array.Empty<ParusLicenseAnalyticsGroupDto>(),
+            OrganizationGroupsTotalCount = filteredOrganizationGroups.Length,
             OrganizationGroups = organizationGroups
         });
     }
@@ -137,8 +151,9 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         var clientId = license.Org?.Oid ?? 0;
         var clientName = license.Org?.Name ?? license.Org?.FullName ?? license.MnemoOrg ?? "Без организации";
         var baseNumber = ResolveBaseLicenseNumber(license);
-        var number = FirstNotEmpty(license.RegNumberAbonement, license.Number, license.RegNumberClient, baseNumber, license.Oid.ToString());
+        var number = FirstNotEmpty(license.RegNumberAbonement, license.RegNumberClient, baseNumber, license.Oid.ToString());
         var groupKey = $"{clientId}:{baseNumber.ToUpperInvariant()}";
+        var otherInfo = license.Org?.OrgInfoOther;
 
         return new LicenseRecord(
             license.Oid,
@@ -152,6 +167,11 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             NullIfWhiteSpace(license.Payer),
             NullIfWhiteSpace(license.RegNumberClient),
             NullIfWhiteSpace(license.RegNumberAbonement),
+            NullIfWhiteSpace(license.Number),
+            NullIfWhiteSpace(otherInfo?.ZpLicSostav),
+            Math.Max(0, otherInfo?.ZpNumOfBases ?? 0),
+            Math.Max(0, otherInfo?.CountOrganizationsInDataBases ?? 0),
+            Math.Max(0, otherInfo?.ZpNumDopPlaces ?? 0),
             dateSince.Value,
             dateTo.Value,
             NullIfWhiteSpace(license.Nomenclature),
@@ -199,110 +219,168 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         };
     }
 
-    private static ParusLicenseAnalyticsProductDto[] BuildProductSummary(IReadOnlyCollection<LicenseGroup> groups, DateTime from, DateTime to)
-    {
-        return groups
-            .Where(group => HasPeriodActivity(group, from, to))
-            .GroupBy(group => ResolveGroupProduct(group, from, to))
-            .Select(group => new ParusLicenseAnalyticsProductDto
-            {
-                Name = group.Key,
-                LicenseGroups = group.Count(),
-                LicenseRecords = group.Sum(item => item.Records.Count(record => Overlaps(record, from, to))),
-                Clients = group.Select(item => item.ClientId).Distinct().Count(),
-                ActiveAtPeriodEnd = group.Count(item => IsActiveAt(item, to)),
-                ExpiredAtPeriodEnd = group.Count(item => IsExpiredAtPeriodEnd(item, to)),
-                Renewed = group.Count(item => HasRenewalInPeriod(item, from, to)),
-                WithoutRenewal = group.Count(item => IsWithoutRenewalInPeriod(item, from, to)),
-                Lost = group.Count(item => IsLostInPeriod(item, from, to))
-            })
-            .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static string ResolveGroupProduct(LicenseGroup group, DateTime from, DateTime to)
-        => group.Records
-            .Where(record => Overlaps(record, from, to))
-            .OrderByDescending(record => record.DateToUtc)
-            .ThenByDescending(record => record.DateSinceUtc)
-            .Select(record => record.Product)
-            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "Без продукта";
-
-    private static IEnumerable<ParusLicenseAnalyticsGroupDto> BuildPeriodGroups(IReadOnlyCollection<LicenseGroup> groups, DateTime from, DateTime to)
+    private static IEnumerable<OrganizationGroupRow> BuildOrganizationGroupRows(IReadOnlyCollection<LicenseGroup> groups, DateTime from, DateTime to)
     {
         foreach (var lifecycleGroup in groups.Where(group => HasPeriodActivity(group, from, to)))
         {
-            var periodGroups = lifecycleGroup.Records
-                .Where(record => Overlaps(record, from, to))
-                .GroupBy(record => $"{record.Number.ToUpperInvariant()}|{record.DateSinceUtc:yyyyMMdd}|{record.DateToUtc:yyyyMMdd}", StringComparer.OrdinalIgnoreCase);
-
-            foreach (var periodGroup in periodGroups)
-            {
-                yield return ToGroupDto(lifecycleGroup, periodGroup.ToArray(), from, to);
-            }
-        }
-    }
-
-    private IEnumerable<ParusLicenseAnalyticsOrganizationGroupDto> BuildOrganizationGroups(IReadOnlyCollection<LicenseGroup> groups, DateTime from, DateTime to)
-    {
-        foreach (var lifecycleGroup in groups.Where(group => HasPeriodActivity(group, from, to)))
-        {
-            var fileInfo = ResolveLicenseFile(lifecycleGroup.ClientId);
-            var periodDtos = lifecycleGroup.Records
-                .Where(record => Overlaps(record, from, to))
-                .GroupBy(record => $"{record.PeriodNumber.ToUpperInvariant()}|{record.DateSinceUtc:yyyyMMdd}|{record.DateToUtc:yyyyMMdd}", StringComparer.OrdinalIgnoreCase)
-                .OrderByDescending(group => group.Max(record => record.DateToUtc))
-                .ThenByDescending(group => group.Max(record => record.DateSinceUtc))
-                .ThenBy(group => group.First().PeriodNumber, StringComparer.OrdinalIgnoreCase)
-                .Select(periodGroup =>
-                {
-                    var components = periodGroup
-                        .OrderBy(record => record.Number, StringComparer.OrdinalIgnoreCase)
-                        .ThenBy(record => record.Modification, StringComparer.OrdinalIgnoreCase)
-                        .Select(ToComponentDto)
-                        .ToArray();
-                    var first = periodGroup.First();
-
-                    return new ParusLicenseAnalyticsLicensePeriodDto
-                    {
-                        Key = $"{lifecycleGroup.Key}:{first.PeriodNumber.ToUpperInvariant()}:{first.DateSinceUtc:yyyyMMdd}:{first.DateToUtc:yyyyMMdd}",
-                        LicenseNumber = first.PeriodNumber,
-                        DateSinceUtc = first.DateSinceUtc,
-                        DateToUtc = first.DateToUtc,
-                        ComponentsCount = components.Length,
-                        ActiveAtPeriodEnd = first.DateSinceUtc <= to && first.DateToUtc >= to,
-                        ExpiredAtPeriodEnd = first.DateToUtc < to,
-                        HasLicenseFile = fileInfo is not null,
-                        LicenseFileName = fileInfo?.FileName,
-                        Components = components
-                    };
-                })
-                .ToArray();
-
+            var periodGroups = BuildPeriodRecordGroups(lifecycleGroup, from, to).ToArray();
             var latest = lifecycleGroup.Records
                 .Where(record => Overlaps(record, from, to))
                 .OrderByDescending(record => record.DateToUtc)
                 .ThenByDescending(record => record.DateSinceUtc)
                 .First();
 
-            yield return new ParusLicenseAnalyticsOrganizationGroupDto
-            {
-                Key = lifecycleGroup.Key,
-                ClientId = lifecycleGroup.ClientId,
-                ClientName = lifecycleGroup.DisplayClientName,
-                Inn = latest.Inn,
-                MnemoOrg = latest.MnemoOrg,
-                LicenseNumber = lifecycleGroup.DisplayBaseNumber,
-                PeriodsCount = periodDtos.Length,
-                ComponentsCount = periodDtos.Sum(period => period.ComponentsCount),
-                ActiveAtPeriodEnd = IsActiveAt(lifecycleGroup, to),
-                ExpiredAtPeriodEnd = IsExpiredAtPeriodEnd(lifecycleGroup, to),
-                RenewedInPeriod = HasRenewalInPeriod(lifecycleGroup, from, to),
-                WithoutRenewal = IsWithoutRenewalInPeriod(lifecycleGroup, from, to),
-                Periods = periodDtos
-            };
+            yield return new OrganizationGroupRow(
+                lifecycleGroup,
+                latest,
+                lifecycleGroup.Records
+                    .Select(record => record.LicenseComposition)
+                    .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
+                lifecycleGroup.Records.Max(record => record.DatabaseCount),
+                lifecycleGroup.Records.Max(record => record.OrganizationCount),
+                lifecycleGroup.Records.Max(record => record.ExtraWorkplaces),
+                periodGroups.Length,
+                periodGroups.Sum(period => period.Length),
+                IsActiveAt(lifecycleGroup, to),
+                IsExpiredAtPeriodEnd(lifecycleGroup, to),
+                HasRenewalInPeriod(lifecycleGroup, from, to),
+                IsWithoutRenewalInPeriod(lifecycleGroup, from, to),
+                HasExpirationInPeriod(lifecycleGroup, from, to),
+                IsNewInPeriod(lifecycleGroup, from, to),
+                IsLostInPeriod(lifecycleGroup, from, to));
         }
     }
+
+    private ParusLicenseAnalyticsOrganizationGroupDto BuildOrganizationGroupDto(OrganizationGroupRow row, DateTime from, DateTime to)
+    {
+        var fileInfo = ResolveLicenseFile(row.Group.ClientId);
+        var periodDtos = BuildPeriodRecordGroups(row.Group, from, to)
+            .OrderByDescending(group => group.Max(record => record.DateToUtc))
+            .ThenByDescending(group => group.Max(record => record.DateSinceUtc))
+            .ThenBy(group => group.First().PeriodNumber, StringComparer.OrdinalIgnoreCase)
+            .Select(periodGroup =>
+            {
+                var components = periodGroup
+                    .OrderBy(record => record.Number, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(record => record.Modification, StringComparer.OrdinalIgnoreCase)
+                    .Select(ToComponentDto)
+                    .ToArray();
+                var first = periodGroup.First();
+
+                return new ParusLicenseAnalyticsLicensePeriodDto
+                {
+                    Key = $"{row.Group.Key}:{first.PeriodNumber.ToUpperInvariant()}:{first.DateSinceUtc:yyyyMMdd}:{first.DateToUtc:yyyyMMdd}",
+                    LicenseNumber = first.PeriodNumber,
+                    DateSinceUtc = first.DateSinceUtc,
+                    DateToUtc = first.DateToUtc,
+                    ComponentsCount = components.Length,
+                    ActiveAtPeriodEnd = first.DateSinceUtc <= to && first.DateToUtc >= to,
+                    ExpiredAtPeriodEnd = first.DateToUtc < to,
+                    HasLicenseFile = fileInfo is not null,
+                    LicenseFileName = fileInfo?.FileName,
+                    Components = components
+                };
+            })
+            .ToArray();
+
+        return new ParusLicenseAnalyticsOrganizationGroupDto
+        {
+            Key = row.Group.Key,
+            ClientId = row.Group.ClientId,
+            ClientName = row.Group.DisplayClientName,
+            Inn = row.Latest.Inn,
+            MnemoOrg = row.Latest.MnemoOrg,
+            LicenseNumber = row.Group.DisplayBaseNumber,
+            LicenseComposition = row.LicenseComposition,
+            DatabaseCount = row.DatabaseCount,
+            OrganizationCount = row.OrganizationCount,
+            ExtraWorkplaces = row.ExtraWorkplaces,
+            PeriodsCount = row.PeriodsCount,
+            ComponentsCount = row.ComponentsCount,
+            ActiveAtPeriodEnd = row.ActiveAtPeriodEnd,
+            ExpiredAtPeriodEnd = row.ExpiredAtPeriodEnd,
+            RenewedInPeriod = row.RenewedInPeriod,
+            WithoutRenewal = row.WithoutRenewal,
+            ExpiringInPeriod = row.ExpiringInPeriod,
+            NewInPeriod = row.NewInPeriod,
+            LostInPeriod = row.LostInPeriod,
+            Periods = periodDtos
+        };
+    }
+
+    private static LicenseRecord[][] BuildPeriodRecordGroups(LicenseGroup lifecycleGroup, DateTime from, DateTime to)
+        => lifecycleGroup.Records
+            .Where(record => Overlaps(record, from, to))
+            .GroupBy(record => $"{record.PeriodNumber.ToUpperInvariant()}|{record.DateSinceUtc:yyyyMMdd}|{record.DateToUtc:yyyyMMdd}", StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.ToArray())
+            .ToArray();
+
+    private static IEnumerable<OrganizationGroupRow> FilterOrganizationGroups(
+        IEnumerable<OrganizationGroupRow> groups,
+        string? search,
+        string? status,
+        DateTime from,
+        DateTime to)
+    {
+        var result = groups;
+        var normalizedStatus = NormalizeGroupStatus(status);
+        if (!string.IsNullOrWhiteSpace(normalizedStatus) && normalizedStatus != "all")
+        {
+            result = result.Where(group => MatchesStatus(group, normalizedStatus));
+        }
+
+        var term = NullIfWhiteSpace(search);
+        if (!string.IsNullOrWhiteSpace(term))
+        {
+            result = result.Where(group => BuildGroupSearchText(group, from, to).Contains(term, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return result;
+    }
+
+    private static string NormalizeGroupStatus(string? status)
+        => NullIfWhiteSpace(status)?.Trim().ToLowerInvariant() ?? "all";
+
+    private static bool MatchesStatus(OrganizationGroupRow group, string status)
+        => status switch
+        {
+            "active" => group.ActiveAtPeriodEnd,
+            "expired" => group.ExpiredAtPeriodEnd,
+            "renewed" => group.RenewedInPeriod,
+            "without-renewal" => group.WithoutRenewal,
+            "expiring" => group.ExpiringInPeriod,
+            "new" => group.NewInPeriod,
+            "lost" => group.LostInPeriod,
+            _ => true
+        };
+
+    private static string BuildGroupSearchText(OrganizationGroupRow group, DateTime from, DateTime to)
+    {
+        var values = new List<string?>
+        {
+            group.Group.DisplayClientName,
+            group.Latest.Inn,
+            group.Latest.MnemoOrg,
+            group.Group.DisplayBaseNumber,
+            group.LicenseComposition
+        };
+
+        foreach (var record in group.Group.Records.Where(record => Overlaps(record, from, to)))
+        {
+            values.Add(record.PeriodNumber);
+            values.Add(record.Number);
+            values.Add(record.RegNumberAbonement);
+            values.Add(record.RegNumberClient);
+            values.Add(record.Nomenclature);
+            values.Add(record.Modification);
+            values.Add(record.Product);
+        }
+
+        return string.Join(' ', values.Where(value => !string.IsNullOrWhiteSpace(value)));
+    }
+
+    private static int NormalizeTake(int take)
+        => Math.Clamp(take <= 0 ? 10 : take, 1, 100);
 
     private static ParusLicenseAnalyticsComponentDto ToComponentDto(LicenseRecord record)
     {
@@ -310,42 +388,12 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         {
             Id = record.Id,
             Number = record.Number,
+            Quantity = record.Quantity,
             RegNumberAbonement = record.RegNumberAbonement,
             RegNumberClient = record.RegNumberClient,
             Nomenclature = record.Nomenclature,
             Modification = record.Modification,
             Product = record.Product
-        };
-    }
-
-    private static ParusLicenseAnalyticsGroupDto ToGroupDto(LicenseGroup lifecycleGroup, IReadOnlyCollection<LicenseRecord> periodRecords, DateTime from, DateTime to)
-    {
-        var latest = periodRecords
-            .OrderBy(record => record.DateToUtc)
-            .ThenBy(record => record.DateSinceUtc)
-            .Last();
-
-        return new ParusLicenseAnalyticsGroupDto
-        {
-            Key = $"{lifecycleGroup.Key}:{latest.DateSinceUtc:yyyyMMdd}:{latest.DateToUtc:yyyyMMdd}",
-            Number = latest.Number,
-            Nomenclature = latest.Nomenclature,
-            Modification = latest.Modification,
-            Product = latest.Product,
-            ClientId = lifecycleGroup.ClientId,
-            ClientName = lifecycleGroup.DisplayClientName,
-            Inn = latest.Inn,
-            MnemoOrg = latest.MnemoOrg,
-            Payer = latest.Payer,
-            RegNumberClient = latest.RegNumberClient,
-            RegNumberAbonement = latest.RegNumberAbonement,
-            FirstDateSinceUtc = latest.DateSinceUtc,
-            LastDateToUtc = latest.DateToUtc,
-            Records = periodRecords.Count,
-            ActiveAtPeriodEnd = periodRecords.Any(record => record.DateSinceUtc <= to && record.DateToUtc >= to),
-            ExpiredAtPeriodEnd = periodRecords.All(record => record.DateToUtc < to),
-            RenewedInPeriod = HasRenewalInPeriod(lifecycleGroup, from, to),
-            WithoutRenewal = IsWithoutRenewalInPeriod(lifecycleGroup, from, to)
         };
     }
 
@@ -424,27 +472,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             return NormalizeBaseLicenseNumber(clientNumber);
         }
 
-        return NormalizeBaseLicenseNumber(FirstNotEmpty(license.RegNumberAbonement, license.Number, license.INN, license.Oid.ToString()));
-    }
-
-    private static string ResolveLicenseGroupNumber(LegacyZPParusLicenseInfo license, string displayNumber)
-    {
-        var fullNumber = FirstNotEmpty(license.RegNumberAbonement, license.Number, displayNumber, license.RegNumberClient, license.Oid.ToString());
-        return NormalizeLicenseGroupNumber(fullNumber);
-    }
-
-    private static string NormalizeLicenseGroupNumber(string value)
-    {
-        var trimmed = value.Trim();
-        if (string.IsNullOrWhiteSpace(trimmed))
-        {
-            return string.Empty;
-        }
-
-        return new string(trimmed
-            .Where(ch => !char.IsWhiteSpace(ch) && ch != '-')
-            .Select(char.ToUpperInvariant)
-            .ToArray());
+        return NormalizeBaseLicenseNumber(FirstNotEmpty(license.RegNumberAbonement, license.INN, license.Oid.ToString()));
     }
 
     private (string FileName, byte[] Content)? ResolveLicenseFile(int clientId)
@@ -513,13 +541,18 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         string? Payer,
         string? RegNumberClient,
         string? RegNumberAbonement,
+        string? Quantity,
+        string? LicenseComposition,
+        int DatabaseCount,
+        int OrganizationCount,
+        int ExtraWorkplaces,
         DateTime DateSinceUtc,
         DateTime DateToUtc,
         string? Nomenclature,
         string? Modification,
         string Product)
     {
-        public string PeriodNumber => FirstNotEmpty(RegNumberAbonement, Number, BaseNumber, GroupKey);
+        public string PeriodNumber => FirstNotEmpty(RegNumberAbonement, BaseNumber, GroupKey);
     }
 
     private sealed record LicenseGroup(string Key, IReadOnlyList<LicenseRecord> Records)
@@ -529,4 +562,21 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         public string DisplayBaseNumber => FirstNotEmpty(Records.First().BaseNumber, Key);
         public string DisplayNumber => FirstNotEmpty(Records.First().RegNumberAbonement, Records.First().Number, Key);
     }
+
+    private sealed record OrganizationGroupRow(
+        LicenseGroup Group,
+        LicenseRecord Latest,
+        string? LicenseComposition,
+        int DatabaseCount,
+        int OrganizationCount,
+        int ExtraWorkplaces,
+        int PeriodsCount,
+        int ComponentsCount,
+        bool ActiveAtPeriodEnd,
+        bool ExpiredAtPeriodEnd,
+        bool RenewedInPeriod,
+        bool WithoutRenewal,
+        bool ExpiringInPeriod,
+        bool NewInPeriod,
+        bool LostInPeriod);
 }

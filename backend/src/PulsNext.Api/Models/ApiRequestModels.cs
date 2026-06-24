@@ -136,9 +136,77 @@ public sealed class ParusLicenseAnalyticsQuery
     public DateTime? DateFromUtc { get; set; }
 
     /// <summary>
+    /// Короткий alias для ручных запросов: начало периода.
+    /// </summary>
+    [FromQuery(Name = "from")]
+    public DateTime? From { get; set; }
+
+    /// <summary>
     /// Конец периода в UTC. Если не задано, используется 31 декабря года начала периода.
     /// </summary>
     public DateTime? DateToUtc { get; set; }
+
+    /// <summary>
+    /// Короткий alias для ручных запросов: конец периода.
+    /// </summary>
+    [FromQuery(Name = "to")]
+    public DateTime? To { get; set; }
+
+    /// <summary>
+    /// Поиск по группам лицензий.
+    /// </summary>
+    public string? Search { get; set; }
+
+    /// <summary>
+    /// Фильтр статуса группы: all, active, expired, renewed, without-renewal, expiring, new, lost.
+    /// </summary>
+    public string? Status { get; set; }
+
+    /// <summary>
+    /// Сколько групп пропустить.
+    /// </summary>
+    public int? Skip { get; set; }
+
+    /// <summary>
+    /// Сколько групп вернуть.
+    /// </summary>
+    public int? Take { get; set; }
+}
+
+public sealed class ParusLicenseInfoImportRequest
+{
+    [FromForm(Name = "file")]
+    public IFormFile? File { get; set; }
+
+    [FromForm(Name = "dryRun")]
+    public bool DryRun { get; set; }
+}
+
+public sealed class ParusLicenseFilesImportRequest
+{
+    [FromForm(Name = "files")]
+    public List<IFormFile> Files { get; set; } = [];
+
+    [FromForm(Name = "dryRun")]
+    public bool DryRun { get; set; }
+}
+
+public sealed class ParusLicenseCardImportRequest
+{
+    [FromForm(Name = "file")]
+    public IFormFile? File { get; set; }
+
+    [FromForm(Name = "dryRun")]
+    public bool DryRun { get; set; }
+}
+
+public sealed class ParusLicenseBatchImportRequest
+{
+    [FromForm(Name = "files")]
+    public List<IFormFile> Files { get; set; } = [];
+
+    [FromForm(Name = "dryRun")]
+    public bool DryRun { get; set; }
 }
 
 /// <summary>
