@@ -30,7 +30,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
     {
         var result = new ImportAccumulator(fileName, dryRun);
         var organizationsByInn = BuildOrganizationsByInn();
-        var existingKeys = BuildExistingKeys();
+        var existingLicenses = BuildExistingLicenseIndex();
         var touchedOrganizations = new Dictionary<int, TouchedOrganization>();
         var state = new SpreadsheetState();
 
@@ -76,9 +76,25 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             }
 
             var key = BuildImportKey(parsed, org.Oid);
-            if (!existingKeys.Add(key))
+            if (existingLicenses.FullKeys.Contains(key))
             {
                 result.DuplicateRows += 1;
+                continue;
+            }
+
+            var updateCandidate = existingLicenses.FindUpdateCandidate(parsed, org.Oid);
+            if (updateCandidate is not null)
+            {
+                TrackTouchedOrganization(touchedOrganizations, org, parsed);
+                if (UpdateLicenseInfo(updateCandidate, parsed, org, dryRun))
+                {
+                    result.UpdatedRows += 1;
+                    existingLicenses.FullKeys.Add(key);
+                    continue;
+                }
+
+                result.DuplicateRows += 1;
+                existingLicenses.FullKeys.Add(key);
                 continue;
             }
 
@@ -102,11 +118,12 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                 };
             }
 
+            existingLicenses.FullKeys.Add(key);
             result.ImportedRows += 1;
         }
 
         result.UpdatedOrganizations = UpdateOrganizationLicenseNumbers(touchedOrganizations.Values, dryRun);
-        if (!dryRun && (result.ImportedRows > 0 || result.UpdatedOrganizations > 0))
+        if (!dryRun && (result.ImportedRows > 0 || result.UpdatedRows > 0 || result.UpdatedOrganizations > 0))
         {
             legacyUnitOfWork.CommitChanges();
         }
@@ -479,6 +496,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             $"строк: {result.TotalRows}",
             $"состав: {result.ComponentRows}",
             $"{(result.DryRun ? "будет добавлено" : "добавлено")}: {result.ImportedRows}",
+            $"{(result.DryRun ? "будет обновлено" : "обновлено")}: {result.UpdatedRows}",
             $"дубликатов: {result.DuplicateRows}",
             $"не найдены организации: {result.MissingOrganizationRows}",
             $"ошибочных строк: {result.InvalidRows}"
@@ -528,11 +546,13 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
         }
     }
 
-    private HashSet<string> BuildExistingKeys()
+    private ExistingLicenseIndex BuildExistingLicenseIndex()
     {
-        return new XPQuery<LegacyZPParusLicenseInfo>(legacyUnitOfWork)
+        var licenses = new XPQuery<LegacyZPParusLicenseInfo>(legacyUnitOfWork)
             .ToList()
             .Where(license => license.Org is not null)
+            .ToArray();
+        var fullKeys = licenses
             .Select(license => BuildImportKey(
                 NormalizePayer(license.Payer),
                 license.RegNumberClient,
@@ -545,6 +565,17 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                 license.Number,
                 license.Org!.Oid))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var legacyKeys = licenses
+            .GroupBy(license => BuildLegacyImportKey(
+                NormalizePayer(license.Payer),
+                license.RegNumberClient,
+                license.MnemoOrg,
+                license.RegNumberAbonement,
+                license.Modification),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+
+        return new ExistingLicenseIndex(fullKeys, legacyKeys);
     }
 
     private async Task<IReadOnlyCollection<ParusLicenseCardRow>> ReadCardRowsAsync(
@@ -1006,6 +1037,65 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             NormalizeKey(modification),
             NormalizeKey(quantity));
 
+    private static string BuildLegacyImportKey(ParsedLicenseRow row)
+        => BuildLegacyImportKey(
+            row.Payer,
+            row.RegNumberClient,
+            row.MnemoOrg,
+            row.RegNumberAbonement,
+            row.Modification);
+
+    private static string BuildLegacyImportKey(
+        string? payer,
+        string? regNumberClient,
+        string? mnemoOrg,
+        string? regNumberAbonement,
+        string? modification)
+        => string.Join('|',
+            NormalizeKey(payer),
+            NormalizeKey(regNumberClient),
+            NormalizeKey(mnemoOrg),
+            NormalizeKey(regNumberAbonement),
+            NormalizeKey(modification));
+
+    private static bool UpdateLicenseInfo(LegacyZPParusLicenseInfo license, ParsedLicenseRow row, LegacyOrg org, bool dryRun)
+    {
+        var changed = false;
+        changed |= !StringEquals(license.Payer, row.Payer);
+        changed |= !StringEquals(license.RegNumberClient, row.RegNumberClient);
+        changed |= !StringEquals(license.MnemoOrg, row.MnemoOrg);
+        changed |= !StringEquals(license.RegNumberAbonement, row.RegNumberAbonement);
+        changed |= license.DateSince.Date != row.DateSince.Date;
+        changed |= license.DateTo.Date != row.DateTo.Date;
+        changed |= !StringEquals(license.Nomenclature, row.Nomenclature);
+        changed |= !StringEquals(license.Modification, row.Modification);
+        changed |= !StringEquals(license.Number, row.Quantity);
+        changed |= !StringEquals(license.INN, row.Inn);
+        changed |= license.Org?.Oid != org.Oid;
+
+        if (!changed || dryRun)
+        {
+            return changed;
+        }
+
+        license.Payer = row.Payer;
+        license.RegNumberClient = row.RegNumberClient;
+        license.MnemoOrg = row.MnemoOrg;
+        license.RegNumberAbonement = row.RegNumberAbonement;
+        license.DateSince = row.DateSince;
+        license.DateTo = row.DateTo;
+        license.Nomenclature = row.Nomenclature;
+        license.Modification = row.Modification;
+        license.Number = row.Quantity;
+        license.INN = row.Inn;
+        license.Org = org;
+
+        return true;
+    }
+
+    private static bool StringEquals(string? left, string? right)
+        => string.Equals(NullIfWhiteSpace(left), NullIfWhiteSpace(right), StringComparison.OrdinalIgnoreCase);
+
     private static string NormalizePayer(string? value)
     {
         var trimmed = NullIfWhiteSpace(value) ?? string.Empty;
@@ -1443,6 +1533,30 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
 
     private sealed record TouchedOrganization(LegacyOrg Org, DateTime DateSince, DateTime DateTo, string RegNumberClient);
 
+    private sealed class ExistingLicenseIndex(
+        HashSet<string> fullKeys,
+        Dictionary<string, LegacyZPParusLicenseInfo[]> legacyKeys)
+    {
+        public HashSet<string> FullKeys { get; } = fullKeys;
+
+        public LegacyZPParusLicenseInfo? FindUpdateCandidate(ParsedLicenseRow row, int orgId)
+        {
+            if (!legacyKeys.TryGetValue(BuildLegacyImportKey(row), out var licenses))
+            {
+                return null;
+            }
+
+            return licenses
+                .Where(license => StringEquals(license.Nomenclature, row.Nomenclature)
+                    && StringEquals(license.Number, row.Quantity))
+                .OrderByDescending(license => license.Org?.Oid == orgId)
+                .ThenBy(license => Math.Abs((license.DateSince.Date - row.DateSince.Date).TotalDays))
+                .ThenByDescending(license => license.DateTo)
+                .ThenByDescending(license => license.Oid)
+                .FirstOrDefault();
+        }
+    }
+
     private sealed record ParusLicenseCardRow(
         string? LicenseNumber,
         string? Phone,
@@ -1470,6 +1584,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
         public int TotalRows { get; set; }
         public int ComponentRows { get; set; }
         public int ImportedRows { get; set; }
+        public int UpdatedRows { get; set; }
         public int DuplicateRows { get; set; }
         public int SkippedRows { get; set; }
         public int MissingOrganizationRows { get; set; }
@@ -1504,6 +1619,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                 TotalRows = TotalRows,
                 ComponentRows = ComponentRows,
                 ImportedRows = ImportedRows,
+                UpdatedRows = UpdatedRows,
                 DuplicateRows = DuplicateRows,
                 SkippedRows = SkippedRows,
                 MissingOrganizationRows = MissingOrganizationRows,

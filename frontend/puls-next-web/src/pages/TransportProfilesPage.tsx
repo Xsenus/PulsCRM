@@ -81,6 +81,7 @@ function buildInfoImportResultText(result: ParusLicenseInfoImportResultDto) {
   return [
     `строк состава: ${formatCount(result.componentRows)}`,
     `${result.dryRun ? 'будет добавлено' : 'добавлено'}: ${formatCount(result.importedRows)}`,
+    `${result.dryRun ? 'будет обновлено' : 'обновлено'}: ${formatCount(result.updatedRows)}`,
     `дубликатов: ${formatCount(result.duplicateRows)}`,
     `без организации: ${formatCount(result.missingOrganizationRows)}`,
     `ошибок: ${formatCount(result.invalidRows)}`

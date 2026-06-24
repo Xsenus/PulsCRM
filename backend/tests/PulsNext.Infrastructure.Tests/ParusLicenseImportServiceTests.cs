@@ -41,6 +41,86 @@ public sealed class ParusLicenseImportServiceTests
     }
 
     [Fact]
+    public async Task ImportInfoAsync_UpdatesExistingPeriodDatesInsteadOfCreatingDuplicate()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+        var org = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "Test org",
+            INN = "5453175287",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+        };
+        org.OrgInfoOther.Org = org;
+        _ = new LegacyZPParusLicenseInfo(legacyUnitOfWork)
+        {
+            Org = org,
+            Payer = "ООО «ПУЛЬС-ГРУП»",
+            RegNumberClient = "НА-2360",
+            MnemoOrg = "АдминТатарНСО",
+            RegNumberAbonement = "НА2360-2-11",
+            DateSince = new DateTime(2025, 2, 21),
+            DateTo = new DateTime(2026, 12, 31),
+            Nomenclature = "PARUS 10 Б",
+            Modification = "Модуль «Расчет заработной платы»",
+            Number = "5",
+            INN = "5453175287"
+        };
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseImportService(legacyUnitOfWork);
+        var result = await service.ImportInfoAsync(ToStream(BuildXml()), "CliensBase.xml", false, CancellationToken.None);
+
+        Assert.Equal(1, result.ImportedRows);
+        Assert.Equal(1, result.UpdatedRows);
+        Assert.Equal(0, result.DuplicateRows);
+
+        var licenses = new XPQuery<LegacyZPParusLicenseInfo>(legacyUnitOfWork).ToArray();
+        Assert.Equal(2, licenses.Length);
+        var updated = Assert.Single(licenses, license => license.Modification == "Модуль «Расчет заработной платы»");
+        Assert.Equal(new DateTime(2026, 2, 21), updated.DateTo.Date);
+        Assert.Equal(org.Oid, updated.Org?.Oid);
+    }
+
+    [Fact]
+    public async Task ImportInfoAsync_MovesExistingLicenseInfoToMatchedOrganization()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+        var oldOrg = new LegacyOrg(legacyUnitOfWork) { Name = "Old org", INN = "0000000000" };
+        var matchedOrg = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "Matched org",
+            INN = "5453175287",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+        };
+        matchedOrg.OrgInfoOther.Org = matchedOrg;
+        _ = new LegacyZPParusLicenseInfo(legacyUnitOfWork)
+        {
+            Org = oldOrg,
+            Payer = "ООО «ПУЛЬС-ГРУП»",
+            RegNumberClient = "НА-2360",
+            MnemoOrg = "АдминТатарНСО",
+            RegNumberAbonement = "НА2360-2-11",
+            DateSince = new DateTime(2025, 2, 21),
+            DateTo = new DateTime(2026, 2, 21),
+            Nomenclature = "PARUS 10 Б",
+            Modification = "Модуль «Расчет заработной платы»",
+            Number = "5",
+            INN = "5453175287"
+        };
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseImportService(legacyUnitOfWork);
+        var result = await service.ImportInfoAsync(ToStream(BuildXml()), "CliensBase.xml", false, CancellationToken.None);
+
+        Assert.Equal(1, result.ImportedRows);
+        Assert.Equal(1, result.UpdatedRows);
+        Assert.Equal(0, result.DuplicateRows);
+
+        var updated = Assert.Single(new XPQuery<LegacyZPParusLicenseInfo>(legacyUnitOfWork), license => license.Modification == "Модуль «Расчет заработной платы»");
+        Assert.Equal(matchedOrg.Oid, updated.Org?.Oid);
+    }
+
+    [Fact]
     public async Task ImportInfoAsync_DryRunDoesNotWriteRows()
     {
         using var legacyUnitOfWork = CreateLegacyUnitOfWork();

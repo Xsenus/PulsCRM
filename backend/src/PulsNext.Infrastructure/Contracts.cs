@@ -296,6 +296,7 @@ public sealed class ParusLicenseInfoImportResultDto
     public int TotalRows { get; set; }
     public int ComponentRows { get; set; }
     public int ImportedRows { get; set; }
+    public int UpdatedRows { get; set; }
     public int DuplicateRows { get; set; }
     public int SkippedRows { get; set; }
     public int MissingOrganizationRows { get; set; }

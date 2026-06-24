@@ -158,6 +158,7 @@ export interface ParusLicenseInfoImportResultDto {
   totalRows: number;
   componentRows: number;
   importedRows: number;
+  updatedRows: number;
   duplicateRows: number;
   skippedRows: number;
   missingOrganizationRows: number;
