@@ -237,6 +237,38 @@ select {
   padding: 0;
 }
 
+.sidebar-database {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding: 8px 10px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  color: rgba(184, 199, 220, 0.72);
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.sidebar-database-label {
+  flex: 0 0 auto;
+  color: rgba(154, 176, 207, 0.62);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sidebar-database-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell-collapsed .sidebar-database {
+  display: none;
+}
+
 .content-shell {
   min-width: 0;
   display: flex;

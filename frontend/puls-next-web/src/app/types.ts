@@ -19,6 +19,10 @@ export interface CurrentUserDto {
   avatarContentType?: string;
 }
 
+export interface DatabaseInfoDto {
+  databaseName: string;
+}
+
 export interface LoginUserOptionDto {
   id: number;
   login: string;

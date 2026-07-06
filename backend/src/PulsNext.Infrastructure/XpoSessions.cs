@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Data.Common;
 using DevExpress.Xpo;
 using DevExpress.Xpo.DB;
 using Microsoft.AspNetCore.Http;
@@ -21,6 +22,11 @@ public interface ICurrentUserAccessor
     string? GetLogin();
 }
 
+public interface IDatabaseInfoService
+{
+    DatabaseInfoDto GetLegacyDatabaseInfo();
+}
+
 public sealed class HttpCurrentUserAccessor(IHttpContextAccessor httpContextAccessor) : ICurrentUserAccessor
 {
     public int? GetLegacyUserId()
@@ -30,6 +36,39 @@ public sealed class HttpCurrentUserAccessor(IHttpContextAccessor httpContextAcce
     }
 
     public string? GetLogin() => httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.Name);
+}
+
+public sealed class DatabaseInfoService(string legacyConnectionString) : IDatabaseInfoService
+{
+    public DatabaseInfoDto GetLegacyDatabaseInfo()
+        => new()
+        {
+            DatabaseName = GetDatabaseName(legacyConnectionString)
+        };
+
+    private static string GetDatabaseName(string connectionString)
+    {
+        try
+        {
+            var builder = new DbConnectionStringBuilder
+            {
+                ConnectionString = connectionString
+            };
+
+            foreach (var key in new[] { "Initial Catalog", "Database" })
+            {
+                if (builder.TryGetValue(key, out var value) && value is not null && !string.IsNullOrWhiteSpace(value.ToString()))
+                {
+                    return value.ToString()!;
+                }
+            }
+        }
+        catch (ArgumentException)
+        {
+        }
+
+        return "unknown";
+    }
 }
 
 public static class ServiceCollectionExtensions
@@ -48,6 +87,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHttpContextAccessor();
         services.AddSingleton<ICurrentUserAccessor, HttpCurrentUserAccessor>();
+        services.AddSingleton<IDatabaseInfoService>(new DatabaseInfoService(legacyConnectionString));
 
         services.AddXpoCustomSession<LegacyUnitOfWork>(true, options =>
             options.UseConnectionString(legacyConnectionString)

@@ -44,6 +44,11 @@ public sealed class CurrentUserDto
     public string? AvatarContentType { get; set; }
 }
 
+public sealed class DatabaseInfoDto
+{
+    public string DatabaseName { get; set; } = string.Empty;
+}
+
 /// <summary>
 /// Краткая информация о пользователе, доступная на форме входа.
 /// </summary>

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PulsNext.Domain.Legacy;
 using PulsNext.Infrastructure;
 
 namespace PulsNext.Api.Controllers;
@@ -10,7 +11,11 @@ namespace PulsNext.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/diagnostics")]
-public sealed class DiagnosticsController(IStorageDiagnosticsService storageDiagnosticsService) : ControllerBase
+public sealed class DiagnosticsController(
+    IStorageDiagnosticsService storageDiagnosticsService,
+    IDatabaseInfoService databaseInfoService,
+    ICurrentUserAccessor currentUserAccessor,
+    LegacyUnitOfWork legacyUnitOfWork) : ControllerBase
 {
     /// <summary>
     /// Checks storage, uploads and Data Protection keys directory access.
@@ -20,5 +25,26 @@ public sealed class DiagnosticsController(IStorageDiagnosticsService storageDiag
     public async Task<ActionResult<StorageDiagnosticsDto>> GetStorage(CancellationToken cancellationToken)
     {
         return Ok(await storageDiagnosticsService.CheckAsync(cancellationToken));
+    }
+
+    [HttpGet("database")]
+    [ProducesResponseType(typeof(DatabaseInfoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public ActionResult<DatabaseInfoDto> GetDatabase()
+    {
+        return IsCurrentUserRoot()
+            ? Ok(databaseInfoService.GetLegacyDatabaseInfo())
+            : Forbid();
+    }
+
+    private bool IsCurrentUserRoot()
+    {
+        var userId = currentUserAccessor.GetLegacyUserId();
+        if (userId is null or <= 0)
+        {
+            return false;
+        }
+
+        return legacyUnitOfWork.GetObjectByKey<LegacyUser>(userId.Value)?.FlRoot == true;
     }
 }

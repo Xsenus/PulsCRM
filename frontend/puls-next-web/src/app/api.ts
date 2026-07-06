@@ -32,6 +32,7 @@ import type {
   DispatchItemDto,
   DispatchItemListQuery,
   CurrentUserDto,
+  DatabaseInfoDto,
   LoginUserOptionDto,
   ParusLicenseAnalyticsDto,
   ParusLicenseBatchImportResultDto,
@@ -108,6 +109,19 @@ export async function getCurrentUser(): Promise<CurrentUserDto | null> {
     return data;
   } catch (error) {
     if (getApiErrorStatus(error) === 401) {
+      return null;
+    }
+
+    unwrapError(error);
+  }
+}
+
+export async function getDatabaseInfo(): Promise<DatabaseInfoDto | null> {
+  try {
+    const { data } = await api.get<DatabaseInfoDto>('/api/diagnostics/database');
+    return data;
+  } catch (error) {
+    if ([401, 403].includes(getApiErrorStatus(error) ?? 0)) {
       return null;
     }
 

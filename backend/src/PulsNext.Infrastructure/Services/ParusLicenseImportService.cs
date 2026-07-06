@@ -173,12 +173,17 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             }
 
             var other = org.OrgInfoOther;
-            var sameFileExists = other?.ParusLicenseFileData is { Length: > 0 }
-                && string.Equals(other.ParusLicenseFileName, fileName, StringComparison.OrdinalIgnoreCase);
-            if (sameFileExists)
+            var existingFileData = other?.ParusLicenseFileData;
+            var sameFileNameExists = existingFileData is { Length: > 0 }
+                && string.Equals(other?.ParusLicenseFileName, fileName, StringComparison.OrdinalIgnoreCase);
+            var uploadedFileData = sameFileNameExists
+                ? ReadImportFileBytes(file)
+                : null;
+
+            if (sameFileNameExists && existingFileData!.SequenceEqual(uploadedFileData!))
             {
                 duplicates += 1;
-                items.Add(BuildFileItem(fileName, "duplicate", licenseNumber, org, "Файл с таким именем уже записан в карточке организации."));
+                items.Add(BuildFileItem(fileName, "duplicate", licenseNumber, org, "Файл с таким именем и содержимым уже записан в карточке организации."));
                 continue;
             }
 
@@ -188,15 +193,19 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                 org.OrgInfoOther = other;
                 other.ParusLicenseNumber = NormalizeBaseLicenseNumber(licenseNumber);
                 other.ParusLicenseFileName = fileName;
-                using var stream = file.OpenReadStream();
-                using var memory = new MemoryStream();
-                stream.CopyTo(memory);
-                other.ParusLicenseFileData = memory.ToArray();
+                other.ParusLicenseFileData = uploadedFileData ?? ReadImportFileBytes(file);
             }
 
             totalBytes += file.Length;
             imported += 1;
-            items.Add(BuildFileItem(fileName, dryRun ? "ready" : "imported", licenseNumber, org, dryRun ? "Файл будет записан в карточку организации." : "Файл записан в карточку организации."));
+            items.Add(BuildFileItem(
+                fileName,
+                dryRun ? "ready" : "imported",
+                licenseNumber,
+                org,
+                sameFileNameExists
+                    ? dryRun ? "Файл будет перезаписан в карточке организации." : "Файл перезаписан в карточке организации."
+                    : dryRun ? "Файл будет записан в карточку организации." : "Файл записан в карточку организации."));
         }
 
         if (!dryRun && imported > 0)
@@ -215,6 +224,14 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             TotalBytes = totalBytes,
             Items = items.ToArray()
         });
+    }
+
+    private static byte[] ReadImportFileBytes(ParusLicenseFileImportItem file)
+    {
+        using var stream = file.OpenReadStream();
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
     }
 
     public async Task<ParusLicenseCardImportResultDto> ImportCardInfoAsync(Stream stream, string fileName, bool dryRun, CancellationToken cancellationToken)

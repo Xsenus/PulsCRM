@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { getDatabaseInfo } from '../app/api';
 import { useAuth } from '../app/AuthContext';
 
 type MenuIconKey = 'dashboard' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
@@ -167,6 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_STATE_KEY) === '1');
   const [profileOpen, setProfileOpen] = useState(false);
+  const [databaseName, setDatabaseName] = useState<string | null>(null);
 
   const currentSection = useMemo(() => getCurrentSection(location.pathname), [location.pathname]);
   const initials = useMemo(() => getInitials(user?.fullName, user?.login), [user?.fullName, user?.login]);
@@ -186,6 +188,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setProfileOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadDatabaseInfo() {
+      if (!user?.isRoot) {
+        setDatabaseName(null);
+        return;
+      }
+
+      try {
+        const info = await getDatabaseInfo();
+        if (mounted) {
+          setDatabaseName(info?.databaseName?.trim() || null);
+        }
+      } catch {
+        if (mounted) {
+          setDatabaseName(null);
+        }
+      }
+    }
+
+    loadDatabaseInfo();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.isRoot]);
 
   useEffect(() => {
     if (!profileOpen) {
@@ -280,6 +309,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {databaseName ? (
+          <div className="sidebar-database" title={`База данных: ${databaseName}`}>
+            <span className="sidebar-database-label">БД</span>
+            <span className="sidebar-database-name">{databaseName}</span>
+          </div>
+        ) : null}
       </aside>
 
       <div className="content-shell">

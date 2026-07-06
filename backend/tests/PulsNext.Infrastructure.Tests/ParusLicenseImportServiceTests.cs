@@ -172,6 +172,44 @@ public sealed class ParusLicenseImportServiceTests
     }
 
     [Fact]
+    public async Task ImportFilesAsync_OverwritesLicenseFileWhenSameNameHasDifferentContent()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+        var org = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "Test org",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+            {
+                ParusLicenseNumber = "НА2360",
+                ParusLicenseFileName = "License_НА2360-2-11.lic",
+                ParusLicenseFileData = Encoding.UTF8.GetBytes("old-data")
+            }
+        };
+        org.OrgInfoOther.Org = org;
+        _ = new LegacyZPParusLicenseInfo(legacyUnitOfWork)
+        {
+            Org = org,
+            RegNumberAbonement = "НА2360-2-11",
+            RegNumberClient = "НА-2360",
+            DateSince = new DateTime(2025, 2, 21),
+            DateTo = new DateTime(2026, 2, 21),
+            Modification = "PARUS 10"
+        };
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseImportService(legacyUnitOfWork);
+        var result = await service.ImportFilesAsync([
+            new ParusLicenseFileImportItem("License_НА2360-2-11.lic", 8, () => ToStream("new-data"))
+        ], false, CancellationToken.None);
+
+        Assert.Equal(1, result.ImportedFiles);
+        Assert.Equal(0, result.DuplicateFiles);
+        Assert.Equal("License_НА2360-2-11.lic", org.OrgInfoOther?.ParusLicenseFileName);
+        Assert.Equal(Encoding.UTF8.GetBytes("new-data"), org.OrgInfoOther?.ParusLicenseFileData);
+        Assert.Contains(result.Items, item => item.Status == "imported" && item.Message.Contains("перезаписан", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ImportFilesAsync_DryRunDoesNotAttachFileData()
     {
         using var legacyUnitOfWork = CreateLegacyUnitOfWork();
