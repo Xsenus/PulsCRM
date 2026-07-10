@@ -3032,7 +3032,7 @@ body.is-dragging-column {
 
 .employee-image-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin-top: 8px;
 }
@@ -3108,6 +3108,111 @@ body.is-dragging-column {
   min-width: 38px;
   min-height: 38px;
   border-radius: 12px;
+}
+
+.employee-profile-image-card {
+  gap: 12px;
+}
+
+.employee-photo-stage {
+  position: relative;
+  min-height: 320px;
+}
+
+.employee-profile-photo-preview {
+  min-height: 320px;
+  height: clamp(320px, 34vw, 380px);
+  border-radius: 16px;
+}
+
+.employee-avatar-dock {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  z-index: 1;
+}
+
+.employee-avatar-preview-button {
+  position: relative;
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.36);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.2);
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.employee-avatar-preview-button:hover:not(:disabled) {
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 22px 42px rgba(15, 23, 42, 0.24);
+  transform: translateY(-1px);
+}
+
+.employee-avatar-preview-button:disabled {
+  cursor: default;
+  opacity: 0.68;
+}
+
+.employee-profile-avatar-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+}
+
+.employee-profile-avatar-preview img {
+  border-radius: 999px;
+}
+
+.employee-avatar-placeholder {
+  padding: 8px;
+  font-size: 0.82rem;
+}
+
+.employee-avatar-edit-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #eef4ff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.employee-avatar-edit-badge svg {
+  width: 16px;
+  height: 16px;
+}
+
+.employee-avatar-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(219, 228, 240, 0.92);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.employee-avatar-tools .employee-image-tool-button {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 10px;
 }
 
 .employee-password-controls {
@@ -5181,7 +5286,6 @@ body.is-dragging-column {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .employee-image-grid,
   .employee-access-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -5369,9 +5473,27 @@ body.is-dragging-column {
     gap: 8px;
   }
 
-  .employee-access-grid,
-  .employee-image-grid {
+  .employee-access-grid {
     grid-template-columns: 1fr;
+  }
+
+  .employee-profile-photo-preview {
+    min-height: 280px;
+    height: 280px;
+  }
+
+  .employee-photo-stage {
+    min-height: 280px;
+  }
+
+  .employee-avatar-dock {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .employee-avatar-preview-button {
+    width: 92px;
+    height: 92px;
   }
 
   .employee-password-controls {

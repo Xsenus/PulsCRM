@@ -172,28 +172,35 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                 continue;
             }
 
-            var other = org.OrgInfoOther;
-            var existingFileData = other?.ParusLicenseFileData;
-            var sameFileNameExists = existingFileData is { Length: > 0 }
-                && string.Equals(other?.ParusLicenseFileName, fileName, StringComparison.OrdinalIgnoreCase);
-            var uploadedFileData = sameFileNameExists
-                ? ReadImportFileBytes(file)
-                : null;
+            var targetOrganizations = ResolveLicenseFileTargetOrganizations(org);
+            var uploadedFileData = ReadImportFileBytes(file);
+            var sameFileAlreadyWritten = targetOrganizations.All(target =>
+                HasSameLicenseFile(target.OrgInfoOther, fileName, uploadedFileData));
+            var hasExistingFiles = targetOrganizations.Any(target =>
+                target.OrgInfoOther?.ParusLicenseFileData is { Length: > 0 });
 
-            if (sameFileNameExists && existingFileData!.SequenceEqual(uploadedFileData!))
+            if (sameFileAlreadyWritten)
             {
                 duplicates += 1;
-                items.Add(BuildFileItem(fileName, "duplicate", licenseNumber, org, "Файл с таким именем и содержимым уже записан в карточке организации."));
+                items.Add(BuildFileItem(fileName, "duplicate", licenseNumber, org, "Файл с таким именем и содержимым уже записан в связанных карточках организаций."));
                 continue;
             }
 
             if (!dryRun)
             {
-                other ??= new LegacyOrgInfoOther(legacyUnitOfWork) { Org = org };
-                org.OrgInfoOther = other;
-                other.ParusLicenseNumber = NormalizeBaseLicenseNumber(licenseNumber);
-                other.ParusLicenseFileName = fileName;
-                other.ParusLicenseFileData = uploadedFileData ?? ReadImportFileBytes(file);
+                foreach (var targetOrganization in targetOrganizations)
+                {
+                    var other = targetOrganization.OrgInfoOther;
+                    if (other is null)
+                    {
+                        other = new LegacyOrgInfoOther(legacyUnitOfWork) { Org = targetOrganization };
+                        targetOrganization.OrgInfoOther = other;
+                    }
+
+                    other.ParusLicenseNumber = NormalizeBaseLicenseNumber(licenseNumber);
+                    other.ParusLicenseFileName = fileName;
+                    other.ParusLicenseFileData = uploadedFileData;
+                }
             }
 
             totalBytes += file.Length;
@@ -203,9 +210,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                 dryRun ? "ready" : "imported",
                 licenseNumber,
                 org,
-                sameFileNameExists
-                    ? dryRun ? "Файл будет перезаписан в карточке организации." : "Файл перезаписан в карточке организации."
-                    : dryRun ? "Файл будет записан в карточку организации." : "Файл записан в карточку организации."));
+                BuildLicenseFileImportMessage(dryRun, hasExistingFiles, targetOrganizations.Count)));
         }
 
         if (!dryRun && imported > 0)
@@ -232,6 +237,39 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
         return memory.ToArray();
+    }
+
+    private IReadOnlyCollection<LegacyOrg> ResolveLicenseFileTargetOrganizations(LegacyOrg licenseOrganization)
+    {
+        var targets = new Dictionary<int, LegacyOrg>
+        {
+            [licenseOrganization.Oid] = licenseOrganization
+        };
+
+        foreach (var org in new XPQuery<LegacyOrg>(legacyUnitOfWork)
+                     .ToList()
+                     .Where(org => org.OrgInfoOther?.OrgParusLicense?.Oid == licenseOrganization.Oid))
+        {
+            targets.TryAdd(org.Oid, org);
+        }
+
+        return targets.Values.ToArray();
+    }
+
+    private static bool HasSameLicenseFile(LegacyOrgInfoOther? other, string fileName, byte[] content)
+        => other?.ParusLicenseFileData is { Length: > 0 } existingFileData
+            && string.Equals(other.ParusLicenseFileName, fileName, StringComparison.OrdinalIgnoreCase)
+            && existingFileData.SequenceEqual(content);
+
+    private static string BuildLicenseFileImportMessage(bool dryRun, bool hasExistingFiles, int targetCount)
+    {
+        var targetText = targetCount == 1
+            ? "карточку организации"
+            : $"{targetCount} связанных карточек организаций";
+
+        return hasExistingFiles
+            ? dryRun ? $"Файл будет перезаписан в {targetText}." : $"Файл перезаписан в {targetText}."
+            : dryRun ? $"Файл будет записан в {targetText}." : $"Файл записан в {targetText}.";
     }
 
     public async Task<ParusLicenseCardImportResultDto> ImportCardInfoAsync(Stream stream, string fileName, bool dryRun, CancellationToken cancellationToken)

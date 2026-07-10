@@ -495,7 +495,7 @@ export function EmployeeEditorForm({
             />
 
             <div className="employee-image-grid">
-              <div className="employee-image-card">
+              <div className="employee-image-card employee-profile-image-card">
                 <div className="employee-image-card-head employee-image-card-head-inline">
                   <strong>Фотография</strong>
 
@@ -523,49 +523,49 @@ export function EmployeeEditorForm({
                   </div>
                 </div>
 
-                <div className="employee-image-preview employee-image-preview-photo">
-                  {photoSource ? (
-                    <img src={photoSource} alt="Фотография сотрудника" />
-                  ) : (
-                    <div className="employee-image-placeholder">Фотография не загружена</div>
-                  )}
-                </div>
-              </div>
+                <div className="employee-photo-stage">
+                  <div className="employee-image-preview employee-image-preview-photo employee-profile-photo-preview">
+                    {photoSource ? (
+                      <img src={photoSource} alt="Фотография сотрудника" />
+                    ) : (
+                      <div className="employee-image-placeholder">Фотография не загружена</div>
+                    )}
+                  </div>
 
-              <div className="employee-image-card">
-                <div className="employee-image-card-head employee-image-card-head-inline">
-                  <strong>Аватар</strong>
-
-                  <div className="employee-image-tools">
+                  <div className="employee-avatar-dock">
                     <button
                       type="button"
-                      className="secondary-button button-inline icon-button employee-image-tool-button"
+                      className="employee-avatar-preview-button"
                       disabled={disabled}
                       onClick={() => requestImageUpload('avatar')}
                       aria-label="Загрузить аватар"
                       title="Загрузить аватар"
                     >
-                      <UploadIcon />
+                      <span className="employee-image-preview employee-image-preview-avatar employee-profile-avatar-preview">
+                        {avatarSource ? (
+                          <img src={avatarSource} alt="Аватар сотрудника" />
+                        ) : (
+                          <span className="employee-image-placeholder employee-avatar-placeholder">Аватар</span>
+                        )}
+                      </span>
+                      <span className="employee-avatar-edit-badge" aria-hidden="true">
+                        <UploadIcon />
+                      </span>
                     </button>
-                    <button
-                      type="button"
-                      className="secondary-button button-inline icon-button employee-image-tool-button"
-                      disabled={disabled || !value.avatarBase64}
-                      onClick={() => requestImageClear('avatar')}
-                      aria-label="Очистить аватар"
-                      title="Очистить аватар"
-                    >
-                      <TrashIcon />
-                    </button>
-                  </div>
-                </div>
 
-                <div className="employee-image-preview employee-image-preview-avatar">
-                  {avatarSource ? (
-                    <img src={avatarSource} alt="Аватар сотрудника" />
-                  ) : (
-                    <div className="employee-image-placeholder">Аватар не загружен</div>
-                  )}
+                    <div className="employee-avatar-tools" aria-label="Действия с аватаром">
+                      <button
+                        type="button"
+                        className="secondary-button button-inline icon-button employee-image-tool-button"
+                        disabled={disabled || !value.avatarBase64}
+                        onClick={() => requestImageClear('avatar')}
+                        aria-label="Очистить аватар"
+                        title="Очистить аватар"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

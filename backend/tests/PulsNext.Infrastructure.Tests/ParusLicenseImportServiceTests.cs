@@ -210,6 +210,55 @@ public sealed class ParusLicenseImportServiceTests
     }
 
     [Fact]
+    public async Task ImportFilesAsync_OverwritesLicenseFileOnLinkedOrganizationCards()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+        var licenseOrg = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "License owner",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+            {
+                ParusLicenseNumber = "НА2360"
+            }
+        };
+        licenseOrg.OrgInfoOther.Org = licenseOrg;
+        var clientOrg = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "Linked client",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+            {
+                OrgParusLicense = licenseOrg,
+                ParusLicenseNumber = "НА2360",
+                ParusLicenseFileName = "License_НА2360-2-11.lic",
+                ParusLicenseFileData = Encoding.UTF8.GetBytes("old-data")
+            }
+        };
+        clientOrg.OrgInfoOther.Org = clientOrg;
+        _ = new LegacyZPParusLicenseInfo(legacyUnitOfWork)
+        {
+            Org = licenseOrg,
+            RegNumberAbonement = "НА2360-2-11",
+            RegNumberClient = "НА-2360",
+            DateSince = new DateTime(2025, 2, 21),
+            DateTo = new DateTime(2026, 2, 21),
+            Modification = "PARUS 10"
+        };
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseImportService(legacyUnitOfWork);
+        var result = await service.ImportFilesAsync([
+            new ParusLicenseFileImportItem("License_НА2360-2-11.lic", 8, () => ToStream("new-data"))
+        ], false, CancellationToken.None);
+
+        Assert.Equal(1, result.ImportedFiles);
+        Assert.Equal("License_НА2360-2-11.lic", licenseOrg.OrgInfoOther?.ParusLicenseFileName);
+        Assert.Equal(Encoding.UTF8.GetBytes("new-data"), licenseOrg.OrgInfoOther?.ParusLicenseFileData);
+        Assert.Equal("License_НА2360-2-11.lic", clientOrg.OrgInfoOther?.ParusLicenseFileName);
+        Assert.Equal(Encoding.UTF8.GetBytes("new-data"), clientOrg.OrgInfoOther?.ParusLicenseFileData);
+        Assert.Contains(result.Items, item => item.Status == "imported" && item.Message.Contains("2 связанных карточек", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task ImportFilesAsync_DryRunDoesNotAttachFileData()
     {
         using var legacyUnitOfWork = CreateLegacyUnitOfWork();
