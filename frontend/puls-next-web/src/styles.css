@@ -3116,13 +3116,11 @@ body.is-dragging-column {
 
 .employee-photo-stage {
   position: relative;
-  display: grid;
-  justify-items: center;
   min-height: 0;
 }
 
 .employee-profile-photo-preview {
-  width: min(440px, 100%);
+  width: 100%;
   min-height: 0;
   height: auto;
   aspect-ratio: 4 / 3;
@@ -3130,14 +3128,15 @@ body.is-dragging-column {
 }
 
 .employee-profile-photo-preview img {
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center center;
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.9) 0, rgba(248, 251, 255, 0.9) 46%, rgba(238, 244, 255, 0.9) 100%);
 }
 
 .employee-avatar-dock {
   position: absolute;
-  right: max(12px, calc((100% - 440px) / 2 + 12px));
+  right: 12px;
   bottom: 12px;
   display: grid;
   justify-items: center;
