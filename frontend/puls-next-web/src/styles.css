@@ -3125,6 +3125,12 @@ body.is-dragging-column {
   border-radius: 16px;
 }
 
+.employee-profile-photo-preview img {
+  object-fit: contain;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.9) 0, rgba(248, 251, 255, 0.9) 46%, rgba(238, 244, 255, 0.9) 100%);
+}
+
 .employee-avatar-dock {
   position: absolute;
   right: 16px;
