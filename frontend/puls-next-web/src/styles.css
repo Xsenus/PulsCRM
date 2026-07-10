@@ -3116,12 +3116,16 @@ body.is-dragging-column {
 
 .employee-photo-stage {
   position: relative;
-  min-height: 320px;
+  display: grid;
+  justify-items: center;
+  min-height: 0;
 }
 
 .employee-profile-photo-preview {
-  min-height: 320px;
-  height: clamp(320px, 34vw, 380px);
+  width: min(440px, 100%);
+  min-height: 0;
+  height: auto;
+  aspect-ratio: 4 / 3;
   border-radius: 16px;
 }
 
@@ -3133,8 +3137,8 @@ body.is-dragging-column {
 
 .employee-avatar-dock {
   position: absolute;
-  right: 16px;
-  bottom: 16px;
+  right: max(12px, calc((100% - 440px) / 2 + 12px));
+  bottom: 12px;
   display: grid;
   justify-items: center;
   gap: 8px;
@@ -5484,12 +5488,7 @@ body.is-dragging-column {
   }
 
   .employee-profile-photo-preview {
-    min-height: 280px;
-    height: 280px;
-  }
-
-  .employee-photo-stage {
-    min-height: 280px;
+    width: 100%;
   }
 
   .employee-avatar-dock {
