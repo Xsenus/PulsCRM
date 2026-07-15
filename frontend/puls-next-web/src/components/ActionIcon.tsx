@@ -70,9 +70,11 @@ export function ActionIcon({ kind, className }: ActionIconProps) {
     case 'excel':
       return (
         <svg {...svgProps}>
-          <path d="M6 4h8l4 4v12H6z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-          <path d="M14 4v4h4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-          <path d="M9 11l4 5M13 11l-4 5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+          <path d="M7 3.75h7.4L19 8.35V20.25H7z" fill="#ffffff" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
+          <path d="M14.4 3.75v4.6H19" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
+          <path d="M4.5 6.4h8.2v11.2H4.5z" fill="currentColor" />
+          <path d="M6.55 9.35l4.1 5.3M10.65 9.35l-4.1 5.3" fill="none" stroke="#ffffff" strokeWidth="1.55" strokeLinecap="round" />
+          <path d="M14.8 11.1h2.15M14.8 14.1h2.15M14.8 17.1h2.15" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
         </svg>
       );
 

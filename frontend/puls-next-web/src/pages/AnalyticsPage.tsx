@@ -169,19 +169,83 @@ function escapeXmlValue(value: string | number | null | undefined) {
     .replace(/"/g, '&quot;');
 }
 
-function buildSpreadsheetCell(value: string | number | null | undefined, styleId?: string) {
-  const isNumber = typeof value === 'number' && Number.isFinite(value);
+type SpreadsheetCellValue = string | number | null | undefined;
+
+interface SpreadsheetCellConfig {
+  value: SpreadsheetCellValue;
+  styleId?: string;
+  mergeAcross?: number;
+}
+
+type SpreadsheetCell = SpreadsheetCellValue | SpreadsheetCellConfig;
+
+function isSpreadsheetCellConfig(value: SpreadsheetCell): value is SpreadsheetCellConfig {
+  return typeof value === 'object' && value !== null && 'value' in value;
+}
+
+function toSpreadsheetCell(value: SpreadsheetCell): SpreadsheetCellConfig {
+  return isSpreadsheetCellConfig(value)
+    ? value
+    : { value };
+}
+
+function buildSpreadsheetCell(cellValue: SpreadsheetCell, defaultStyleId?: string) {
+  const cell = toSpreadsheetCell(cellValue);
+  const isNumber = typeof cell.value === 'number' && Number.isFinite(cell.value);
+  const styleId = cell.styleId ?? defaultStyleId;
   const style = styleId ? ` ss:StyleID="${styleId}"` : '';
-  return `<Cell${style}><Data ss:Type="${isNumber ? 'Number' : 'String'}">${escapeXmlValue(value)}</Data></Cell>`;
+  const merge = cell.mergeAcross ? ` ss:MergeAcross="${cell.mergeAcross}"` : '';
+  return `<Cell${style}${merge}><Data ss:Type="${isNumber ? 'Number' : 'String'}">${escapeXmlValue(cell.value)}</Data></Cell>`;
 }
 
-function buildSpreadsheetRow(cells: Array<string | number | null | undefined>, styleId?: string) {
-  return `<Row>${cells.map((cell) => buildSpreadsheetCell(cell, styleId)).join('')}</Row>`;
+function buildSpreadsheetRow(cells: SpreadsheetCell[], defaultStyleId?: string, height?: number) {
+  const rowHeight = height ? ` ss:Height="${height}"` : '';
+  return `<Row${rowHeight}>${cells.map((cell) => buildSpreadsheetCell(cell, defaultStyleId)).join('')}</Row>`;
 }
 
-function buildSpreadsheetWorksheet(name: string, rows: string[], columnWidths: number[]) {
+function buildSpreadsheetWorksheet(name: string, rows: string[], columnWidths: number[], frozenHeaderRow?: number) {
   const columns = columnWidths.map((width) => `<Column ss:Width="${width}" />`).join('');
-  return `<Worksheet ss:Name="${escapeXmlValue(name)}"><Table>${columns}${rows.join('')}</Table></Worksheet>`;
+  const worksheetOptions = frozenHeaderRow
+    ? `<WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>${frozenHeaderRow}</SplitHorizontal><TopRowBottomPane>${frozenHeaderRow}</TopRowBottomPane><ActivePane>2</ActivePane></WorksheetOptions>`
+    : '';
+  return `<Worksheet ss:Name="${escapeXmlValue(name)}"><Table>${columns}${rows.join('')}</Table>${worksheetOptions}</Worksheet>`;
+}
+
+function buildCell(value: string | number | null | undefined, styleId?: string, mergeAcross?: number): SpreadsheetCell {
+  return { value, styleId, mergeAcross };
+}
+
+function parseQuantityNumber(value?: string) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number(value.replace(/\s/g, '').replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getWorkbookStatusStyle(row: {
+  activeAtPeriodEnd: boolean;
+  withoutRenewal?: boolean;
+  expiredAtPeriodEnd: boolean;
+}) {
+  if (row.activeAtPeriodEnd) {
+    return 'StatusActive';
+  }
+
+  if (row.withoutRenewal) {
+    return 'StatusDanger';
+  }
+
+  return row.expiredAtPeriodEnd ? 'StatusMuted' : 'Cell';
+}
+
+function getRowStyle(index: number) {
+  return index % 2 === 0 ? 'Cell' : 'CellAlt';
+}
+
+function getNumberStyle(index: number) {
+  return index % 2 === 0 ? 'Number' : 'NumberAlt';
 }
 
 function buildLicenseGroupsWorkbook(
@@ -191,79 +255,120 @@ function buildLicenseGroupsWorkbook(
 ) {
   const title = `Отчет по группам лицензий Парус за период ${formatInputDate(range.from)} - ${formatInputDate(range.to)}`;
   const statusLabel = getGroupStatusLabel(status);
+  const generatedAt = dayjs().format('DD.MM.YYYY HH:mm');
+  const totals = groups.reduce(
+    (accumulator, row) => ({
+      databaseCount: accumulator.databaseCount + row.databaseCount,
+      organizationCount: accumulator.organizationCount + row.organizationCount,
+      extraWorkplaces: accumulator.extraWorkplaces + row.extraWorkplaces,
+      periodsCount: accumulator.periodsCount + row.periodsCount,
+      componentsCount: accumulator.componentsCount + row.componentsCount
+    }),
+    { databaseCount: 0, organizationCount: 0, extraWorkplaces: 0, periodsCount: 0, componentsCount: 0 }
+  );
   const organizationRows = [
-    `<Row ss:Height="24"><Cell ss:MergeAcross="9" ss:StyleID="Title"><Data ss:Type="String">${escapeXmlValue(title)}</Data></Cell></Row>`,
-    buildSpreadsheetRow(['Фильтр статуса', statusLabel, 'Групп', groups.length], 'Meta'),
-    buildSpreadsheetRow([], 'Meta'),
-    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус'], 'Header'),
-    ...groups.map((row) => buildSpreadsheetRow([
-      row.clientName,
-      row.inn || '',
-      row.mnemoOrg || '',
-      row.licenseNumber,
-      row.databaseCount,
-      row.organizationCount,
-      row.extraWorkplaces,
-      row.periodsCount,
-      row.componentsCount,
-      getGroupExportStatus(row)
-    ]))
+    buildSpreadsheetRow([buildCell(title, 'Title', 9)], undefined, 28),
+    buildSpreadsheetRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, 'Subtitle', 9)], undefined, 22),
+    buildSpreadsheetRow([buildCell('', 'Spacer', 9)], undefined, 8),
+    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус'], 'Header', 24),
+    ...groups.map((row, index) => {
+      const rowStyle = getRowStyle(index);
+      const numberStyle = getNumberStyle(index);
+      return buildSpreadsheetRow([
+        buildCell(row.clientName, rowStyle),
+        buildCell(row.inn || '', rowStyle),
+        buildCell(row.mnemoOrg || '', rowStyle),
+        buildCell(row.licenseNumber, rowStyle),
+        buildCell(row.databaseCount, numberStyle),
+        buildCell(row.organizationCount, numberStyle),
+        buildCell(row.extraWorkplaces, numberStyle),
+        buildCell(row.periodsCount, numberStyle),
+        buildCell(row.componentsCount, numberStyle),
+        buildCell(getGroupExportStatus(row), getWorkbookStatusStyle(row))
+      ], undefined, 22);
+    }),
+    buildSpreadsheetRow([
+      buildCell('Итого', 'Total', 3),
+      buildCell(totals.databaseCount, 'TotalNumber'),
+      buildCell(totals.organizationCount, 'TotalNumber'),
+      buildCell(totals.extraWorkplaces, 'TotalNumber'),
+      buildCell(totals.periodsCount, 'TotalNumber'),
+      buildCell(totals.componentsCount, 'TotalNumber'),
+      buildCell('', 'Total')
+    ], undefined, 23)
   ];
 
+  const componentDataRows = groups.flatMap((row) => {
+    const periodRows = row.periods.flatMap((period) => {
+      if (period.components.length === 0) {
+        return [{
+          row,
+          period,
+          product: '',
+          modification: '',
+          nomenclature: '',
+          quantity: null,
+          number: '',
+          note: 'Состав не указан'
+        }];
+      }
+
+      return period.components.map((component) => ({
+        row,
+        period,
+        product: component.product || '',
+        modification: component.modification || '',
+        nomenclature: component.nomenclature || '',
+        quantity: parseQuantityNumber(component.quantity) ?? formatQuantity(component.quantity),
+        number: component.number || '',
+        note: ''
+      }));
+    });
+
+    return periodRows.length > 0
+      ? periodRows
+      : [{
+          row,
+          period: null,
+          product: '',
+          modification: '',
+          nomenclature: '',
+          quantity: null,
+          number: '',
+          note: 'Периоды не найдены'
+        }];
+  });
+  const totalPlaces = componentDataRows.reduce(
+    (sum, item) => sum + (typeof item.quantity === 'number' ? item.quantity : 0),
+    0
+  );
   const componentRows = [
-    `<Row ss:Height="24"><Cell ss:MergeAcross="10" ss:StyleID="Title"><Data ss:Type="String">${escapeXmlValue('Состав лицензий и количество мест')}</Data></Cell></Row>`,
-    buildSpreadsheetRow(['Период отчета', `${formatInputDate(range.from)} - ${formatInputDate(range.to)}`, 'Фильтр статуса', statusLabel], 'Meta'),
-    buildSpreadsheetRow([], 'Meta'),
-    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Период с', 'Период по', 'Продукт', 'Модификация', 'Номенклатура', 'Кол-во мест', 'Номер строки'], 'Header'),
-    ...groups.flatMap((row) => {
-      const periodRows = row.periods.flatMap((period) => {
-        if (period.components.length === 0) {
-          return [buildSpreadsheetRow([
-            row.clientName,
-            row.inn || '',
-            row.mnemoOrg || '',
-            period.licenseNumber,
-            formatDate(period.dateSinceUtc),
-            formatDate(period.dateToUtc),
-            '',
-            '',
-            'Состав не указан',
-            '',
-            ''
-          ])];
-        }
-
-        return period.components.map((component) => buildSpreadsheetRow([
-          row.clientName,
-          row.inn || '',
-          row.mnemoOrg || '',
-          period.licenseNumber,
-          formatDate(period.dateSinceUtc),
-          formatDate(period.dateToUtc),
-          component.product || '',
-          component.modification || '',
-          component.nomenclature || '',
-          formatQuantity(component.quantity),
-          component.number || ''
-        ]));
-      });
-
-      return periodRows.length > 0
-        ? periodRows
-        : [buildSpreadsheetRow([
-            row.clientName,
-            row.inn || '',
-            row.mnemoOrg || '',
-            row.licenseNumber,
-            '',
-            '',
-            '',
-            '',
-            'Периоды не найдены',
-            '',
-            ''
-          ])];
-    })
+    buildSpreadsheetRow([buildCell('Состав лицензий и количество мест', 'Title', 10)], undefined, 28),
+    buildSpreadsheetRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Строк состава: ${componentDataRows.length}`, 'Subtitle', 10)], undefined, 22),
+    buildSpreadsheetRow([buildCell('', 'Spacer', 10)], undefined, 8),
+    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Период действия', 'Продукт', 'Модификация', 'Номенклатура', 'Кол-во мест', 'Номер строки', 'Примечание'], 'Header', 24),
+    ...componentDataRows.map((item, index) => {
+      const rowStyle = getRowStyle(index);
+      const numberStyle = getNumberStyle(index);
+      return buildSpreadsheetRow([
+        buildCell(item.row.clientName, rowStyle),
+        buildCell(item.row.inn || '', rowStyle),
+        buildCell(item.row.mnemoOrg || '', rowStyle),
+        buildCell(item.period?.licenseNumber || item.row.licenseNumber, rowStyle),
+        buildCell(item.period ? `${formatDate(item.period.dateSinceUtc)} - ${formatDate(item.period.dateToUtc)}` : '', rowStyle),
+        buildCell(item.product, rowStyle),
+        buildCell(item.modification, rowStyle),
+        buildCell(item.nomenclature, rowStyle),
+        buildCell(item.quantity, typeof item.quantity === 'number' ? numberStyle : rowStyle),
+        buildCell(item.number, rowStyle),
+        buildCell(item.note, item.note ? 'Note' : rowStyle)
+      ], undefined, 22);
+    }),
+    buildSpreadsheetRow([
+      buildCell('Итого мест', 'Total', 7),
+      buildCell(totalPlaces, 'TotalNumber'),
+      buildCell('', 'Total', 1)
+    ], undefined, 23)
   ];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -277,13 +382,24 @@ function buildLicenseGroupsWorkbook(
     <Title>${escapeXmlValue(title)}</Title>
   </DocumentProperties>
   <Styles>
-    <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="11" /></Style>
-    <Style ss:ID="Title"><Font ss:FontName="Calibri" ss:Size="14" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#EAF1FF" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="Meta"><Font ss:FontName="Calibri" ss:Size="10" ss:Color="#475569" /></Style>
-    <Style ss:ID="Header"><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF" /><Interior ss:Color="#2563EB" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1D4ED8" /></Borders></Style>
+    <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Font ss:FontName="Calibri" ss:Size="11" /><Interior ss:Color="#FFFFFF" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="Title"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#DDEBFF" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="Subtitle"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Color="#475569" /><Interior ss:Color="#F8FBFF" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="Spacer"><Interior ss:Color="#FFFFFF" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="Header"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF" /><Interior ss:Color="#2563EB" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1D4ED8" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#93C5FD" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#93C5FD" /><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1D4ED8" /></Borders></Style>
+    <Style ss:ID="Cell"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
+    <Style ss:ID="CellAlt"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Interior ss:Color="#F8FAFC" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
+    <Style ss:ID="Number"><Alignment ss:Horizontal="Right" ss:Vertical="Center" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
+    <Style ss:ID="NumberAlt"><Alignment ss:Horizontal="Right" ss:Vertical="Center" /><Interior ss:Color="#F8FAFC" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
+    <Style ss:ID="StatusActive"><Alignment ss:Horizontal="Center" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#047857" /><Interior ss:Color="#D1FAE5" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="StatusDanger"><Alignment ss:Horizontal="Center" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#B91C1C" /><Interior ss:Color="#FEE2E2" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="StatusMuted"><Alignment ss:Horizontal="Center" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#64748B" /><Interior ss:Color="#E2E8F0" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="Note"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Font ss:FontName="Calibri" ss:Size="10" ss:Color="#92400E" /><Interior ss:Color="#FEF3C7" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FDE68A" /></Borders></Style>
+    <Style ss:ID="Total"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#EAF1FF" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="TotalNumber"><Alignment ss:Horizontal="Right" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#EAF1FF" ss:Pattern="Solid" /></Style>
   </Styles>
-  ${buildSpreadsheetWorksheet('Организации', organizationRows, [240, 110, 150, 90, 60, 130, 90, 85, 95, 120])}
-  ${buildSpreadsheetWorksheet('Состав лицензий', componentRows, [240, 110, 150, 90, 90, 90, 180, 220, 260, 90, 95])}
+  ${buildSpreadsheetWorksheet('Организации', organizationRows, [260, 105, 160, 95, 60, 130, 90, 85, 100, 125], 4)}
+  ${buildSpreadsheetWorksheet('Состав лицензий', componentRows, [260, 105, 155, 95, 155, 140, 220, 290, 85, 95, 150], 4)}
 </Workbook>`;
 }
 
