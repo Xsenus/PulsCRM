@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { downloadParusLicenseFile, getParusLicenseAnalytics } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
+import { useAuth } from '../app/AuthContext';
 import { formatDate } from '../app/format';
 import { showToast } from '../app/toast';
 import type {
@@ -16,6 +17,7 @@ import { StatsCards } from '../components/StatsCards';
 
 const GROUP_PAGE_SIZE_OPTIONS = [10, 25, 50];
 const WEEK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+const ANNUAL_ANALYTICS_STORAGE_ID = 'parus-annual-analytics';
 const GROUP_STATUS_OPTIONS = [
   { value: 'all', label: 'Все статусы' },
   { value: 'active', label: 'Действуют' },
@@ -39,6 +41,18 @@ function startOfCurrentYear() {
 
 function endOfCurrentYear() {
   return dayjs().endOf('year').format('YYYY-MM-DD');
+}
+
+function buildAnnualAnalyticsStorageKey(userId: string) {
+  return `puls-analytics:${ANNUAL_ANALYTICS_STORAGE_ID}:${userId}`;
+}
+
+function loadAnnualAnalyticsPreference(storageKey: string) {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.localStorage.getItem(storageKey) === '1';
 }
 
 function toApiDate(value: string) {
@@ -253,11 +267,14 @@ function buildLicenseMeta(row: ParusLicenseAnalyticsOrganizationGroupDto) {
 }
 
 export function AnalyticsPage() {
+  const { user } = useAuth();
+  const currentUserId = String(user?.id ?? 'guest');
+  const annualAnalyticsStorageKey = buildAnnualAnalyticsStorageKey(currentUserId);
   const [dateFrom, setDateFrom] = useState(startOfCurrentYear);
   const [dateTo, setDateTo] = useState(endOfCurrentYear);
   const [analytics, setAnalytics] = useState<ParusLicenseAnalyticsDto | null>(null);
   const [loading, setLoading] = useState(true);
-  const [annualAnalytics, setAnnualAnalytics] = useState(true);
+  const [annualAnalytics, setAnnualAnalytics] = useState(() => loadAnnualAnalyticsPreference(annualAnalyticsStorageKey));
   const [infoModal, setInfoModal] = useState<InfoDetails | null>(null);
   const [groupSearch, setGroupSearch] = useState('');
   const [groupStatus, setGroupStatus] = useState('all');
@@ -300,6 +317,14 @@ export function AnalyticsPage() {
 
     return () => window.clearTimeout(handle);
   }, [appliedRange, groupPage, groupPageSize, groupSearch, groupStatus]);
+
+  useEffect(() => {
+    setAnnualAnalytics(loadAnnualAnalyticsPreference(annualAnalyticsStorageKey));
+  }, [annualAnalyticsStorageKey]);
+
+  useEffect(() => {
+    window.localStorage.setItem(annualAnalyticsStorageKey, annualAnalytics ? '1' : '0');
+  }, [annualAnalytics, annualAnalyticsStorageKey]);
 
   const applyPeriod = () => {
     setAppliedRange(normalizedRange);
@@ -423,7 +448,7 @@ export function AnalyticsPage() {
                 { label: 'Продлены', value: formatCount(summary.renewed), hint: 'Новый период у существующей лицензии' },
                 { label: 'Без продления', value: formatCount(summary.withoutRenewal), hint: 'Последний период закончился' },
                 { label: 'Ушли', value: formatCount(summary.lost), hint: 'Нет продлений после окончания' },
-                { label: 'Заканчиваются', value: formatCount(summary.expiringInPeriod), hint: 'Дата окончания попала в период' },
+                { label: 'Заканчиваются', value: formatCount(summary.expiringInPeriod), hint: 'Последний период закончился в диапазоне' },
                 { label: 'Новые', value: formatCount(summary.newLicenses), hint: 'Первое появление лицензии' }
               ]}
             />

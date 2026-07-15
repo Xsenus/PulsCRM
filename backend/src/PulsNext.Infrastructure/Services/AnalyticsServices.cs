@@ -213,7 +213,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             ExpiredAtPeriodEnd = activeGroups.Count(group => IsExpiredAtPeriodEnd(group, to)),
             Renewed = activeGroups.Count(group => HasRenewalInPeriod(group, from, to)),
             WithoutRenewal = activeGroups.Count(group => IsWithoutRenewalInPeriod(group, from, to)),
-            ExpiringInPeriod = activeGroups.Count(group => HasExpirationInPeriod(group, from, to)),
+            ExpiringInPeriod = activeGroups.Count(group => IsFinalExpirationInPeriod(group, from, to)),
             NewLicenses = activeGroups.Count(group => IsNewInPeriod(group, from, to)),
             Lost = activeGroups.Count(group => IsLostInPeriod(group, from, to))
         };
@@ -245,7 +245,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
                 IsExpiredAtPeriodEnd(lifecycleGroup, to),
                 HasRenewalInPeriod(lifecycleGroup, from, to),
                 IsWithoutRenewalInPeriod(lifecycleGroup, from, to),
-                HasExpirationInPeriod(lifecycleGroup, from, to),
+                IsFinalExpirationInPeriod(lifecycleGroup, from, to),
                 IsNewInPeriod(lifecycleGroup, from, to),
                 IsLostInPeriod(lifecycleGroup, from, to));
         }
@@ -423,8 +423,8 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
     private static bool IsLostInPeriod(LicenseGroup group, DateTime from, DateTime to)
         => IsWithoutRenewalInPeriod(group, from, to);
 
-    private static bool HasExpirationInPeriod(LicenseGroup group, DateTime from, DateTime to)
-        => GetLifecyclePeriods(group).Any(record => record.DateToUtc >= from && record.DateToUtc <= to);
+    private static bool IsFinalExpirationInPeriod(LicenseGroup group, DateTime from, DateTime to)
+        => IsWithoutRenewalInPeriod(group, from, to);
 
     private static bool IsNewInPeriod(LicenseGroup group, DateTime from, DateTime to)
     {

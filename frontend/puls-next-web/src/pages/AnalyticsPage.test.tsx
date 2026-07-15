@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { act } from 'react-dom/test-utils';
+import { act, Simulate } from 'react-dom/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AnalyticsPage } from './AnalyticsPage';
 import type { ParusLicenseAnalyticsDto } from '../app/types';
@@ -20,6 +20,16 @@ vi.mock('../app/api', () => ({
 
 vi.mock('../app/toast', () => ({
   showToast: vi.fn()
+}));
+
+vi.mock('../app/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 7, login: 'tester', fullName: 'Tester', isRoot: true },
+    loading: false,
+    isAuthenticated: true,
+    login: vi.fn(),
+    logout: vi.fn()
+  })
 }));
 
 let root: Root | null = null;
@@ -113,6 +123,7 @@ function buildAnalytics(): ParusLicenseAnalyticsDto {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  window.localStorage.clear();
   apiMocks.getParusLicenseAnalytics.mockResolvedValue(buildAnalytics());
   apiMocks.downloadParusLicenseFile.mockResolvedValue(new Blob());
 });
@@ -126,9 +137,41 @@ afterEach(() => {
   container = null;
   vi.useRealTimers();
   vi.clearAllMocks();
+  window.localStorage.clear();
 });
 
 describe('AnalyticsPage', () => {
+  it('keeps annual analytics disabled by default and persists user preference', async () => {
+    const view = render(<AnalyticsPage />);
+    await flushAnalyticsLoad();
+
+    const checkbox = view.querySelector<HTMLInputElement>('.analytics-annual-toggle input[type="checkbox"]');
+    expect(checkbox).toBeInstanceOf(HTMLInputElement);
+    expect(checkbox!.checked).toBe(false);
+    expect(view.querySelector('.analytics-year-table')).toBeNull();
+
+    act(() => {
+      checkbox!.checked = true;
+      Simulate.change(checkbox!);
+    });
+
+    expect(window.localStorage.getItem('puls-analytics:parus-annual-analytics:7')).toBe('1');
+
+    act(() => {
+      root?.unmount();
+    });
+    root = null;
+    container?.remove();
+    container = null;
+
+    const nextView = render(<AnalyticsPage />);
+    await flushAnalyticsLoad();
+
+    const nextCheckbox = nextView.querySelector<HTMLInputElement>('.analytics-annual-toggle input[type="checkbox"]');
+    expect(nextCheckbox?.checked).toBe(true);
+    expect(nextView.querySelector('.analytics-year-table')).toBeInstanceOf(HTMLTableElement);
+  });
+
   it('requests server-side license groups with selected status filter', async () => {
     const view = render(<AnalyticsPage />);
     await flushAnalyticsLoad();

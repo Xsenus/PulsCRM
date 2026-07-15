@@ -142,9 +142,12 @@ public sealed class ParusLicenseAnalyticsServiceTests
 
         var newClient = new LegacyOrg(legacyUnitOfWork) { Name = "New client" };
         var lostClient = new LegacyOrg(legacyUnitOfWork) { Name = "Lost client" };
+        var renewedClient = new LegacyOrg(legacyUnitOfWork) { Name = "Renewed client" };
 
         CreateLicense(legacyUnitOfWork, newClient, "NEW-1", new DateTime(2026, 1, 1), new DateTime(2027, 12, 31), clientNumber: "NEW");
         CreateLicense(legacyUnitOfWork, lostClient, "LOST-1", new DateTime(2024, 1, 1), new DateTime(2025, 6, 30), clientNumber: "LOST");
+        CreateLicense(legacyUnitOfWork, renewedClient, "RENEWED-1", new DateTime(2024, 1, 1), new DateTime(2025, 12, 31), clientNumber: "RENEWED");
+        CreateLicense(legacyUnitOfWork, renewedClient, "RENEWED-2", new DateTime(2026, 1, 1), new DateTime(2026, 12, 31), clientNumber: "RENEWED");
         legacyUnitOfWork.CommitChanges();
 
         var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
@@ -154,15 +157,16 @@ public sealed class ParusLicenseAnalyticsServiceTests
         Assert.Equal("NEW", newGroup.LicenseNumber);
         Assert.True(newGroup.NewInPeriod);
 
-        var lostResult = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, "lost", 0, 10, CancellationToken.None);
+        var lostResult = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2025, 12, 31), null, "lost", 0, 10, CancellationToken.None);
         var lostGroup = Assert.Single(lostResult.OrganizationGroups);
         Assert.Equal("LOST", lostGroup.LicenseNumber);
         Assert.True(lostGroup.LostInPeriod);
 
-        var expiringResult = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2026, 12, 31), null, "expiring", 0, 10, CancellationToken.None);
+        var expiringResult = await service.GetAsync(new DateTime(2025, 1, 1), new DateTime(2025, 12, 31), null, "expiring", 0, 10, CancellationToken.None);
         var expiringGroup = Assert.Single(expiringResult.OrganizationGroups);
         Assert.Equal("LOST", expiringGroup.LicenseNumber);
         Assert.True(expiringGroup.ExpiringInPeriod);
+        Assert.Equal(1, expiringResult.Summary.ExpiringInPeriod);
     }
 
     private static LegacyUnitOfWork CreateLegacyUnitOfWork()
