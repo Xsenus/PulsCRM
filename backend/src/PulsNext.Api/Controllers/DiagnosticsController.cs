@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PulsNext.Domain.Legacy;
@@ -32,9 +33,22 @@ public sealed class DiagnosticsController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public ActionResult<DatabaseInfoDto> GetDatabase()
     {
-        return IsCurrentUserRoot()
-            ? Ok(databaseInfoService.GetLegacyDatabaseInfo())
-            : Forbid();
+        if (!IsCurrentUserRoot())
+        {
+            return Forbid();
+        }
+
+        var info = databaseInfoService.GetLegacyDatabaseInfo();
+        info.ApplicationVersion = GetApplicationVersion();
+        return Ok(info);
+    }
+
+    private static string GetApplicationVersion()
+    {
+        var assembly = typeof(DiagnosticsController).Assembly;
+        return assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString()
+            ?? "unknown";
     }
 
     private bool IsCurrentUserRoot()

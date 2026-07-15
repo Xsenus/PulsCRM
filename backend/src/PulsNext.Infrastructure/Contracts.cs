@@ -47,6 +47,7 @@ public sealed class CurrentUserDto
 public sealed class DatabaseInfoDto
 {
     public string DatabaseName { get; set; } = string.Empty;
+    public string ApplicationVersion { get; set; } = string.Empty;
 }
 
 /// <summary>

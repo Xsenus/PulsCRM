@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_STATE_KEY) === '1');
   const [profileOpen, setProfileOpen] = useState(false);
-  const [databaseName, setDatabaseName] = useState<string | null>(null);
+  const [databaseInfo, setDatabaseInfo] = useState<{ databaseName: string; applicationVersion: string | null } | null>(null);
 
   const currentSection = useMemo(() => getCurrentSection(location.pathname), [location.pathname]);
   const initials = useMemo(() => getInitials(user?.fullName, user?.login), [user?.fullName, user?.login]);
@@ -194,18 +194,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     async function loadDatabaseInfo() {
       if (!user?.isRoot) {
-        setDatabaseName(null);
+        setDatabaseInfo(null);
         return;
       }
 
       try {
         const info = await getDatabaseInfo();
         if (mounted) {
-          setDatabaseName(info?.databaseName?.trim() || null);
+          const databaseName = info?.databaseName?.trim() || null;
+          setDatabaseInfo(databaseName
+            ? {
+                databaseName,
+                applicationVersion: info?.applicationVersion?.trim() || null
+              }
+            : null);
         }
       } catch {
         if (mounted) {
-          setDatabaseName(null);
+          setDatabaseInfo(null);
         }
       }
     }
@@ -310,10 +316,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {databaseName ? (
-          <div className="sidebar-database" title={`База данных: ${databaseName}`}>
+        {databaseInfo ? (
+          <div
+            className="sidebar-database"
+            title={`База данных: ${databaseInfo.databaseName}${databaseInfo.applicationVersion ? `, версия: ${databaseInfo.applicationVersion}` : ''}`}
+          >
             <span className="sidebar-database-label">БД</span>
-            <span className="sidebar-database-name">{databaseName}</span>
+            <span className="sidebar-database-main">
+              <span className="sidebar-database-name">{databaseInfo.databaseName}</span>
+              {databaseInfo.applicationVersion ? (
+                <span className="sidebar-database-version">v{databaseInfo.applicationVersion}</span>
+              ) : null}
+            </span>
           </div>
         ) : null}
       </aside>

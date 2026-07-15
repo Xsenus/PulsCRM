@@ -16,8 +16,10 @@ import { Pagination } from '../components/Pagination';
 import { StatsCards } from '../components/StatsCards';
 
 const GROUP_PAGE_SIZE_OPTIONS = [10, 25, 50];
+const GROUP_EXPORT_PAGE_SIZE = 100;
 const WEEK_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const ANNUAL_ANALYTICS_STORAGE_ID = 'parus-annual-analytics';
+const ANALYTICS_PERIOD_STORAGE_ID = 'parus-period';
 const GROUP_STATUS_OPTIONS = [
   { value: 'all', label: 'Все статусы' },
   { value: 'active', label: 'Действуют' },
@@ -35,6 +37,11 @@ interface InfoDetails {
   description: string;
 }
 
+interface AnalyticsPeriodRange {
+  from: string;
+  to: string;
+}
+
 function startOfCurrentYear() {
   return dayjs().startOf('year').format('YYYY-MM-DD');
 }
@@ -47,12 +54,50 @@ function buildAnnualAnalyticsStorageKey(userId: string) {
   return `puls-analytics:${ANNUAL_ANALYTICS_STORAGE_ID}:${userId}`;
 }
 
+function buildAnalyticsPeriodStorageKey(userId: string) {
+  return `puls-analytics:${ANALYTICS_PERIOD_STORAGE_ID}:${userId}`;
+}
+
+function getDefaultPeriodRange(): AnalyticsPeriodRange {
+  return { from: startOfCurrentYear(), to: endOfCurrentYear() };
+}
+
 function loadAnnualAnalyticsPreference(storageKey: string) {
   if (typeof window === 'undefined') {
     return false;
   }
 
   return window.localStorage.getItem(storageKey) === '1';
+}
+
+function loadAnalyticsPeriodPreference(storageKey: string): AnalyticsPeriodRange {
+  const fallback = getDefaultPeriodRange();
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(storageKey);
+    if (!rawValue) {
+      return fallback;
+    }
+
+    const value = JSON.parse(rawValue) as Partial<AnalyticsPeriodRange>;
+    const from = typeof value.from === 'string' && dayjs(value.from).isValid() ? value.from : null;
+    const to = typeof value.to === 'string' && dayjs(value.to).isValid() ? value.to : null;
+
+    return from && to ? { from, to } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveAnalyticsPeriodPreference(storageKey: string, range: AnalyticsPeriodRange) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(storageKey, JSON.stringify(range));
 }
 
 function toApiDate(value: string) {
@@ -104,6 +149,35 @@ function formatQuantity(value?: string) {
 
   const number = Number(value.replace(',', '.'));
   return Number.isFinite(number) ? formatCount(number) : value;
+}
+
+function getGroupStatusLabel(value: string) {
+  return GROUP_STATUS_OPTIONS.find((option) => option.value === value)?.label ?? GROUP_STATUS_OPTIONS[0].label;
+}
+
+function escapeCsvValue(value: string | number | null | undefined) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function buildLicenseGroupsCsv(groups: ParusLicenseAnalyticsOrganizationGroupDto[]) {
+  const rows = [
+    ['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Состав', 'Статус'],
+    ...groups.map((row) => [
+      row.clientName,
+      row.inn || '',
+      row.mnemoOrg || '',
+      row.licenseNumber,
+      row.databaseCount,
+      row.organizationCount,
+      row.extraWorkplaces,
+      row.periodsCount,
+      row.componentsCount,
+      getGroupExportStatus(row)
+    ])
+  ];
+
+  return rows.map((row) => row.map(escapeCsvValue).join(';')).join('\r\n');
 }
 
 function InfoHeader({ label, info, onOpen }: { label: string; info: InfoDetails; onOpen: (info: InfoDetails) => void }) {
@@ -257,6 +331,26 @@ function renderState({
   return <span className="analytics-status analytics-status-muted">История</span>;
 }
 
+function getGroupExportStatus(row: {
+  activeAtPeriodEnd: boolean;
+  withoutRenewal?: boolean;
+  expiredAtPeriodEnd: boolean;
+}) {
+  if (row.activeAtPeriodEnd) {
+    return 'Действует';
+  }
+
+  if (row.withoutRenewal) {
+    return 'Без продления';
+  }
+
+  if (row.expiredAtPeriodEnd) {
+    return 'Просрочена';
+  }
+
+  return 'История';
+}
+
 function buildLicenseMeta(row: ParusLicenseAnalyticsOrganizationGroupDto) {
   return [
     row.databaseCount > 0 ? `Баз: ${formatCount(row.databaseCount)}` : null,
@@ -266,14 +360,78 @@ function buildLicenseMeta(row: ParusLicenseAnalyticsOrganizationGroupDto) {
   ].filter(Boolean).join(' · ');
 }
 
+function StatusCombobox({
+  value,
+  options,
+  onChange
+}: {
+  value: string;
+  options: typeof GROUP_STATUS_OPTIONS;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = getGroupStatusLabel(value);
+
+  return (
+    <div
+      className="analytics-combobox"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="analytics-combobox-button analytics-groups-status"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Фильтр по статусу"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{selectedLabel}</span>
+        <ActionIcon kind="chevronDown" />
+      </button>
+      {open ? (
+        <div className="analytics-combobox-menu" role="listbox" aria-label="Фильтр по статусу">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              data-value={option.value}
+              aria-selected={option.value === value}
+              className={`analytics-combobox-option${option.value === value ? ' selected' : ''}`}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function AnalyticsPage() {
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
   const annualAnalyticsStorageKey = buildAnnualAnalyticsStorageKey(currentUserId);
-  const [dateFrom, setDateFrom] = useState(startOfCurrentYear);
-  const [dateTo, setDateTo] = useState(endOfCurrentYear);
+  const analyticsPeriodStorageKey = buildAnalyticsPeriodStorageKey(currentUserId);
+  const [initialPeriod] = useState(() => loadAnalyticsPeriodPreference(analyticsPeriodStorageKey));
+  const [dateFrom, setDateFrom] = useState(() => initialPeriod.from);
+  const [dateTo, setDateTo] = useState(() => initialPeriod.to);
   const [analytics, setAnalytics] = useState<ParusLicenseAnalyticsDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exportingGroups, setExportingGroups] = useState(false);
   const [annualAnalytics, setAnnualAnalytics] = useState(() => loadAnnualAnalyticsPreference(annualAnalyticsStorageKey));
   const [infoModal, setInfoModal] = useState<InfoDetails | null>(null);
   const [groupSearch, setGroupSearch] = useState('');
@@ -282,7 +440,7 @@ export function AnalyticsPage() {
   const [groupPageSize, setGroupPageSize] = useState(10);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
   const [expandedPeriods, setExpandedPeriods] = useState<Set<string>>(() => new Set());
-  const [appliedRange, setAppliedRange] = useState(() => ({ from: startOfCurrentYear(), to: endOfCurrentYear() }));
+  const [appliedRange, setAppliedRange] = useState<AnalyticsPeriodRange>(() => initialPeriod);
 
   const normalizedRange = useMemo(() => {
     const from = dayjs(dateFrom);
@@ -323,12 +481,59 @@ export function AnalyticsPage() {
   }, [annualAnalyticsStorageKey]);
 
   useEffect(() => {
+    const storedRange = loadAnalyticsPeriodPreference(analyticsPeriodStorageKey);
+    setDateFrom(storedRange.from);
+    setDateTo(storedRange.to);
+    setAppliedRange(storedRange);
+    setGroupPage(1);
+  }, [analyticsPeriodStorageKey]);
+
+  useEffect(() => {
     window.localStorage.setItem(annualAnalyticsStorageKey, annualAnalytics ? '1' : '0');
   }, [annualAnalytics, annualAnalyticsStorageKey]);
 
   const applyPeriod = () => {
     setAppliedRange(normalizedRange);
+    saveAnalyticsPeriodPreference(analyticsPeriodStorageKey, normalizedRange);
     setGroupPage(1);
+  };
+
+  const exportLicenseGroups = async () => {
+    setExportingGroups(true);
+    try {
+      const loadedGroups: ParusLicenseAnalyticsOrganizationGroupDto[] = [];
+      let totalCount = groupsTotalCount;
+      let skip = 0;
+
+      while (skip < totalCount) {
+        const page = await getParusLicenseAnalytics({
+          dateFromUtc: toApiDate(appliedRange.from),
+          dateToUtc: toApiDate(appliedRange.to),
+          search: groupSearch.trim() || undefined,
+          status: groupStatus,
+          skip,
+          take: GROUP_EXPORT_PAGE_SIZE
+        });
+
+        loadedGroups.push(...page.organizationGroups);
+        totalCount = page.organizationGroupsTotalCount;
+        skip += GROUP_EXPORT_PAGE_SIZE;
+
+        if (page.organizationGroups.length === 0) {
+          break;
+        }
+      }
+
+      const csv = `\uFEFF${buildLicenseGroupsCsv(loadedGroups)}`;
+      saveBlob(
+        new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+        `parus-license-groups-${appliedRange.from}-${appliedRange.to}.csv`
+      );
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось подготовить выгрузку групп лицензий.'), 'error', 4000);
+    } finally {
+      setExportingGroups(false);
+    }
   };
 
   const downloadLicenseFile = async (clientId: number, fileName?: string) => {
@@ -498,7 +703,19 @@ export function AnalyticsPage() {
           <section className="panel">
             <div className="section-header-inline">
               <h3>Группы лицензий</h3>
-              <span className="field-hint">{formatCount(groupsTotalCount)} групп</span>
+              <div className="analytics-groups-header-actions">
+                <span className="field-hint">{formatCount(groupsTotalCount)} групп</span>
+                <button
+                  type="button"
+                  className="secondary-button button-inline icon-button analytics-groups-export-button"
+                  onClick={() => void exportLicenseGroups()}
+                  disabled={exportingGroups || loading || groupsTotalCount === 0}
+                  aria-label="Выгрузить группы лицензий в Excel"
+                  title="Выгрузить группы лицензий в Excel"
+                >
+                  <ActionIcon kind="excel" />
+                </button>
+              </div>
             </div>
 
             <div className="analytics-groups-toolbar">
@@ -510,16 +727,7 @@ export function AnalyticsPage() {
                 aria-label="Поиск по группам лицензий"
                 onChange={(event) => setGroupSearch(event.target.value)}
               />
-              <select
-                className="form-select analytics-groups-status"
-                value={groupStatus}
-                aria-label="Фильтр по статусу"
-                onChange={(event) => setGroupStatus(event.target.value)}
-              >
-                {GROUP_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+              <StatusCombobox value={groupStatus} options={GROUP_STATUS_OPTIONS} onChange={setGroupStatus} />
               <button
                 type="button"
                 className="secondary-button button-inline"

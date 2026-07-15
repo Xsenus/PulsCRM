@@ -185,12 +185,18 @@ describe('AnalyticsPage', () => {
       take: 10
     }));
 
-    const statusSelect = view.querySelector<HTMLSelectElement>('.analytics-groups-status');
-    expect(statusSelect).toBeInstanceOf(HTMLSelectElement);
+    const statusButton = view.querySelector<HTMLButtonElement>('.analytics-groups-status');
+    expect(statusButton).toBeInstanceOf(HTMLButtonElement);
 
     act(() => {
-      statusSelect!.value = 'lost';
-      statusSelect!.dispatchEvent(new Event('change', { bubbles: true }));
+      Simulate.click(statusButton!);
+    });
+
+    const lostOption = view.querySelector<HTMLButtonElement>('.analytics-combobox-option[data-value="lost"]');
+    expect(lostOption).toBeInstanceOf(HTMLButtonElement);
+
+    act(() => {
+      Simulate.click(lostOption!);
     });
     await flushAnalyticsLoad();
 
@@ -198,6 +204,51 @@ describe('AnalyticsPage', () => {
       status: 'lost',
       skip: 0,
       take: 10
+    }));
+  });
+
+  it('restores selected period and saves it after generation', async () => {
+    window.localStorage.setItem('puls-analytics:parus-period:7', JSON.stringify({
+      from: '2025-02-01',
+      to: '2025-03-31'
+    }));
+
+    const view = render(<AnalyticsPage />);
+    await flushAnalyticsLoad();
+
+    expect(apiMocks.getParusLicenseAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({
+      dateFromUtc: '2025-02-01T00:00:00.000Z',
+      dateToUtc: '2025-03-31T00:00:00.000Z'
+    }));
+
+    const fromInput = view.querySelector<HTMLInputElement>('#analytics-date-from');
+    const toInput = view.querySelector<HTMLInputElement>('#analytics-date-to');
+    const applyButton = Array.from(view.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.includes('Сформировать'));
+
+    expect(fromInput).toBeInstanceOf(HTMLInputElement);
+    expect(toInput).toBeInstanceOf(HTMLInputElement);
+    expect(applyButton).toBeInstanceOf(HTMLButtonElement);
+
+    act(() => {
+      fromInput!.value = '01.04.2025';
+      Simulate.change(fromInput!);
+      toInput!.value = '30.04.2025';
+      Simulate.change(toInput!);
+    });
+
+    act(() => {
+      Simulate.click(applyButton!);
+    });
+    await flushAnalyticsLoad();
+
+    expect(window.localStorage.getItem('puls-analytics:parus-period:7')).toBe(JSON.stringify({
+      from: '2025-04-01',
+      to: '2025-04-30'
+    }));
+    expect(apiMocks.getParusLicenseAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({
+      dateFromUtc: '2025-04-01T00:00:00.000Z',
+      dateToUtc: '2025-04-30T00:00:00.000Z'
     }));
   });
 });

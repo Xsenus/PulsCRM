@@ -265,6 +265,21 @@ select {
   white-space: nowrap;
 }
 
+.sidebar-database-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-database-version {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(154, 176, 207, 0.58);
+  font-size: 0.7rem;
+}
+
 .app-shell-collapsed .sidebar-database {
   display: none;
 }
@@ -1429,13 +1444,105 @@ select {
   margin-bottom: 14px;
 }
 
+.analytics-groups-header-actions {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.analytics-groups-export-button {
+  width: 40px;
+  height: 40px;
+}
+
 .analytics-groups-search {
   max-width: 520px;
+}
+
+.analytics-combobox {
+  position: relative;
+  flex: 0 0 auto;
 }
 
 .analytics-groups-status {
   width: 190px;
   min-width: 170px;
+}
+
+.analytics-combobox-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--text);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.analytics-combobox-button:hover {
+  border-color: rgba(37, 99, 235, 0.32);
+}
+
+.analytics-combobox-button:focus-visible {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.analytics-combobox-button svg {
+  width: 18px;
+  height: 18px;
+  color: var(--brand-2);
+}
+
+.analytics-combobox-menu {
+  position: absolute;
+  z-index: 35;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  min-width: 210px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.14);
+}
+
+.analytics-combobox-option {
+  width: 100%;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.analytics-combobox-option:hover,
+.analytics-combobox-option:focus-visible {
+  outline: none;
+  background: #eef4ff;
+  color: var(--brand-2);
+}
+
+.analytics-combobox-option.selected {
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .analytics-info-header {
@@ -5458,6 +5565,14 @@ body.is-dragging-column {
 
   .analytics-groups-status {
     width: 100%;
+  }
+
+  .analytics-combobox {
+    width: 100%;
+  }
+
+  .analytics-groups-header-actions {
+    align-items: flex-start;
   }
 
   .settings-parus-grid {

@@ -21,6 +21,7 @@ export interface CurrentUserDto {
 
 export interface DatabaseInfoDto {
   databaseName: string;
+  applicationVersion?: string;
 }
 
 export interface LoginUserOptionDto {

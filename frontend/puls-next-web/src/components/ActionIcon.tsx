@@ -6,6 +6,7 @@ export type ActionIconKind =
   | 'chevronDown'
   | 'clear'
   | 'download'
+  | 'excel'
   | 'first'
   | 'last'
   | 'next'
@@ -63,6 +64,15 @@ export function ActionIcon({ kind, className }: ActionIconProps) {
           <path d="M12 4v10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           <path d="M8 10l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M5 19h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      );
+
+    case 'excel':
+      return (
+        <svg {...svgProps}>
+          <path d="M6 4h8l4 4v12H6z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+          <path d="M14 4v4h4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+          <path d="M9 11l4 5M13 11l-4 5" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
         </svg>
       );
 
