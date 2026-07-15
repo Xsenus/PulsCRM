@@ -115,7 +115,28 @@ function buildAnalytics(): ParusLicenseAnalyticsDto {
         expiringInPeriod: true,
         newInPeriod: false,
         lostInPeriod: true,
-        periods: []
+        periods: [
+          {
+            key: '1:HA2360:20260101:20261231',
+            licenseNumber: 'HA2360',
+            dateSinceUtc: from,
+            dateToUtc: to,
+            componentsCount: 1,
+            activeAtPeriodEnd: false,
+            expiredAtPeriodEnd: true,
+            hasLicenseFile: false,
+            components: [
+              {
+                id: 11,
+                number: '1',
+                quantity: '5',
+                product: 'Парус',
+                modification: 'Торнадо',
+                nomenclature: 'Рабочее место'
+              }
+            ]
+          }
+        ]
       }
     ]
   };
@@ -250,5 +271,47 @@ describe('AnalyticsPage', () => {
       dateFromUtc: '2025-04-01T00:00:00.000Z',
       dateToUtc: '2025-04-30T00:00:00.000Z'
     }));
+  });
+
+  it('exports a workbook with organization and license composition sheets', async () => {
+    const originalCreateObjectUrl = URL.createObjectURL;
+    const originalRevokeObjectUrl = URL.revokeObjectURL;
+    let exportedBlob: Blob | null = null;
+
+    URL.createObjectURL = vi.fn((blob: Blob | MediaSource) => {
+      exportedBlob = blob as Blob;
+      return 'blob:analytics-export';
+    });
+    URL.revokeObjectURL = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    try {
+      const view = render(<AnalyticsPage />);
+      await flushAnalyticsLoad();
+
+      const exportButton = view.querySelector<HTMLButtonElement>('[aria-label="Выгрузить отчет по группам лицензий в Excel"]');
+      expect(exportButton).toBeInstanceOf(HTMLButtonElement);
+
+      await act(async () => {
+        Simulate.click(exportButton!);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(clickSpy).toHaveBeenCalled();
+      expect(exportedBlob).toBeInstanceOf(Blob);
+      expect(exportedBlob?.type).toBe('application/vnd.ms-excel;charset=utf-8');
+
+      const workbook = await exportedBlob!.text();
+      expect(workbook).toContain('<Worksheet ss:Name="Организации">');
+      expect(workbook).toContain('<Worksheet ss:Name="Состав лицензий">');
+      expect(workbook).toContain('Client');
+      expect(workbook).toContain('Рабочее место');
+      expect(workbook).toContain('Торнадо');
+    } finally {
+      URL.createObjectURL = originalCreateObjectUrl;
+      URL.revokeObjectURL = originalRevokeObjectUrl;
+      clickSpy.mockRestore();
+    }
   });
 });

@@ -1441,7 +1441,15 @@ select {
   display: flex;
   gap: 10px;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 14px;
+}
+
+.analytics-groups-toolbar-main {
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .analytics-groups-header-actions {
@@ -1458,6 +1466,21 @@ select {
 
 .analytics-groups-search {
   max-width: 520px;
+}
+
+.analytics-status-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-status-info-icon {
+  flex: 0 0 auto;
+}
+
+.analytics-status-info-tooltip {
+  width: 310px;
 }
 
 .analytics-combobox {
@@ -5559,6 +5582,11 @@ body.is-dragging-column {
     flex-direction: column;
   }
 
+  .analytics-groups-toolbar-main {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .analytics-groups-search {
     max-width: none;
   }
@@ -5568,6 +5596,10 @@ body.is-dragging-column {
   }
 
   .analytics-combobox {
+    width: 100%;
+  }
+
+  .analytics-groups-export-button {
     width: 100%;
   }
 

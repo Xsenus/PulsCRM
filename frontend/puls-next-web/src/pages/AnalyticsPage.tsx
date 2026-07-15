@@ -37,6 +37,12 @@ interface InfoDetails {
   description: string;
 }
 
+const STATUS_FILTER_INFO: InfoDetails = {
+  label: 'Статус',
+  title: 'Как работает фильтр статуса',
+  description: 'Фильтр отбирает группы лицензий по расчетному состоянию на выбранный период. Например, "Заканчиваются" показывает лицензии, у которых последний известный период завершился внутри диапазона и нет более позднего продления; "Без продления" смотрит на последний период без привязки к дате окончания внутри диапазона.'
+};
+
 interface AnalyticsPeriodRange {
   from: string;
   to: string;
@@ -155,15 +161,42 @@ function getGroupStatusLabel(value: string) {
   return GROUP_STATUS_OPTIONS.find((option) => option.value === value)?.label ?? GROUP_STATUS_OPTIONS[0].label;
 }
 
-function escapeCsvValue(value: string | number | null | undefined) {
-  const text = value === null || value === undefined ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
+function escapeXmlValue(value: string | number | null | undefined) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-function buildLicenseGroupsCsv(groups: ParusLicenseAnalyticsOrganizationGroupDto[]) {
-  const rows = [
-    ['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Состав', 'Статус'],
-    ...groups.map((row) => [
+function buildSpreadsheetCell(value: string | number | null | undefined, styleId?: string) {
+  const isNumber = typeof value === 'number' && Number.isFinite(value);
+  const style = styleId ? ` ss:StyleID="${styleId}"` : '';
+  return `<Cell${style}><Data ss:Type="${isNumber ? 'Number' : 'String'}">${escapeXmlValue(value)}</Data></Cell>`;
+}
+
+function buildSpreadsheetRow(cells: Array<string | number | null | undefined>, styleId?: string) {
+  return `<Row>${cells.map((cell) => buildSpreadsheetCell(cell, styleId)).join('')}</Row>`;
+}
+
+function buildSpreadsheetWorksheet(name: string, rows: string[], columnWidths: number[]) {
+  const columns = columnWidths.map((width) => `<Column ss:Width="${width}" />`).join('');
+  return `<Worksheet ss:Name="${escapeXmlValue(name)}"><Table>${columns}${rows.join('')}</Table></Worksheet>`;
+}
+
+function buildLicenseGroupsWorkbook(
+  groups: ParusLicenseAnalyticsOrganizationGroupDto[],
+  range: AnalyticsPeriodRange,
+  status: string
+) {
+  const title = `Отчет по группам лицензий Парус за период ${formatInputDate(range.from)} - ${formatInputDate(range.to)}`;
+  const statusLabel = getGroupStatusLabel(status);
+  const organizationRows = [
+    `<Row ss:Height="24"><Cell ss:MergeAcross="9" ss:StyleID="Title"><Data ss:Type="String">${escapeXmlValue(title)}</Data></Cell></Row>`,
+    buildSpreadsheetRow(['Фильтр статуса', statusLabel, 'Групп', groups.length], 'Meta'),
+    buildSpreadsheetRow([], 'Meta'),
+    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус'], 'Header'),
+    ...groups.map((row) => buildSpreadsheetRow([
       row.clientName,
       row.inn || '',
       row.mnemoOrg || '',
@@ -174,10 +207,84 @@ function buildLicenseGroupsCsv(groups: ParusLicenseAnalyticsOrganizationGroupDto
       row.periodsCount,
       row.componentsCount,
       getGroupExportStatus(row)
-    ])
+    ]))
   ];
 
-  return rows.map((row) => row.map(escapeCsvValue).join(';')).join('\r\n');
+  const componentRows = [
+    `<Row ss:Height="24"><Cell ss:MergeAcross="10" ss:StyleID="Title"><Data ss:Type="String">${escapeXmlValue('Состав лицензий и количество мест')}</Data></Cell></Row>`,
+    buildSpreadsheetRow(['Период отчета', `${formatInputDate(range.from)} - ${formatInputDate(range.to)}`, 'Фильтр статуса', statusLabel], 'Meta'),
+    buildSpreadsheetRow([], 'Meta'),
+    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Период с', 'Период по', 'Продукт', 'Модификация', 'Номенклатура', 'Кол-во мест', 'Номер строки'], 'Header'),
+    ...groups.flatMap((row) => {
+      const periodRows = row.periods.flatMap((period) => {
+        if (period.components.length === 0) {
+          return [buildSpreadsheetRow([
+            row.clientName,
+            row.inn || '',
+            row.mnemoOrg || '',
+            period.licenseNumber,
+            formatDate(period.dateSinceUtc),
+            formatDate(period.dateToUtc),
+            '',
+            '',
+            'Состав не указан',
+            '',
+            ''
+          ])];
+        }
+
+        return period.components.map((component) => buildSpreadsheetRow([
+          row.clientName,
+          row.inn || '',
+          row.mnemoOrg || '',
+          period.licenseNumber,
+          formatDate(period.dateSinceUtc),
+          formatDate(period.dateToUtc),
+          component.product || '',
+          component.modification || '',
+          component.nomenclature || '',
+          formatQuantity(component.quantity),
+          component.number || ''
+        ]));
+      });
+
+      return periodRows.length > 0
+        ? periodRows
+        : [buildSpreadsheetRow([
+            row.clientName,
+            row.inn || '',
+            row.mnemoOrg || '',
+            row.licenseNumber,
+            '',
+            '',
+            '',
+            '',
+            'Периоды не найдены',
+            '',
+            ''
+          ])];
+    })
+  ];
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:x="urn:schemas-microsoft-com:office:excel"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:html="http://www.w3.org/TR/REC-html40">
+  <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+    <Title>${escapeXmlValue(title)}</Title>
+  </DocumentProperties>
+  <Styles>
+    <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="11" /></Style>
+    <Style ss:ID="Title"><Font ss:FontName="Calibri" ss:Size="14" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#EAF1FF" ss:Pattern="Solid" /></Style>
+    <Style ss:ID="Meta"><Font ss:FontName="Calibri" ss:Size="10" ss:Color="#475569" /></Style>
+    <Style ss:ID="Header"><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#FFFFFF" /><Interior ss:Color="#2563EB" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1D4ED8" /></Borders></Style>
+  </Styles>
+  ${buildSpreadsheetWorksheet('Организации', organizationRows, [240, 110, 150, 90, 60, 130, 90, 85, 95, 120])}
+  ${buildSpreadsheetWorksheet('Состав лицензий', componentRows, [240, 110, 150, 90, 90, 90, 180, 220, 260, 90, 95])}
+</Workbook>`;
 }
 
 function InfoHeader({ label, info, onOpen }: { label: string; info: InfoDetails; onOpen: (info: InfoDetails) => void }) {
@@ -524,10 +631,10 @@ export function AnalyticsPage() {
         }
       }
 
-      const csv = `\uFEFF${buildLicenseGroupsCsv(loadedGroups)}`;
+      const workbook = buildLicenseGroupsWorkbook(loadedGroups, appliedRange, groupStatus);
       saveBlob(
-        new Blob([csv], { type: 'text/csv;charset=utf-8' }),
-        `parus-license-groups-${appliedRange.from}-${appliedRange.to}.csv`
+        new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8' }),
+        `parus-license-groups-${appliedRange.from}-${appliedRange.to}.xls`
       );
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось подготовить выгрузку групп лицензий.'), 'error', 4000);
@@ -705,39 +812,50 @@ export function AnalyticsPage() {
               <h3>Группы лицензий</h3>
               <div className="analytics-groups-header-actions">
                 <span className="field-hint">{formatCount(groupsTotalCount)} групп</span>
-                <button
-                  type="button"
-                  className="secondary-button button-inline icon-button analytics-groups-export-button"
-                  onClick={() => void exportLicenseGroups()}
-                  disabled={exportingGroups || loading || groupsTotalCount === 0}
-                  aria-label="Выгрузить группы лицензий в Excel"
-                  title="Выгрузить группы лицензий в Excel"
-                >
-                  <ActionIcon kind="excel" />
-                </button>
               </div>
             </div>
 
             <div className="analytics-groups-toolbar">
-              <input
-                className="form-input analytics-groups-search"
-                type="search"
-                value={groupSearch}
-                placeholder="Поиск по организации, ИНН, номеру или составу"
-                aria-label="Поиск по группам лицензий"
-                onChange={(event) => setGroupSearch(event.target.value)}
-              />
-              <StatusCombobox value={groupStatus} options={GROUP_STATUS_OPTIONS} onChange={setGroupStatus} />
+              <div className="analytics-groups-toolbar-main">
+                <input
+                  className="form-input analytics-groups-search"
+                  type="search"
+                  value={groupSearch}
+                  placeholder="Поиск по организации, ИНН, номеру или составу"
+                  aria-label="Поиск по группам лицензий"
+                  onChange={(event) => setGroupSearch(event.target.value)}
+                />
+                <div className="analytics-status-filter">
+                  <StatusCombobox value={groupStatus} options={GROUP_STATUS_OPTIONS} onChange={setGroupStatus} />
+                  <button type="button" className="analytics-info-icon analytics-status-info-icon" aria-label="Подробнее о фильтре статуса" onClick={() => setInfoModal(STATUS_FILTER_INFO)}>
+                    i
+                    <span className="analytics-info-tooltip analytics-status-info-tooltip" role="tooltip">
+                      <strong>{STATUS_FILTER_INFO.title}</strong>
+                      <span>{STATUS_FILTER_INFO.description}</span>
+                    </span>
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button button-inline"
+                  onClick={() => {
+                    setGroupSearch('');
+                    setGroupStatus('all');
+                  }}
+                  disabled={!groupSearch && groupStatus === 'all'}
+                >
+                  Сбросить
+                </button>
+              </div>
               <button
                 type="button"
-                className="secondary-button button-inline"
-                onClick={() => {
-                  setGroupSearch('');
-                  setGroupStatus('all');
-                }}
-                disabled={!groupSearch && groupStatus === 'all'}
+                className="secondary-button button-inline icon-button analytics-groups-export-button"
+                onClick={() => void exportLicenseGroups()}
+                disabled={exportingGroups || loading || groupsTotalCount === 0}
+                aria-label="Выгрузить отчет по группам лицензий в Excel"
+                title="Выгрузить отчет по группам лицензий в Excel"
               >
-                Сбросить
+                <ActionIcon kind="excel" />
               </button>
             </div>
 
