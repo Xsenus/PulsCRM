@@ -70,11 +70,11 @@ export function ActionIcon({ kind, className }: ActionIconProps) {
     case 'excel':
       return (
         <svg {...svgProps}>
-          <path d="M7 3.75h7.4L19 8.35V20.25H7z" fill="#ffffff" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
-          <path d="M14.4 3.75v4.6H19" fill="none" stroke="currentColor" strokeWidth="1.45" strokeLinejoin="round" />
-          <path d="M4.5 6.4h8.2v11.2H4.5z" fill="currentColor" />
-          <path d="M6.55 9.35l4.1 5.3M10.65 9.35l-4.1 5.3" fill="none" stroke="#ffffff" strokeWidth="1.55" strokeLinecap="round" />
-          <path d="M14.8 11.1h2.15M14.8 14.1h2.15M14.8 17.1h2.15" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+          <path d="M7.2 3.1h8.1l4.5 4.55V20.9H7.2z" fill="#ffffff" stroke="#107c41" strokeWidth="1.25" strokeLinejoin="round" />
+          <path d="M15.3 3.1v4.55h4.5" fill="#e8f5ee" stroke="#107c41" strokeWidth="1.25" strokeLinejoin="round" />
+          <path d="M13.05 10.05h4.45M13.05 13h4.45M13.05 15.95h4.45M14.65 8.35v9.3" fill="none" stroke="#b7d7c3" strokeWidth="1" strokeLinecap="round" />
+          <path d="M4.2 6.45h8.55v11.1H4.2z" fill="#107c41" stroke="#0e6f3a" strokeWidth="0.8" strokeLinejoin="round" />
+          <path d="M6.3 9.55l4.25 4.9M10.55 9.55l-4.25 4.9" fill="none" stroke="#ffffff" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
 

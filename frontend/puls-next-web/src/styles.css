@@ -1494,16 +1494,16 @@ select {
 .analytics-groups-export-button {
   width: 44px;
   height: 44px;
-  border-color: #15803d;
-  background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
-  color: #ffffff;
-  box-shadow: 0 10px 22px rgba(21, 128, 61, 0.24);
+  border-color: rgba(16, 124, 65, 0.28);
+  background: #ffffff;
+  color: #107c41;
+  box-shadow: 0 10px 22px rgba(16, 124, 65, 0.14);
 }
 
 .analytics-groups-export-button:hover:not(:disabled) {
-  border-color: #166534;
-  background: linear-gradient(180deg, #16a34a 0%, #166534 100%);
-  color: #ffffff;
+  border-color: rgba(16, 124, 65, 0.48);
+  background: #f0fdf4;
+  color: #107c41;
   transform: translateY(-1px);
 }
 
