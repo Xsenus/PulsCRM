@@ -161,6 +161,15 @@ function getCurrentSection(pathname: string) {
   return menu.find((item) => item.to && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)))?.label || 'Раздел';
 }
 
+function getApplicationVersionNumber(version: string | null) {
+  if (!version) {
+    return null;
+  }
+
+  const trimmed = version.trim().replace(/^v/i, '');
+  return trimmed.split('+')[0];
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -176,6 +185,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const avatarSource = useMemo(
     () => buildImageSource(user?.avatarBase64, user?.avatarContentType),
     [user?.avatarBase64, user?.avatarContentType]
+  );
+  const applicationVersion = useMemo(
+    () => getApplicationVersionNumber(databaseInfo?.applicationVersion ?? null),
+    [databaseInfo?.applicationVersion]
   );
   const profileRole = user?.userGroup?.trim() || 'Разработчик';
   const profileContact = user?.phone?.trim() || user?.email?.trim() || user?.login || 'Контакт не указан';
@@ -324,8 +337,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="sidebar-database-label">БД</span>
             <span className="sidebar-database-main">
               <span className="sidebar-database-name">{databaseInfo.databaseName}</span>
-              {databaseInfo.applicationVersion ? (
-                <span className="sidebar-database-version">v{databaseInfo.applicationVersion}</span>
+              {applicationVersion ? (
+                <span className="sidebar-database-version" title={databaseInfo.applicationVersion ?? undefined}>
+                  <span className="sidebar-database-version-label">Версия</span>
+                  <span className="sidebar-database-version-number">{applicationVersion}</span>
+                </span>
               ) : null}
             </span>
           </div>
