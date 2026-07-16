@@ -102,6 +102,7 @@ function buildAnalytics(): ParusLicenseAnalyticsDto {
         clientName: 'Client',
         inn: '5400000000',
         raion: 'Central district',
+        salaryWorking: true,
         mnemoOrg: 'Client',
         licenseNumber: 'HA2360',
         lastDateToUtc: to,
@@ -227,6 +228,44 @@ describe('AnalyticsPage', () => {
 
     expect(apiMocks.getParusLicenseAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({
       status: 'lost',
+      skip: 0,
+      take: 10
+    }));
+  });
+
+  it('shows salary filter only for expiring status and sends it to the server', async () => {
+    const view = render(<AnalyticsPage />);
+    await flushAnalyticsLoad();
+
+    expect(view.textContent).not.toContain('Только ЗП');
+
+    const statusButton = view.querySelector<HTMLButtonElement>('.analytics-groups-status');
+    expect(statusButton).toBeInstanceOf(HTMLButtonElement);
+
+    act(() => {
+      Simulate.click(statusButton!);
+    });
+
+    const expiringOption = view.querySelector<HTMLButtonElement>('.analytics-combobox-option[data-value="expiring"]');
+    expect(expiringOption).toBeInstanceOf(HTMLButtonElement);
+
+    act(() => {
+      Simulate.click(expiringOption!);
+    });
+    await flushAnalyticsLoad();
+
+    const salaryCheckbox = view.querySelector<HTMLInputElement>('.analytics-salary-toggle input[type="checkbox"]');
+    expect(salaryCheckbox).toBeInstanceOf(HTMLInputElement);
+
+    act(() => {
+      salaryCheckbox!.checked = true;
+      Simulate.change(salaryCheckbox!);
+    });
+    await flushAnalyticsLoad();
+
+    expect(apiMocks.getParusLicenseAnalytics).toHaveBeenLastCalledWith(expect.objectContaining({
+      status: 'expiring',
+      salaryOnly: true,
       skip: 0,
       take: 10
     }));

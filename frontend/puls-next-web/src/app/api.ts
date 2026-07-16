@@ -154,6 +154,7 @@ export interface ParusLicenseAnalyticsParams {
   dateToUtc: string;
   search?: string;
   status?: string;
+  salaryOnly?: boolean;
   skip?: number;
   take?: number;
 }

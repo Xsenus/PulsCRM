@@ -11,6 +11,7 @@ public interface IParusLicenseAnalyticsService
         DateTime dateToUtc,
         string? groupSearch,
         string? groupStatus,
+        bool salaryOnly,
         int groupSkip,
         int groupTake,
         CancellationToken cancellationToken);
@@ -24,6 +25,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         DateTime dateToUtc,
         string? groupSearch,
         string? groupStatus,
+        bool salaryOnly,
         int groupSkip,
         int groupTake,
         CancellationToken cancellationToken)
@@ -47,7 +49,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             .OrderBy(group => group.Group.DisplayClientName)
             .ThenBy(group => group.Group.DisplayBaseNumber, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var filteredOrganizationGroups = FilterOrganizationGroups(allOrganizationGroups, groupSearch, groupStatus, range.From, range.To).ToArray();
+        var filteredOrganizationGroups = FilterOrganizationGroups(allOrganizationGroups, groupSearch, groupStatus, salaryOnly, range.From, range.To).ToArray();
         var organizationGroups = filteredOrganizationGroups
             .Skip(Math.Max(0, groupSkip))
             .Take(NormalizeTake(groupTake))
@@ -166,6 +168,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             NullIfWhiteSpace(license.INN),
             NullIfWhiteSpace(license.MnemoOrg),
             NullIfWhiteSpace(license.Org?.Raion?.Name),
+            otherInfo?.ZpWorking == true,
             NullIfWhiteSpace(license.Payer),
             NullIfWhiteSpace(license.RegNumberClient),
             NullIfWhiteSpace(license.RegNumberAbonement),
@@ -244,6 +247,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
                 lifecycleGroup.Records.Max(record => record.ExtraWorkplaces),
                 periodGroups.Length,
                 periodGroups.Sum(period => period.Length),
+                lifecycleGroup.Records.Any(record => record.SalaryWorking),
                 IsActiveAt(lifecycleGroup, to),
                 IsExpiredAtPeriodEnd(lifecycleGroup, to),
                 HasRenewalInPeriod(lifecycleGroup, from, to),
@@ -294,6 +298,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             Inn = row.Latest.Inn,
             MnemoOrg = row.Latest.MnemoOrg,
             Raion = row.Latest.Raion,
+            SalaryWorking = row.SalaryWorking,
             LicenseNumber = row.Group.DisplayBaseNumber,
             LicenseComposition = row.LicenseComposition,
             LastDateToUtc = row.LastDateToUtc,
@@ -324,6 +329,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         IEnumerable<OrganizationGroupRow> groups,
         string? search,
         string? status,
+        bool salaryOnly,
         DateTime from,
         DateTime to)
     {
@@ -332,6 +338,11 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         if (!string.IsNullOrWhiteSpace(normalizedStatus) && normalizedStatus != "all")
         {
             result = result.Where(group => MatchesStatus(group, normalizedStatus));
+        }
+
+        if (salaryOnly)
+        {
+            result = result.Where(group => group.SalaryWorking);
         }
 
         var term = NullIfWhiteSpace(search);
@@ -367,6 +378,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             group.Latest.Inn,
             group.Latest.Raion,
             group.Latest.MnemoOrg,
+            group.SalaryWorking ? "ЗП зарплата заработная плата" : null,
             group.Group.DisplayBaseNumber,
             group.LastDateToUtc.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
             group.LicenseComposition
@@ -546,6 +558,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         string? Inn,
         string? MnemoOrg,
         string? Raion,
+        bool SalaryWorking,
         string? Payer,
         string? RegNumberClient,
         string? RegNumberAbonement,
@@ -581,6 +594,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         int ExtraWorkplaces,
         int PeriodsCount,
         int ComponentsCount,
+        bool SalaryWorking,
         bool ActiveAtPeriodEnd,
         bool ExpiredAtPeriodEnd,
         bool RenewedInPeriod,

@@ -163,6 +163,11 @@ public sealed class ParusLicenseAnalyticsQuery
     public string? Status { get; set; }
 
     /// <summary>
+    /// Возвращать только организации, с которыми ведется зарплатное сопровождение.
+    /// </summary>
+    public bool? SalaryOnly { get; set; }
+
+    /// <summary>
     /// Сколько групп пропустить.
     /// </summary>
     public int? Skip { get; set; }

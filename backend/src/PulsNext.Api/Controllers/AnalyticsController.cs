@@ -30,6 +30,7 @@ public sealed class AnalyticsController(
             to,
             query.Search,
             query.Status,
+            query.SalaryOnly == true,
             query.Skip ?? 0,
             query.Take ?? 10,
             cancellationToken));

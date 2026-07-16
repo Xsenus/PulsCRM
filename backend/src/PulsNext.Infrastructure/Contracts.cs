@@ -442,6 +442,7 @@ public sealed class ParusLicenseAnalyticsOrganizationGroupDto
     public string? Inn { get; set; }
     public string? MnemoOrg { get; set; }
     public string? Raion { get; set; }
+    public bool SalaryWorking { get; set; }
     public string LicenseNumber { get; set; } = string.Empty;
     public string? LicenseComposition { get; set; }
     public DateTime? LastDateToUtc { get; set; }

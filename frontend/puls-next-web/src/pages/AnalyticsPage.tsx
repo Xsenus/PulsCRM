@@ -43,6 +43,12 @@ const STATUS_FILTER_INFO: InfoDetails = {
   description: 'Фильтр отбирает группы лицензий по расчетному состоянию на выбранный период. Например, "Заканчиваются" показывает лицензии, у которых последний известный период завершился внутри диапазона и нет более позднего продления; "Без продления" смотрит на последний период без привязки к дате окончания внутри диапазона.'
 };
 
+const SALARY_FILTER_INFO: InfoDetails = {
+  label: 'Только ЗП',
+  title: 'Организации на зарплатном сопровождении',
+  description: 'Галочка доступна только для статуса "Заканчиваются" и оставляет организации, у которых в legacy-карточке включен признак работы по зарплате.'
+};
+
 interface AnalyticsPeriodRange {
   from: string;
   to: string;
@@ -577,10 +583,12 @@ function buildXlsxPackage(sheets: XlsxWorksheet[]) {
 function buildLicenseGroupsWorkbook(
   groups: ParusLicenseAnalyticsOrganizationGroupDto[],
   range: AnalyticsPeriodRange,
-  status: string
+  status: string,
+  salaryOnly = false
 ) {
   const title = `Отчет по группам лицензий Парус за период ${formatInputDate(range.from)} - ${formatInputDate(range.to)}`;
   const statusLabel = getGroupStatusLabel(status);
+  const filterDetails = salaryOnly ? `${statusLabel}, только ЗП` : statusLabel;
   const generatedAt = dayjs().format('DD.MM.YYYY HH:mm');
   const totals = groups.reduce(
     (accumulator, row) => ({
@@ -595,7 +603,7 @@ function buildLicenseGroupsWorkbook(
 
   const organizationRows = [
     buildRow([buildCell(title, XLSX_STYLES.title, 11)], 30),
-    buildRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, XLSX_STYLES.subtitle, 11)], 24),
+    buildRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${filterDetails}   |   Сформировано: ${generatedAt}`, XLSX_STYLES.subtitle, 11)], 24),
     buildRow([buildCell('', XLSX_STYLES.spacer, 11)], 8),
     buildRow(
       ['Организация', 'ИНН', 'Район', 'Мнемоника', 'Окончание', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус']
@@ -1005,6 +1013,7 @@ export function AnalyticsPage() {
   const [infoModal, setInfoModal] = useState<InfoDetails | null>(null);
   const [groupSearch, setGroupSearch] = useState('');
   const [groupStatus, setGroupStatus] = useState('all');
+  const [salaryOnly, setSalaryOnly] = useState(false);
   const [groupPage, setGroupPage] = useState(1);
   const [groupPageSize, setGroupPageSize] = useState(10);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set());
@@ -1019,7 +1028,17 @@ export function AnalyticsPage() {
       : { from: dateFrom, to: dateTo };
   }, [dateFrom, dateTo]);
 
-  const load = async (range = appliedRange, page = groupPage, search = groupSearch, status = groupStatus, pageSize = groupPageSize) => {
+  const showSalaryOnlyFilter = groupStatus === 'expiring';
+  const activeSalaryOnly = showSalaryOnlyFilter && salaryOnly;
+
+  const load = async (
+    range = appliedRange,
+    page = groupPage,
+    search = groupSearch,
+    status = groupStatus,
+    pageSize = groupPageSize,
+    onlySalary = activeSalaryOnly
+  ) => {
     setLoading(true);
     try {
       setAnalytics(await getParusLicenseAnalytics({
@@ -1027,6 +1046,7 @@ export function AnalyticsPage() {
         dateToUtc: toApiDate(range.to),
         search: search.trim() || undefined,
         status,
+        salaryOnly: onlySalary || undefined,
         skip: (page - 1) * pageSize,
         take: pageSize
       }));
@@ -1039,11 +1059,17 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      void load(appliedRange, groupPage, groupSearch, groupStatus, groupPageSize);
+      void load(appliedRange, groupPage, groupSearch, groupStatus, groupPageSize, activeSalaryOnly);
     }, 250);
 
     return () => window.clearTimeout(handle);
-  }, [appliedRange, groupPage, groupPageSize, groupSearch, groupStatus]);
+  }, [activeSalaryOnly, appliedRange, groupPage, groupPageSize, groupSearch, groupStatus]);
+
+  useEffect(() => {
+    if (groupStatus !== 'expiring' && salaryOnly) {
+      setSalaryOnly(false);
+    }
+  }, [groupStatus, salaryOnly]);
 
   useEffect(() => {
     setAnnualAnalytics(loadAnnualAnalyticsPreference(annualAnalyticsStorageKey));
@@ -1080,6 +1106,7 @@ export function AnalyticsPage() {
           dateToUtc: toApiDate(appliedRange.to),
           search: groupSearch.trim() || undefined,
           status: groupStatus,
+          salaryOnly: activeSalaryOnly || undefined,
           skip,
           take: GROUP_EXPORT_PAGE_SIZE
         });
@@ -1093,7 +1120,7 @@ export function AnalyticsPage() {
         }
       }
 
-      const workbook = buildLicenseGroupsWorkbook(loadedGroups, appliedRange, groupStatus);
+      const workbook = buildLicenseGroupsWorkbook(loadedGroups, appliedRange, groupStatus, activeSalaryOnly);
       saveBlob(
         new Blob([workbook], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
         `parus-license-groups-${appliedRange.from}-${appliedRange.to}.xlsx`
@@ -1148,7 +1175,7 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     setGroupPage(1);
-  }, [groupSearch, groupStatus]);
+  }, [activeSalaryOnly, groupSearch, groupStatus]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(groupsTotalCount / groupPageSize));
@@ -1297,6 +1324,26 @@ export function AnalyticsPage() {
                     </span>
                   </button>
                 </div>
+                {showSalaryOnlyFilter ? (
+                  <div className="analytics-salary-filter">
+                    <label className="analytics-annual-toggle analytics-salary-toggle">
+                      <input
+                        type="checkbox"
+                        checked={salaryOnly}
+                        onChange={(event) => setSalaryOnly(event.target.checked)}
+                      />
+                      <span className="analytics-checkbox" aria-hidden="true" />
+                      <span>Только ЗП</span>
+                    </label>
+                    <button type="button" className="analytics-info-icon analytics-status-info-icon" aria-label="Подробнее о фильтре зарплаты" onClick={() => setInfoModal(SALARY_FILTER_INFO)}>
+                      i
+                      <span className="analytics-info-tooltip analytics-status-info-tooltip" role="tooltip">
+                        <strong>{SALARY_FILTER_INFO.title}</strong>
+                        <span>{SALARY_FILTER_INFO.description}</span>
+                      </span>
+                    </button>
+                  </div>
+                ) : null}
               </div>
               <button
                 type="button"

@@ -130,6 +130,7 @@ export interface ParusLicenseAnalyticsOrganizationGroupDto {
   inn?: string;
   mnemoOrg?: string;
   raion?: string;
+  salaryWorking: boolean;
   licenseNumber: string;
   licenseComposition?: string;
   lastDateToUtc?: string;
