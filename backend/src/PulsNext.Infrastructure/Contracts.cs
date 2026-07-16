@@ -441,8 +441,10 @@ public sealed class ParusLicenseAnalyticsOrganizationGroupDto
     public string ClientName { get; set; } = string.Empty;
     public string? Inn { get; set; }
     public string? MnemoOrg { get; set; }
+    public string? Raion { get; set; }
     public string LicenseNumber { get; set; } = string.Empty;
     public string? LicenseComposition { get; set; }
+    public DateTime? LastDateToUtc { get; set; }
     public int DatabaseCount { get; set; }
     public int OrganizationCount { get; set; }
     public int ExtraWorkplaces { get; set; }

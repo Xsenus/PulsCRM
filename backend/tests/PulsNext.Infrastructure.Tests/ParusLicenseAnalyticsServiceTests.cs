@@ -57,7 +57,8 @@ public sealed class ParusLicenseAnalyticsServiceTests
     {
         using var legacyUnitOfWork = CreateLegacyUnitOfWork();
 
-        var client = new LegacyOrg(legacyUnitOfWork) { Name = "Клиент" };
+        var raion = new LegacyRaion(legacyUnitOfWork) { Name = "Central district" };
+        var client = new LegacyOrg(legacyUnitOfWork) { Name = "Клиент", Raion = raion };
 
         CreateLicense(legacyUnitOfWork, client, "HA2360-2-10", new DateTime(2025, 1, 1), new DateTime(2025, 12, 31), clientNumber: "HA-2360");
         CreateLicense(legacyUnitOfWork, client, "HA2360-2-11", new DateTime(2026, 1, 1), new DateTime(2026, 12, 31), clientNumber: "HA-2360");
@@ -82,6 +83,8 @@ public sealed class ParusLicenseAnalyticsServiceTests
 
         var group = Assert.Single(result.OrganizationGroups);
         Assert.Equal("HA2360", group.LicenseNumber);
+        Assert.Equal("Central district", group.Raion);
+        Assert.Equal(new DateTime(2026, 12, 31), group.LastDateToUtc);
         Assert.Equal(2, group.Periods.Count);
         Assert.Contains(group.Periods, period => period.LicenseNumber == "HA2360-2-10");
         Assert.Contains(group.Periods, period => period.LicenseNumber == "HA2360-2-11" && period.ComponentsCount == 2);

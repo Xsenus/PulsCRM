@@ -272,9 +272,12 @@ function buildXlsxWorksheetXml(sheet: XlsxWorksheet) {
     const excelRowIndex = rowIndex + 1;
     let columnIndex = 1;
     const cells = row.cells.map((cell) => {
-      const cellXml = buildXlsxCellXml(cell, excelRowIndex, columnIndex);
+      let cellXml = buildXlsxCellXml(cell, excelRowIndex, columnIndex);
       if (cell.mergeAcross && cell.mergeAcross > 0) {
         merges.push(`${getColumnName(columnIndex)}${excelRowIndex}:${getColumnName(columnIndex + cell.mergeAcross)}${excelRowIndex}`);
+        for (let offset = 1; offset <= cell.mergeAcross; offset += 1) {
+          cellXml += buildXlsxCellXml({ style: cell.style }, excelRowIndex, columnIndex + offset);
+        }
         columnIndex += cell.mergeAcross + 1;
       } else {
         columnIndex += 1;
@@ -591,11 +594,11 @@ function buildLicenseGroupsWorkbook(
   );
 
   const organizationRows = [
-    buildRow([buildCell(title, XLSX_STYLES.title, 9)], 30),
-    buildRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, XLSX_STYLES.subtitle, 9)], 24),
-    buildRow([buildCell('', XLSX_STYLES.spacer, 9)], 8),
+    buildRow([buildCell(title, XLSX_STYLES.title, 11)], 30),
+    buildRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, XLSX_STYLES.subtitle, 11)], 24),
+    buildRow([buildCell('', XLSX_STYLES.spacer, 11)], 8),
     buildRow(
-      ['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус']
+      ['Организация', 'ИНН', 'Район', 'Мнемоника', 'Окончание', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус']
         .map((label) => buildCell(label, XLSX_STYLES.header)),
       24
     ),
@@ -605,7 +608,9 @@ function buildLicenseGroupsWorkbook(
       return buildRow([
         buildCell(row.clientName, rowStyle),
         buildCell(row.inn || '', rowStyle),
+        buildCell(row.raion || '', rowStyle),
         buildCell(row.mnemoOrg || '', rowStyle),
+        buildCell(row.lastDateToUtc ? formatDate(row.lastDateToUtc) : '', rowStyle),
         buildCell(row.licenseNumber, rowStyle),
         buildCell(row.databaseCount, numberStyle),
         buildCell(row.organizationCount, numberStyle),
@@ -616,7 +621,7 @@ function buildLicenseGroupsWorkbook(
       ], 24);
     }),
     buildRow([
-      buildCell('Итого', XLSX_STYLES.total, 3),
+      buildCell('Итого', XLSX_STYLES.total, 5),
       buildCell(totals.databaseCount, XLSX_STYLES.totalNumber),
       buildCell(totals.organizationCount, XLSX_STYLES.totalNumber),
       buildCell(totals.extraWorkplaces, XLSX_STYLES.totalNumber),
@@ -724,10 +729,10 @@ function buildLicenseGroupsWorkbook(
   return buildXlsxPackage([
     {
       name: 'Организации',
-      columns: [48, 16, 28, 15, 8, 18, 11, 11, 13, 18],
+      columns: [50, 16, 24, 24, 14, 15, 8, 18, 11, 11, 13, 18],
       rows: organizationRows,
       freezeRow: 4,
-      printArea: `$A$1:$J$${organizationRows.length}`,
+      printArea: `$A$1:$L$${organizationRows.length}`,
       showGridLines: false,
       landscape: true
     },
@@ -1292,17 +1297,6 @@ export function AnalyticsPage() {
                     </span>
                   </button>
                 </div>
-                <button
-                  type="button"
-                  className="secondary-button button-inline"
-                  onClick={() => {
-                    setGroupSearch('');
-                    setGroupStatus('all');
-                  }}
-                  disabled={!groupSearch && groupStatus === 'all'}
-                >
-                  Сбросить
-                </button>
               </div>
               <button
                 type="button"
@@ -1321,6 +1315,7 @@ export function AnalyticsPage() {
                 <thead>
                   <tr>
                     <th><TextHeader label="Организация" /></th>
+                    <th><TextHeader label="Окончание" /></th>
                     <th><TextHeader label="Лицензия" /></th>
                     <th><TextHeader label="Периоды" /></th>
                     <th><TextHeader label="Состав" /></th>
@@ -1339,11 +1334,14 @@ export function AnalyticsPage() {
                             <span className={`analytics-expand-chevron${expandedGroups.has(row.key) ? ' expanded' : ''}`}>›</span>
                             <span className="analytics-cell-stack">
                               <span className="analytics-cell-top">{row.clientName}</span>
-                              <span className="analytics-cell-middle">{row.inn ? `ИНН ${row.inn}` : 'ИНН не указан'}</span>
+                              <span className="analytics-cell-middle">
+                                {row.inn ? `ИНН ${row.inn}${row.raion ? ` (${row.raion})` : ''}` : row.raion ? `Район: ${row.raion}` : 'ИНН не указан'}
+                              </span>
                               <span className="analytics-cell-bottom">{row.mnemoOrg || 'Мнемоника не указана'}</span>
                             </span>
                           </button>
                         </td>
+                        <td>{row.lastDateToUtc ? formatDate(row.lastDateToUtc) : '—'}</td>
                         <td>
                           <span className="analytics-cell-stack">
                             <span className="analytics-cell-top">{row.licenseNumber}</span>
@@ -1356,7 +1354,7 @@ export function AnalyticsPage() {
                       </tr>
                       {expandedGroups.has(row.key) ? (
                         <tr className="analytics-periods-row">
-                          <td colSpan={5}>
+                          <td colSpan={6}>
                             <div className="analytics-period-list">
                               {row.periods.map((period) => (
                                 <div key={period.key} className="analytics-period-block">

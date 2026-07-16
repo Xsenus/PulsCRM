@@ -129,8 +129,10 @@ export interface ParusLicenseAnalyticsOrganizationGroupDto {
   clientName: string;
   inn?: string;
   mnemoOrg?: string;
+  raion?: string;
   licenseNumber: string;
   licenseComposition?: string;
+  lastDateToUtc?: string;
   databaseCount: number;
   organizationCount: number;
   extraWorkplaces: number;

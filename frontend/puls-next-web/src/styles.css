@@ -1415,22 +1415,25 @@ select {
 }
 
 .analytics-groups-table {
-  min-width: 1040px;
+  min-width: 1220px;
 }
 
-.analytics-groups-table th:nth-child(3),
+.analytics-groups-table th:nth-child(2),
 .analytics-groups-table th:nth-child(4),
 .analytics-groups-table th:nth-child(5),
-.analytics-groups-table td:nth-child(3),
+.analytics-groups-table th:nth-child(6),
+.analytics-groups-table td:nth-child(2),
 .analytics-groups-table td:nth-child(4),
-.analytics-groups-table td:nth-child(5) {
+.analytics-groups-table td:nth-child(5),
+.analytics-groups-table td:nth-child(6) {
   text-align: center;
   vertical-align: middle;
 }
 
-.analytics-groups-table th:nth-child(3) .analytics-info-header,
+.analytics-groups-table th:nth-child(2) .analytics-info-header,
 .analytics-groups-table th:nth-child(4) .analytics-info-header,
-.analytics-groups-table th:nth-child(5) .analytics-info-header {
+.analytics-groups-table th:nth-child(5) .analytics-info-header,
+.analytics-groups-table th:nth-child(6) .analytics-info-header {
   justify-content: center;
 }
 
@@ -1443,6 +1446,7 @@ select {
 }
 
 .analytics-groups-toolbar-main {
+  flex: 1 1 auto;
   min-width: 0;
   display: flex;
   gap: 10px;
@@ -1483,7 +1487,9 @@ select {
 }
 
 .analytics-groups-search {
-  max-width: 520px;
+  flex: 1 1 760px;
+  width: min(760px, 100%);
+  max-width: 860px;
 }
 
 .analytics-status-filter {

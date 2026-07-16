@@ -1,5 +1,6 @@
 using DevExpress.Xpo;
 using PulsNext.Domain.Legacy;
+using System.Globalization;
 
 namespace PulsNext.Infrastructure;
 
@@ -164,6 +165,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             clientName,
             NullIfWhiteSpace(license.INN),
             NullIfWhiteSpace(license.MnemoOrg),
+            NullIfWhiteSpace(license.Org?.Raion?.Name),
             NullIfWhiteSpace(license.Payer),
             NullIfWhiteSpace(license.RegNumberClient),
             NullIfWhiteSpace(license.RegNumberAbonement),
@@ -236,6 +238,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
                 lifecycleGroup.Records
                     .Select(record => record.LicenseComposition)
                     .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)),
+                lifecycleGroup.Records.Max(record => record.DateToUtc),
                 lifecycleGroup.Records.Max(record => record.DatabaseCount),
                 lifecycleGroup.Records.Max(record => record.OrganizationCount),
                 lifecycleGroup.Records.Max(record => record.ExtraWorkplaces),
@@ -290,8 +293,10 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             ClientName = row.Group.DisplayClientName,
             Inn = row.Latest.Inn,
             MnemoOrg = row.Latest.MnemoOrg,
+            Raion = row.Latest.Raion,
             LicenseNumber = row.Group.DisplayBaseNumber,
             LicenseComposition = row.LicenseComposition,
+            LastDateToUtc = row.LastDateToUtc,
             DatabaseCount = row.DatabaseCount,
             OrganizationCount = row.OrganizationCount,
             ExtraWorkplaces = row.ExtraWorkplaces,
@@ -360,8 +365,10 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         {
             group.Group.DisplayClientName,
             group.Latest.Inn,
+            group.Latest.Raion,
             group.Latest.MnemoOrg,
             group.Group.DisplayBaseNumber,
+            group.LastDateToUtc.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture),
             group.LicenseComposition
         };
 
@@ -538,6 +545,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         string ClientName,
         string? Inn,
         string? MnemoOrg,
+        string? Raion,
         string? Payer,
         string? RegNumberClient,
         string? RegNumberAbonement,
@@ -567,6 +575,7 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         LicenseGroup Group,
         LicenseRecord Latest,
         string? LicenseComposition,
+        DateTime LastDateToUtc,
         int DatabaseCount,
         int OrganizationCount,
         int ExtraWorkplaces,

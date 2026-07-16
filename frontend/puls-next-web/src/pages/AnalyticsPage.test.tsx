@@ -101,8 +101,10 @@ function buildAnalytics(): ParusLicenseAnalyticsDto {
         clientId: 1,
         clientName: 'Client',
         inn: '5400000000',
+        raion: 'Central district',
         mnemoOrg: 'Client',
         licenseNumber: 'HA2360',
+        lastDateToUtc: to,
         databaseCount: 1,
         organizationCount: 0,
         extraWorkplaces: 0,
@@ -170,6 +172,8 @@ describe('AnalyticsPage', () => {
     expect(checkbox).toBeInstanceOf(HTMLInputElement);
     expect(checkbox!.checked).toBe(false);
     expect(view.querySelector('.analytics-year-table')).toBeNull();
+    expect(view.textContent).toContain(`ИНН 5400000000 (Central district)`);
+    expect(view.textContent).toContain(`31.12.${new Date().getFullYear()}`);
 
     act(() => {
       checkbox!.checked = true;
