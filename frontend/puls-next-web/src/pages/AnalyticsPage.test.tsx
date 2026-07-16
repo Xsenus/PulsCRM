@@ -358,8 +358,14 @@ describe('AnalyticsPage', () => {
       expect(workbook).toContain('Организации');
       expect(workbook).toContain('Печать по заказам');
       expect(workbook).toContain('Client');
+      expect(workbook).toContain('Client (Central district)');
+      expect(workbook).toContain('Дата действия');
       expect(workbook).toContain('Рабочее место');
       expect(workbook).toContain('Торнадо');
+      expect(workbook).not.toContain('№ заказа');
+      expect(workbook).not.toContain('ПУЛЬС ГРУП');
+      expect(workbook).not.toContain('Мнемокод');
+      expect(workbook).not.toContain('Итого мест');
     } finally {
       URL.createObjectURL = originalCreateObjectUrl;
       URL.revokeObjectURL = originalRevokeObjectUrl;

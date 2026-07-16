@@ -416,6 +416,23 @@ function getNumberStyle(index: number) {
   return index % 2 === 0 ? XLSX_STYLES.number : XLSX_STYLES.numberAlt;
 }
 
+function buildPrintOrganizationName(row: ParusLicenseAnalyticsOrganizationGroupDto) {
+  return row.raion ? `${row.clientName} (${row.raion})` : row.clientName;
+}
+
+function buildPrintActionPeriod(periods: ParusLicenseAnalyticsLicensePeriodDto[]) {
+  if (periods.length === 0) {
+    return '';
+  }
+
+  const datesSince = periods.map((period) => dayjs(period.dateSinceUtc));
+  const datesTo = periods.map((period) => dayjs(period.dateToUtc));
+  const firstDate = datesSince.reduce((current, date) => (date.isBefore(current) ? date : current), datesSince[0]);
+  const lastDate = datesTo.reduce((current, date) => (date.isAfter(current) ? date : current), datesTo[0]);
+
+  return `${firstDate.format('DD.MM.YYYY')} - ${lastDate.format('DD.MM.YYYY')}`;
+}
+
 function getCrc32Table() {
   return Array.from({ length: 256 }, (_, index) => {
     let value = index;
@@ -655,9 +672,8 @@ function buildLicenseGroupsWorkbook(
 
       return periodComponents.map((component) => ({
         period,
-        product: component.nomenclature || component.product || 'Парус',
-        code: component.number || component.regNumberClient || component.regNumberAbonement || '',
-        module: component.modification || 'Состав лицензии',
+        nomenclature: component.nomenclature || 'Не указана',
+        module: component.modification || component.product || 'Состав лицензии',
         quantity: parseQuantityNumber(component.quantity) ?? (formatQuantity(component.quantity) || '')
       }));
     });
@@ -666,65 +682,41 @@ function buildLicenseGroupsWorkbook(
       ? componentRows
       : [{
           period: null,
-          product: 'Парус',
-          code: '',
+          nomenclature: 'Не указана',
           module: 'Периоды не найдены',
           quantity: ''
         }];
 
-    const latestPeriod = row.periods[0] ?? null;
-    const totalPlaces = printableComponents.reduce(
-      (sum, item) => sum + (typeof item.quantity === 'number' ? item.quantity : 0),
-      0
-    );
     const blockRows = [
-      buildRow([buildCell(row.clientName, XLSX_STYLES.printTitle, 11)], 28),
+      buildRow([buildCell(buildPrintOrganizationName(row), XLSX_STYLES.printTitle, 11)], 28),
       buildRow([
-        buildCell('№ заказа', XLSX_STYLES.printLabel, 1),
-        buildCell('Дата', XLSX_STYLES.printLabel, 1),
+        buildCell('Дата действия', XLSX_STYLES.printLabel, 3),
         buildCell('Статус', XLSX_STYLES.printLabel, 1),
-        buildCell('Провайдер', XLSX_STYLES.printLabel, 1),
-        buildCell('ИНН', XLSX_STYLES.printLabel, 1),
-        buildCell('Рег. номер', XLSX_STYLES.printLabel, 1)
+        buildCell('ИНН', XLSX_STYLES.printLabel, 2),
+        buildCell('Рег. номер', XLSX_STYLES.printLabel, 2)
       ], 22),
       buildRow([
-        buildCell(row.clientId, XLSX_STYLES.printValue, 1),
-        buildCell(formatInputDate(range.to), XLSX_STYLES.printValue, 1),
+        buildCell(buildPrintActionPeriod(row.periods), XLSX_STYLES.printValue, 3),
         buildCell(getGroupExportStatus(row), XLSX_STYLES.printValue, 1),
-        buildCell('ПУЛЬС ГРУП', XLSX_STYLES.printValue, 1),
-        buildCell(row.inn || '', XLSX_STYLES.printValue, 1),
-        buildCell(row.licenseNumber, XLSX_STYLES.printValue, 1)
+        buildCell(row.inn || '', XLSX_STYLES.printValue, 2),
+        buildCell(row.licenseNumber, XLSX_STYLES.printValue, 2)
       ], 24),
       buildRow([
         buildCell('№', XLSX_STYLES.printHeader),
-        buildCell('Номенклатура', XLSX_STYLES.printHeader, 1),
-        buildCell('Мнемокод', XLSX_STYLES.printHeader, 1),
-        buildCell('Модуль / блок', XLSX_STYLES.printHeader, 2),
+        buildCell('Номенклатура', XLSX_STYLES.printHeader, 2),
+        buildCell('Модуль / блок', XLSX_STYLES.printHeader, 3),
         buildCell('Кол-во мест', XLSX_STYLES.printHeader),
         buildCell('Нужен', XLSX_STYLES.printHeader),
         buildCell('Проверено, шт.', XLSX_STYLES.printHeader, 1)
       ], 28),
       ...printableComponents.map((component, index) => buildRow([
         buildCell(index + 1, XLSX_STYLES.printNumber),
-        buildCell(component.product, XLSX_STYLES.printCell, 1),
-        buildCell(component.code, XLSX_STYLES.printCell, 1),
-        buildCell(component.module, XLSX_STYLES.printCell, 2),
+        buildCell(component.nomenclature, XLSX_STYLES.printCell, 2),
+        buildCell(component.module, XLSX_STYLES.printCell, 3),
         buildCell(component.quantity, typeof component.quantity === 'number' ? XLSX_STYLES.printNumber : XLSX_STYLES.printCell),
         buildCell('□', XLSX_STYLES.printCheck),
         buildCell('', XLSX_STYLES.printChecked, 1)
-      ], component.module.length > 72 ? 54 : 38)),
-      buildRow([
-        buildCell('Итого мест', XLSX_STYLES.printFooterLabel, 7),
-        buildCell(totalPlaces, XLSX_STYLES.printFooterLabel),
-        buildCell('', XLSX_STYLES.printFooterValue, 2)
-      ], 24),
-      buildRow([
-        buildCell('Лицензия', XLSX_STYLES.printLabel, 1),
-        buildCell(row.licenseNumber, XLSX_STYLES.printFooterValue, 2),
-        buildCell('ЛО до', XLSX_STYLES.printLabel, 1),
-        buildCell(latestPeriod ? formatDate(latestPeriod.dateToUtc) : '', XLSX_STYLES.printFooterValue, 1),
-        buildCell('', XLSX_STYLES.printFooterValue, 2)
-      ], 24)
+      ], component.module.length > 72 ? 54 : 38))
     ];
 
     if (groupIndex < groups.length - 1) {
