@@ -738,7 +738,7 @@ function buildLicenseGroupsWorkbook(
     },
     {
       name: 'Печать по заказам',
-      columns: [5, 22, 18, 20, 18, 26, 10, 9, 10, 8, 14, 16],
+      columns: [5, 12, 9, 9, 30, 40, 12, 9, 10, 8, 14, 16],
       rows: printRows.length > 0
         ? printRows
         : [buildRow([buildCell('Нет данных для печати', XLSX_STYLES.printTitle, 11)], 24)],
