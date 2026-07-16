@@ -222,7 +222,9 @@ const XLSX_STYLES = {
   printCheck: 21,
   printChecked: 22,
   printFooterLabel: 23,
-  printFooterValue: 24
+  printFooterValue: 24,
+  registryCell: 25,
+  registryCellAlt: 26
 } as const;
 
 function buildCell(value: XlsxCellValue, style?: number, mergeAcross?: number): XlsxCell {
@@ -307,7 +309,7 @@ function buildXlsxWorksheetXml(sheet: XlsxWorksheet) {
 function buildXlsxStylesXml() {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="8">
+  <fonts count="9">
     <font><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/></font>
     <font><b/><sz val="16"/><color rgb="FF0F172A"/><name val="Calibri"/></font>
     <font><sz val="10"/><color rgb="FF475569"/><name val="Calibri"/></font>
@@ -316,6 +318,7 @@ function buildXlsxStylesXml() {
     <font><b/><sz val="10"/><color rgb="FFB91C1C"/><name val="Calibri"/></font>
     <font><b/><sz val="10"/><color rgb="FF64748B"/><name val="Calibri"/></font>
     <font><b/><sz val="11"/><color rgb="FF0F172A"/><name val="Calibri"/></font>
+    <font><sz val="10"/><color theme="1"/><name val="Calibri"/></font>
   </fonts>
   <fills count="12">
     <fill><patternFill patternType="none"/></fill>
@@ -338,14 +341,14 @@ function buildXlsxStylesXml() {
     <border><left style="thin"><color rgb="FF7F7F7F"/></left><right style="thin"><color rgb="FF7F7F7F"/></right><top style="thin"><color rgb="FF7F7F7F"/></top><bottom style="thin"><color rgb="FF7F7F7F"/></bottom><diagonal/></border>
   </borders>
   <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  <cellXfs count="25">
+  <cellXfs count="27">
     <xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0"><alignment vertical="center" wrapText="1"/></xf>
     <xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
     <xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
     <xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0"/>
     <xf numFmtId="0" fontId="3" fillId="5" borderId="2" xfId="0" applyFill="1" applyFont="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
-    <xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
-    <xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyBorder="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf>
     <xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>
     <xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>
     <xf numFmtId="0" fontId="4" fillId="7" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
@@ -364,6 +367,8 @@ function buildXlsxStylesXml() {
     <xf numFmtId="0" fontId="0" fillId="10" borderId="3" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
     <xf numFmtId="0" fontId="7" fillId="2" borderId="3" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>
     <xf numFmtId="0" fontId="0" fillId="2" borderId="3" xfId="0" applyBorder="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="8" fillId="2" borderId="1" xfId="0" applyBorder="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="8" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center"/></xf>
   </cellXfs>
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
@@ -395,7 +400,7 @@ function getWorkbookStatusStyle(row: {
 }
 
 function getRowStyle(index: number) {
-  return index % 2 === 0 ? XLSX_STYLES.cell : XLSX_STYLES.cellAlt;
+  return index % 2 === 0 ? XLSX_STYLES.registryCell : XLSX_STYLES.registryCellAlt;
 }
 
 function getNumberStyle(index: number) {
@@ -586,8 +591,8 @@ function buildLicenseGroupsWorkbook(
   );
 
   const organizationRows = [
-    buildRow([buildCell(title, XLSX_STYLES.title, 9)], 28),
-    buildRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, XLSX_STYLES.subtitle, 9)], 22),
+    buildRow([buildCell(title, XLSX_STYLES.title, 9)], 30),
+    buildRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, XLSX_STYLES.subtitle, 9)], 24),
     buildRow([buildCell('', XLSX_STYLES.spacer, 9)], 8),
     buildRow(
       ['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус']
@@ -608,7 +613,7 @@ function buildLicenseGroupsWorkbook(
         buildCell(row.periodsCount, numberStyle),
         buildCell(row.componentsCount, numberStyle),
         buildCell(getGroupExportStatus(row), getWorkbookStatusStyle(row))
-      ], 22);
+      ], 24);
     }),
     buildRow([
       buildCell('Итого', XLSX_STYLES.total, 3),
@@ -660,7 +665,7 @@ function buildLicenseGroupsWorkbook(
       0
     );
     const blockRows = [
-      buildRow([buildCell(row.clientName, XLSX_STYLES.printTitle, 11)], 24),
+      buildRow([buildCell(row.clientName, XLSX_STYLES.printTitle, 11)], 28),
       buildRow([
         buildCell('№ заказа', XLSX_STYLES.printLabel, 1),
         buildCell('Дата', XLSX_STYLES.printLabel, 1),
@@ -668,7 +673,7 @@ function buildLicenseGroupsWorkbook(
         buildCell('Провайдер', XLSX_STYLES.printLabel, 1),
         buildCell('ИНН', XLSX_STYLES.printLabel, 1),
         buildCell('Рег. номер', XLSX_STYLES.printLabel, 1)
-      ], 20),
+      ], 22),
       buildRow([
         buildCell(row.clientId, XLSX_STYLES.printValue, 1),
         buildCell(formatInputDate(range.to), XLSX_STYLES.printValue, 1),
@@ -676,7 +681,7 @@ function buildLicenseGroupsWorkbook(
         buildCell('ПУЛЬС ГРУП', XLSX_STYLES.printValue, 1),
         buildCell(row.inn || '', XLSX_STYLES.printValue, 1),
         buildCell(row.licenseNumber, XLSX_STYLES.printValue, 1)
-      ], 22),
+      ], 24),
       buildRow([
         buildCell('№', XLSX_STYLES.printHeader),
         buildCell('Номенклатура', XLSX_STYLES.printHeader, 1),
@@ -685,7 +690,7 @@ function buildLicenseGroupsWorkbook(
         buildCell('Кол-во мест', XLSX_STYLES.printHeader),
         buildCell('Нужен', XLSX_STYLES.printHeader),
         buildCell('Проверено, шт.', XLSX_STYLES.printHeader, 1)
-      ], 30),
+      ], 28),
       ...printableComponents.map((component, index) => buildRow([
         buildCell(index + 1, XLSX_STYLES.printNumber),
         buildCell(component.product, XLSX_STYLES.printCell, 1),
@@ -694,23 +699,23 @@ function buildLicenseGroupsWorkbook(
         buildCell(component.quantity, typeof component.quantity === 'number' ? XLSX_STYLES.printNumber : XLSX_STYLES.printCell),
         buildCell('□', XLSX_STYLES.printCheck),
         buildCell('', XLSX_STYLES.printChecked, 1)
-      ], component.module.length > 64 ? 44 : 28)),
+      ], component.module.length > 72 ? 54 : 38)),
       buildRow([
         buildCell('Итого мест', XLSX_STYLES.printFooterLabel, 7),
         buildCell(totalPlaces, XLSX_STYLES.printFooterLabel),
         buildCell('', XLSX_STYLES.printFooterValue, 2)
-      ], 22),
+      ], 24),
       buildRow([
         buildCell('Лицензия', XLSX_STYLES.printLabel, 1),
         buildCell(row.licenseNumber, XLSX_STYLES.printFooterValue, 2),
         buildCell('ЛО до', XLSX_STYLES.printLabel, 1),
         buildCell(latestPeriod ? formatDate(latestPeriod.dateToUtc) : '', XLSX_STYLES.printFooterValue, 1),
         buildCell('', XLSX_STYLES.printFooterValue, 2)
-      ], 22)
+      ], 24)
     ];
 
     if (groupIndex < groups.length - 1) {
-      blockRows.push(buildRow([], 8));
+      blockRows.push(buildRow([], 14));
     }
 
     return blockRows;
@@ -719,7 +724,7 @@ function buildLicenseGroupsWorkbook(
   return buildXlsxPackage([
     {
       name: 'Организации',
-      columns: [32, 14, 20, 13, 8, 18, 12, 12, 14, 16],
+      columns: [48, 16, 28, 15, 8, 18, 11, 11, 13, 18],
       rows: organizationRows,
       freezeRow: 4,
       printArea: `$A$1:$J$${organizationRows.length}`,
@@ -728,7 +733,7 @@ function buildLicenseGroupsWorkbook(
     },
     {
       name: 'Печать по заказам',
-      columns: [5, 18.5, 16, 17.5, 14, 12.5, 9, 10, 10, 8, 12.5, 16],
+      columns: [5, 22, 18, 20, 18, 26, 10, 9, 10, 8, 14, 16],
       rows: printRows.length > 0
         ? printRows
         : [buildRow([buildCell('Нет данных для печати', XLSX_STYLES.printTitle, 11)], 24)],
