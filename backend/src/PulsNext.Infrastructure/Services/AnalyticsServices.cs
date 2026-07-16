@@ -517,13 +517,13 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
             return null;
         }
 
-        var ownFile = ResolveLicenseFile(org.OrgInfoOther);
-        if (ownFile is not null)
+        var ownerFile = ResolveLicenseFile(org.OrgInfoOther?.OrgParusLicense?.OrgInfoOther);
+        if (ownerFile is not null)
         {
-            return ownFile;
+            return ownerFile;
         }
 
-        return ResolveLicenseFile(org.OrgInfoOther?.OrgParusLicense?.OrgInfoOther);
+        return ResolveLicenseFile(org.OrgInfoOther);
     }
 
     private static (string FileName, byte[] Content)? ResolveLicenseFile(LegacyOrgInfoOther? other)

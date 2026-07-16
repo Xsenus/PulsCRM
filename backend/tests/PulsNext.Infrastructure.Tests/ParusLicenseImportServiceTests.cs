@@ -319,6 +319,41 @@ public sealed class ParusLicenseImportServiceTests
     }
 
     [Fact]
+    public async Task ImportBatchAsync_PrefersArchiveLicenseFileOverStandaloneDuplicate()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+        var org = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "Test org",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+        };
+        org.OrgInfoOther.Org = org;
+        _ = new LegacyZPParusLicenseInfo(legacyUnitOfWork)
+        {
+            Org = org,
+            RegNumberAbonement = "HA2360-2-11",
+            RegNumberClient = "HA-2360",
+            DateSince = new DateTime(2025, 2, 21),
+            DateTo = new DateTime(2026, 2, 21),
+            Modification = "PARUS 10"
+        };
+        legacyUnitOfWork.CommitChanges();
+
+        var zipBytes = BuildZip(("License_HA2360-2-11.lic", "archive-data"));
+        var service = new ParusLicenseImportService(legacyUnitOfWork);
+
+        var result = await service.ImportBatchAsync([
+            new ParusLicenseFileImportItem("licenses.zip", zipBytes.Length, () => new MemoryStream(zipBytes, writable: false)),
+            new ParusLicenseFileImportItem("License_HA2360-2-11.lic", Encoding.UTF8.GetByteCount("standalone-data"), () => ToStream("standalone-data"))
+        ], false, CancellationToken.None);
+
+        Assert.NotNull(result.FileResult);
+        Assert.Equal(2, result.FileResult.ImportedFiles);
+        Assert.Equal("License_HA2360-2-11.lic", org.OrgInfoOther?.ParusLicenseFileName);
+        Assert.Equal(Encoding.UTF8.GetBytes("archive-data"), org.OrgInfoOther?.ParusLicenseFileData);
+    }
+
+    [Fact]
     public async Task ImportBatchAsync_DoesNotUpdateOrganizationCards()
     {
         using var legacyUnitOfWork = CreateLegacyUnitOfWork();

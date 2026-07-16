@@ -237,6 +237,42 @@ public sealed class ParusLicenseAnalyticsServiceTests
         Assert.True(group.RenewedInPeriod);
     }
 
+    [Fact]
+    public async Task GetLicenseFileAsync_PrefersLinkedLicenseOwnerFile()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+
+        var licenseOwner = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "License owner",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+            {
+                ParusLicenseFileName = "license-new.lic",
+                ParusLicenseFileData = "new-data"u8.ToArray()
+            }
+        };
+        licenseOwner.OrgInfoOther.Org = licenseOwner;
+        var linkedClient = new LegacyOrg(legacyUnitOfWork)
+        {
+            Name = "Linked client",
+            OrgInfoOther = new LegacyOrgInfoOther(legacyUnitOfWork)
+            {
+                OrgParusLicense = licenseOwner,
+                ParusLicenseFileName = "license-old.lic",
+                ParusLicenseFileData = "old-data"u8.ToArray()
+            }
+        };
+        linkedClient.OrgInfoOther.Org = linkedClient;
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
+        var file = await service.GetLicenseFileAsync(linkedClient.Oid, CancellationToken.None);
+
+        Assert.NotNull(file);
+        Assert.Equal("license-new.lic", file.FileName);
+        Assert.Equal("new-data"u8.ToArray(), file.Content);
+    }
+
     private static LegacyUnitOfWork CreateLegacyUnitOfWork()
     {
         var dataLayer = new SimpleDataLayer(new InMemoryDataStore());

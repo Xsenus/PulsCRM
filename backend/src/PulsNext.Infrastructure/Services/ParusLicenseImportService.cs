@@ -18,7 +18,7 @@ public interface IParusLicenseImportService
     Task<ParusLicenseBatchImportResultDto> ImportBatchAsync(IReadOnlyCollection<ParusLicenseFileImportItem> files, bool dryRun, CancellationToken cancellationToken);
 }
 
-public sealed record ParusLicenseFileImportItem(string FileName, long Length, Func<Stream> OpenReadStream);
+public sealed record ParusLicenseFileImportItem(string FileName, long Length, Func<Stream> OpenReadStream, int SourcePriority = 0);
 
 public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork) : IParusLicenseImportService
 {
@@ -147,7 +147,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
         var skipped = 0;
         long totalBytes = 0;
 
-        foreach (var file in files)
+        foreach (var file in files.OrderBy(file => file.SourcePriority))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -197,9 +197,10 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                         targetOrganization.OrgInfoOther = other;
                     }
 
-                    other.ParusLicenseNumber = NormalizeBaseLicenseNumber(licenseNumber);
-                    other.ParusLicenseFileName = fileName;
-                    other.ParusLicenseFileData = uploadedFileData;
+                    SetPersistentMember(other, nameof(LegacyOrgInfoOther.ParusLicenseNumber), NormalizeBaseLicenseNumber(licenseNumber));
+                    SetPersistentMember(other, nameof(LegacyOrgInfoOther.ParusLicenseFileName), fileName);
+                    SetPersistentMember(other, nameof(LegacyOrgInfoOther.ParusLicenseFileData), uploadedFileData);
+                    other.Save();
                 }
             }
 
@@ -456,7 +457,8 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                     result.Add(new ParusLicenseFileImportItem(
                         fileName,
                         bytes.LongLength,
-                        () => new MemoryStream(bytes, writable: false)));
+                        () => new MemoryStream(bytes, writable: false),
+                        SourcePriority: 1));
                     logItems.Add(new ParusLicenseImportLogItemDto
                     {
                         Stage = "archive",
@@ -815,7 +817,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
         changed |= SetText(other.ZpPhone, row.Phone, value => other.ZpPhone = value, dryRun);
         changed |= SetText(other.ZpEmail, row.Email, value => other.ZpEmail = value, dryRun);
         changed |= SetText(other.ZpFIO, row.Fio, value => other.ZpFIO = value, dryRun);
-        changed |= SetText(other.ZpLicSostav, row.LicenseComposition, value => other.ZpLicSostav = value, dryRun);
+        changed |= SetText(other.ZpLicSostav, row.LicenseComposition, value => SetPersistentMember(other, nameof(LegacyOrgInfoOther.ZpLicSostav), value), dryRun);
         changed |= SetText(other.ZpComment, row.Comment, value => other.ZpComment = value, dryRun);
 
         if (row.DatabaseCount is not null && other.ZpNumOfBases != row.DatabaseCount.Value)
@@ -823,7 +825,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             changed = true;
             if (!dryRun)
             {
-                other.ZpNumOfBases = row.DatabaseCount.Value;
+                SetPersistentMember(other, nameof(LegacyOrgInfoOther.ZpNumOfBases), row.DatabaseCount.Value);
             }
         }
 
@@ -832,7 +834,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             changed = true;
             if (!dryRun)
             {
-                other.CountOrganizationsInDataBases = row.OrganizationCount.Value;
+                SetPersistentMember(other, nameof(LegacyOrgInfoOther.CountOrganizationsInDataBases), row.OrganizationCount.Value);
             }
         }
 
@@ -841,7 +843,7 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             changed = true;
             if (!dryRun)
             {
-                other.ZpNumDopPlaces = row.ExtraWorkplaces.Value;
+                SetPersistentMember(other, nameof(LegacyOrgInfoOther.ZpNumDopPlaces), row.ExtraWorkplaces.Value);
             }
         }
 
@@ -881,6 +883,11 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
             {
                 other.ZpPlatform = platform;
             }
+        }
+
+        if (changed && !dryRun)
+        {
+            other.Save();
         }
 
         return changed;
@@ -1042,7 +1049,8 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
                 org.OrgInfoOther = other;
             }
 
-            other.ParusLicenseNumber = latestNumber;
+            SetPersistentMember(other, nameof(LegacyOrgInfoOther.ParusLicenseNumber), latestNumber);
+            other.Save();
         }
 
         return updated;
@@ -1324,6 +1332,9 @@ public sealed class ParusLicenseImportService(LegacyUnitOfWork legacyUnitOfWork)
 
     private static string? NullIfWhiteSpace(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static void SetPersistentMember<T>(XPBaseObject target, string memberName, T value)
+        => target.SetMemberValue(memberName, value);
 
     private static string NormalizeKey(string? value)
         => (NullIfWhiteSpace(value) ?? string.Empty).ToUpperInvariant();
