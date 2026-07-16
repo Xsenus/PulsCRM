@@ -194,6 +194,49 @@ public sealed class ParusLicenseAnalyticsServiceTests
         Assert.True(group.SalaryWorking);
     }
 
+    [Fact]
+    public async Task GetAsync_TreatsSameLicenseInnAndBaseNumberAsRenewalAcrossOrganizationCards()
+    {
+        using var legacyUnitOfWork = CreateLegacyUnitOfWork();
+
+        var oldCard = new LegacyOrg(legacyUnitOfWork) { Name = "ЦБ С.А.ЖДАНЬКО", INN = "5440113029" };
+        var newCard = new LegacyOrg(legacyUnitOfWork) { Name = "МКУ \"ЦБО\"", INN = "5440111906" };
+        MarkSalaryWorking(legacyUnitOfWork, oldCard);
+
+        CreateLicense(
+            legacyUnitOfWork,
+            oldCard,
+            "HA2767-1-10",
+            new DateTime(2025, 7, 18),
+            new DateTime(2026, 7, 18),
+            clientNumber: "HA-2767",
+            licenseInn: "5440111906");
+        CreateLicense(
+            legacyUnitOfWork,
+            newCard,
+            "HA2767-1-11",
+            new DateTime(2026, 7, 6),
+            new DateTime(2027, 7, 18),
+            clientNumber: "HA-2767",
+            licenseInn: "5440111906");
+        legacyUnitOfWork.CommitChanges();
+
+        var service = new ParusLicenseAnalyticsService(legacyUnitOfWork);
+
+        var expiringResult = await service.GetAsync(new DateTime(2026, 7, 1), new DateTime(2026, 7, 31), null, "expiring", true, 0, 10, CancellationToken.None);
+
+        Assert.Equal(0, expiringResult.Summary.ExpiringInPeriod);
+        Assert.Empty(expiringResult.OrganizationGroups);
+
+        var allResult = await service.GetAsync(new DateTime(2026, 7, 1), new DateTime(2026, 7, 31), null, "all", true, 0, 10, CancellationToken.None);
+
+        var group = Assert.Single(allResult.OrganizationGroups);
+        Assert.Equal("HA2767", group.LicenseNumber);
+        Assert.Equal("МКУ \"ЦБО\"", group.ClientName);
+        Assert.True(group.ActiveAtPeriodEnd);
+        Assert.True(group.RenewedInPeriod);
+    }
+
     private static LegacyUnitOfWork CreateLegacyUnitOfWork()
     {
         var dataLayer = new SimpleDataLayer(new InMemoryDataStore());
@@ -208,7 +251,8 @@ public sealed class ParusLicenseAnalyticsServiceTests
         DateTime dateTo,
         string modification = "Парус 10",
         string? clientNumber = null,
-        string? quantity = null)
+        string? quantity = null,
+        string? licenseInn = null)
     {
         _ = new LegacyZPParusLicenseInfo(unitOfWork)
         {
@@ -218,7 +262,8 @@ public sealed class ParusLicenseAnalyticsServiceTests
             DateSince = dateSince,
             DateTo = dateTo,
             Modification = modification,
-            Number = quantity ?? abonementNumber
+            Number = quantity ?? abonementNumber,
+            INN = licenseInn
         };
     }
 

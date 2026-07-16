@@ -155,8 +155,8 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         var clientName = license.Org?.Name ?? license.Org?.FullName ?? license.MnemoOrg ?? "Без организации";
         var baseNumber = ResolveBaseLicenseNumber(license);
         var number = FirstNotEmpty(license.RegNumberAbonement, license.RegNumberClient, baseNumber, license.Oid.ToString());
-        var groupKey = $"{clientId}:{baseNumber.ToUpperInvariant()}";
         var otherInfo = license.Org?.OrgInfoOther;
+        var groupKey = ResolveLifecycleGroupKey(clientId, otherInfo?.OrgParusLicense?.Oid, baseNumber, NullIfWhiteSpace(license.INN));
 
         return new LicenseRecord(
             license.Oid,
@@ -494,6 +494,19 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         return NormalizeBaseLicenseNumber(FirstNotEmpty(license.RegNumberAbonement, license.INN, license.Oid.ToString()));
     }
 
+    private static string ResolveLifecycleGroupKey(int clientId, int? licenseOwnerId, string baseNumber, string? licenseInn)
+    {
+        var normalizedBaseNumber = NormalizeBaseLicenseNumber(baseNumber);
+        var normalizedLicenseInn = NormalizeIdentifier(licenseInn);
+        if (!string.IsNullOrWhiteSpace(normalizedBaseNumber) && !string.IsNullOrWhiteSpace(normalizedLicenseInn))
+        {
+            return $"LICENSE:{normalizedLicenseInn}:{normalizedBaseNumber}".ToUpperInvariant();
+        }
+
+        var ownerId = licenseOwnerId is > 0 ? licenseOwnerId.Value : clientId;
+        return $"{ownerId}:{normalizedBaseNumber}".ToUpperInvariant();
+    }
+
     private (string FileName, byte[] Content)? ResolveLicenseFile(int clientId)
         => ResolveLicenseFile(legacyUnitOfWork.GetObjectByKey<LegacyOrg>(clientId));
 
@@ -548,6 +561,12 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
         return parts.Length >= 2 ? $"{parts[0]}{parts[1]}" : withoutSpaces.Replace("-", string.Empty);
     }
 
+    private static string? NormalizeIdentifier(string? value)
+    {
+        var trimmed = NullIfWhiteSpace(value);
+        return trimmed is null ? null : new string(trimmed.Where(char.IsLetterOrDigit).ToArray());
+    }
+
     private sealed record LicenseRecord(
         int Id,
         string GroupKey,
@@ -578,10 +597,16 @@ public sealed class ParusLicenseAnalyticsService(LegacyUnitOfWork legacyUnitOfWo
 
     private sealed record LicenseGroup(string Key, IReadOnlyList<LicenseRecord> Records)
     {
-        public int ClientId => Records.First().ClientId;
-        public string DisplayClientName => Records.First().ClientName;
-        public string DisplayBaseNumber => FirstNotEmpty(Records.First().BaseNumber, Key);
-        public string DisplayNumber => FirstNotEmpty(Records.First().RegNumberAbonement, Records.First().Number, Key);
+        private LicenseRecord DisplayRecord => Records
+            .OrderByDescending(record => record.DateToUtc)
+            .ThenByDescending(record => record.DateSinceUtc)
+            .ThenByDescending(record => record.Id)
+            .First();
+
+        public int ClientId => DisplayRecord.ClientId;
+        public string DisplayClientName => DisplayRecord.ClientName;
+        public string DisplayBaseNumber => FirstNotEmpty(DisplayRecord.BaseNumber, Key);
+        public string DisplayNumber => FirstNotEmpty(DisplayRecord.RegNumberAbonement, DisplayRecord.Number, Key);
     }
 
     private sealed record OrganizationGroupRow(
