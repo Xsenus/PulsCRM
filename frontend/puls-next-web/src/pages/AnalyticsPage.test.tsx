@@ -273,7 +273,7 @@ describe('AnalyticsPage', () => {
     }));
   });
 
-  it('exports a workbook with organization and license composition sheets', async () => {
+  it('exports a valid XLSX workbook with organization and print sheets', async () => {
     const originalCreateObjectUrl = URL.createObjectURL;
     const originalRevokeObjectUrl = URL.revokeObjectURL;
     let exportedBlob: Blob | null = null;
@@ -300,11 +300,20 @@ describe('AnalyticsPage', () => {
 
       expect(clickSpy).toHaveBeenCalled();
       expect(exportedBlob).toBeInstanceOf(Blob);
-      expect(exportedBlob?.type).toBe('application/vnd.ms-excel;charset=utf-8');
+      expect(exportedBlob?.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 
-      const workbook = await exportedBlob!.text();
-      expect(workbook).toContain('<Worksheet ss:Name="Организации">');
-      expect(workbook).toContain('<Worksheet ss:Name="Состав лицензий">');
+      const workbookBuffer = new Uint8Array(await exportedBlob!.arrayBuffer());
+      expect(workbookBuffer[0]).toBe(0x50);
+      expect(workbookBuffer[1]).toBe(0x4b);
+
+      const workbook = new TextDecoder().decode(workbookBuffer);
+      expect(workbook).toContain('[Content_Types].xml');
+      expect(workbook).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml');
+      expect(workbook).toContain('xl/workbook.xml');
+      expect(workbook).toContain('xl/worksheets/sheet1.xml');
+      expect(workbook).toContain('xl/worksheets/sheet2.xml');
+      expect(workbook).toContain('Организации');
+      expect(workbook).toContain('Печать по заказам');
       expect(workbook).toContain('Client');
       expect(workbook).toContain('Рабочее место');
       expect(workbook).toContain('Торнадо');

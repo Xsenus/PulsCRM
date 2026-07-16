@@ -169,50 +169,204 @@ function escapeXmlValue(value: string | number | null | undefined) {
     .replace(/"/g, '&quot;');
 }
 
-type SpreadsheetCellValue = string | number | null | undefined;
+type XlsxCellValue = string | number | null | undefined;
 
-interface SpreadsheetCellConfig {
-  value: SpreadsheetCellValue;
-  styleId?: string;
+interface XlsxCell {
+  value?: XlsxCellValue;
+  style?: number;
   mergeAcross?: number;
 }
 
-type SpreadsheetCell = SpreadsheetCellValue | SpreadsheetCellConfig;
-
-function isSpreadsheetCellConfig(value: SpreadsheetCell): value is SpreadsheetCellConfig {
-  return typeof value === 'object' && value !== null && 'value' in value;
+interface XlsxRow {
+  cells: XlsxCell[];
+  height?: number;
 }
 
-function toSpreadsheetCell(value: SpreadsheetCell): SpreadsheetCellConfig {
-  return isSpreadsheetCellConfig(value)
-    ? value
-    : { value };
+interface XlsxWorksheet {
+  name: string;
+  columns: number[];
+  rows: XlsxRow[];
+  showGridLines?: boolean;
+  freezeRow?: number;
+  printArea?: string;
+  landscape?: boolean;
 }
 
-function buildSpreadsheetCell(cellValue: SpreadsheetCell, defaultStyleId?: string) {
-  const cell = toSpreadsheetCell(cellValue);
-  const isNumber = typeof cell.value === 'number' && Number.isFinite(cell.value);
-  const styleId = cell.styleId ?? defaultStyleId;
-  const style = styleId ? ` ss:StyleID="${styleId}"` : '';
-  const merge = cell.mergeAcross ? ` ss:MergeAcross="${cell.mergeAcross}"` : '';
-  return `<Cell${style}${merge}><Data ss:Type="${isNumber ? 'Number' : 'String'}">${escapeXmlValue(cell.value)}</Data></Cell>`;
+interface ZipFileEntry {
+  path: string;
+  content: string | Uint8Array;
 }
 
-function buildSpreadsheetRow(cells: SpreadsheetCell[], defaultStyleId?: string, height?: number) {
-  const rowHeight = height ? ` ss:Height="${height}"` : '';
-  return `<Row${rowHeight}>${cells.map((cell) => buildSpreadsheetCell(cell, defaultStyleId)).join('')}</Row>`;
+const XLSX_STYLES = {
+  default: 0,
+  title: 1,
+  subtitle: 2,
+  spacer: 3,
+  header: 4,
+  cell: 5,
+  cellAlt: 6,
+  number: 7,
+  numberAlt: 8,
+  statusActive: 9,
+  statusDanger: 10,
+  statusMuted: 11,
+  note: 12,
+  total: 13,
+  totalNumber: 14,
+  printTitle: 15,
+  printLabel: 16,
+  printValue: 17,
+  printHeader: 18,
+  printCell: 19,
+  printNumber: 20,
+  printCheck: 21,
+  printChecked: 22,
+  printFooterLabel: 23,
+  printFooterValue: 24
+} as const;
+
+function buildCell(value: XlsxCellValue, style?: number, mergeAcross?: number): XlsxCell {
+  return { value, style, mergeAcross };
 }
 
-function buildSpreadsheetWorksheet(name: string, rows: string[], columnWidths: number[], frozenHeaderRow?: number) {
-  const columns = columnWidths.map((width) => `<Column ss:Width="${width}" />`).join('');
-  const worksheetOptions = frozenHeaderRow
-    ? `<WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><FreezePanes/><FrozenNoSplit/><SplitHorizontal>${frozenHeaderRow}</SplitHorizontal><TopRowBottomPane>${frozenHeaderRow}</TopRowBottomPane><ActivePane>2</ActivePane></WorksheetOptions>`
+function buildRow(cells: XlsxCell[], height?: number): XlsxRow {
+  return { cells, height };
+}
+
+function getColumnName(index: number) {
+  let column = '';
+  let current = index;
+
+  while (current > 0) {
+    const remainder = (current - 1) % 26;
+    column = String.fromCharCode(65 + remainder) + column;
+    current = Math.floor((current - 1) / 26);
+  }
+
+  return column;
+}
+
+function buildXlsxCellXml(cell: XlsxCell, rowIndex: number, columnIndex: number) {
+  const reference = `${getColumnName(columnIndex)}${rowIndex}`;
+  const style = cell.style === undefined ? '' : ` s="${cell.style}"`;
+
+  if (cell.value === null || cell.value === undefined || cell.value === '') {
+    return `<c r="${reference}"${style}/>`;
+  }
+
+  if (typeof cell.value === 'number' && Number.isFinite(cell.value)) {
+    return `<c r="${reference}"${style}><v>${cell.value}</v></c>`;
+  }
+
+  return `<c r="${reference}"${style} t="inlineStr"><is><t>${escapeXmlValue(cell.value)}</t></is></c>`;
+}
+
+function buildXlsxWorksheetXml(sheet: XlsxWorksheet) {
+  const merges: string[] = [];
+  const columns = sheet.columns
+    .map((width, index) => `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`)
+    .join('');
+  const rows = sheet.rows.map((row, rowIndex) => {
+    const excelRowIndex = rowIndex + 1;
+    let columnIndex = 1;
+    const cells = row.cells.map((cell) => {
+      const cellXml = buildXlsxCellXml(cell, excelRowIndex, columnIndex);
+      if (cell.mergeAcross && cell.mergeAcross > 0) {
+        merges.push(`${getColumnName(columnIndex)}${excelRowIndex}:${getColumnName(columnIndex + cell.mergeAcross)}${excelRowIndex}`);
+        columnIndex += cell.mergeAcross + 1;
+      } else {
+        columnIndex += 1;
+      }
+      return cellXml;
+    }).join('');
+    const height = row.height ? ` ht="${row.height}" customHeight="1"` : '';
+    return `<row r="${excelRowIndex}"${height}>${cells}</row>`;
+  }).join('');
+  const pane = sheet.freezeRow
+    ? `<pane ySplit="${sheet.freezeRow}" topLeftCell="A${sheet.freezeRow + 1}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/>`
+    : '<selection activeCell="A1" sqref="A1"/>';
+  const mergeXml = merges.length > 0
+    ? `<mergeCells count="${merges.length}">${merges.map((ref) => `<mergeCell ref="${ref}"/>`).join('')}</mergeCells>`
     : '';
-  return `<Worksheet ss:Name="${escapeXmlValue(name)}"><Table>${columns}${rows.join('')}</Table>${worksheetOptions}</Worksheet>`;
+  const pageSetup = sheet.landscape
+    ? '<pageMargins left="0.25" right="0.25" top="0.35" bottom="0.35" header="0.1" footer="0.1"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>'
+    : '<pageMargins left="0.35" right="0.35" top="0.45" bottom="0.45" header="0.1" footer="0.1"/><pageSetup fitToWidth="1" fitToHeight="0"/>';
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>
+  <sheetViews><sheetView showGridLines="${sheet.showGridLines === false ? '0' : '1'}" workbookViewId="0">${pane}</sheetView></sheetViews>
+  <sheetFormatPr defaultRowHeight="15"/>
+  <cols>${columns}</cols>
+  <sheetData>${rows}</sheetData>
+  ${mergeXml}
+  ${pageSetup}
+</worksheet>`;
 }
 
-function buildCell(value: string | number | null | undefined, styleId?: string, mergeAcross?: number): SpreadsheetCell {
-  return { value, styleId, mergeAcross };
+function buildXlsxStylesXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <fonts count="8">
+    <font><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/></font>
+    <font><b/><sz val="16"/><color rgb="FF0F172A"/><name val="Calibri"/></font>
+    <font><sz val="10"/><color rgb="FF475569"/><name val="Calibri"/></font>
+    <font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>
+    <font><b/><sz val="10"/><color rgb="FF047857"/><name val="Calibri"/></font>
+    <font><b/><sz val="10"/><color rgb="FFB91C1C"/><name val="Calibri"/></font>
+    <font><b/><sz val="10"/><color rgb="FF64748B"/><name val="Calibri"/></font>
+    <font><b/><sz val="11"/><color rgb="FF0F172A"/><name val="Calibri"/></font>
+  </fonts>
+  <fills count="12">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFDDEBFF"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF8FBFF"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF2563EB"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFF8FAFC"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFD1FAE5"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEE2E2"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFE2E8F0"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFFEF3C7"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF595959"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="4">
+    <border><left/><right/><top/><bottom/><diagonal/></border>
+    <border><left style="thin"><color rgb="FFE2E8F0"/></left><right style="thin"><color rgb="FFE2E8F0"/></right><top/><bottom style="thin"><color rgb="FFD8E2F1"/></bottom><diagonal/></border>
+    <border><left style="thin"><color rgb="FF93C5FD"/></left><right style="thin"><color rgb="FF93C5FD"/></right><top style="thin"><color rgb="FF1D4ED8"/></top><bottom style="thin"><color rgb="FF1D4ED8"/></bottom><diagonal/></border>
+    <border><left style="thin"><color rgb="FF7F7F7F"/></left><right style="thin"><color rgb="FF7F7F7F"/></right><top style="thin"><color rgb="FF7F7F7F"/></top><bottom style="thin"><color rgb="FF7F7F7F"/></bottom><diagonal/></border>
+  </borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="25">
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="1" fillId="3" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="2" fillId="4" borderId="0" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="3" fillId="5" borderId="2" xfId="0" applyFill="1" applyFont="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="4" fillId="7" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="5" fillId="8" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="6" fillId="9" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="2" fillId="10" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="7" fillId="3" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment vertical="center"/></xf>
+    <xf numFmtId="0" fontId="7" fillId="3" borderId="1" xfId="0" applyFill="1" applyFont="1"><alignment horizontal="right" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="3" fillId="11" borderId="3" xfId="0" applyFill="1" applyFont="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="3" xfId="0" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="3" xfId="0" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="3" fillId="11" borderId="3" xfId="0" applyFill="1" applyFont="1" applyBorder="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="3" xfId="0" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="3" xfId="0" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="3" xfId="0" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="10" borderId="3" xfId="0" applyFill="1" applyBorder="1"><alignment vertical="center" wrapText="1"/></xf>
+    <xf numFmtId="0" fontId="7" fillId="2" borderId="3" xfId="0" applyFont="1" applyBorder="1"><alignment horizontal="right" vertical="center"/></xf>
+    <xf numFmtId="0" fontId="0" fillId="2" borderId="3" xfId="0" applyBorder="1"><alignment vertical="center"/></xf>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
 }
 
 function parseQuantityNumber(value?: string) {
@@ -230,22 +384,186 @@ function getWorkbookStatusStyle(row: {
   expiredAtPeriodEnd: boolean;
 }) {
   if (row.activeAtPeriodEnd) {
-    return 'StatusActive';
+    return XLSX_STYLES.statusActive;
   }
 
   if (row.withoutRenewal) {
-    return 'StatusDanger';
+    return XLSX_STYLES.statusDanger;
   }
 
-  return row.expiredAtPeriodEnd ? 'StatusMuted' : 'Cell';
+  return row.expiredAtPeriodEnd ? XLSX_STYLES.statusMuted : XLSX_STYLES.cell;
 }
 
 function getRowStyle(index: number) {
-  return index % 2 === 0 ? 'Cell' : 'CellAlt';
+  return index % 2 === 0 ? XLSX_STYLES.cell : XLSX_STYLES.cellAlt;
 }
 
 function getNumberStyle(index: number) {
-  return index % 2 === 0 ? 'Number' : 'NumberAlt';
+  return index % 2 === 0 ? XLSX_STYLES.number : XLSX_STYLES.numberAlt;
+}
+
+function getCrc32Table() {
+  return Array.from({ length: 256 }, (_, index) => {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) {
+      value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    }
+    return value >>> 0;
+  });
+}
+
+const CRC32_TABLE = getCrc32Table();
+
+function getCrc32(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc = CRC32_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function writeUint16(buffer: Uint8Array, offset: number, value: number) {
+  buffer[offset] = value & 0xff;
+  buffer[offset + 1] = (value >>> 8) & 0xff;
+}
+
+function writeUint32(buffer: Uint8Array, offset: number, value: number) {
+  buffer[offset] = value & 0xff;
+  buffer[offset + 1] = (value >>> 8) & 0xff;
+  buffer[offset + 2] = (value >>> 16) & 0xff;
+  buffer[offset + 3] = (value >>> 24) & 0xff;
+}
+
+function createZip(files: ZipFileEntry[]) {
+  const encoder = new TextEncoder();
+  const preparedFiles = files.map((file) => ({
+    pathBytes: encoder.encode(file.path),
+    data: typeof file.content === 'string' ? encoder.encode(file.content) : file.content
+  }));
+  const localRecords: Uint8Array[] = [];
+  const centralRecords: Uint8Array[] = [];
+  let offset = 0;
+
+  for (const file of preparedFiles) {
+    const crc = getCrc32(file.data);
+    const localHeader = new Uint8Array(30 + file.pathBytes.length);
+    writeUint32(localHeader, 0, 0x04034b50);
+    writeUint16(localHeader, 4, 20);
+    writeUint16(localHeader, 6, 0);
+    writeUint16(localHeader, 8, 0);
+    writeUint16(localHeader, 10, 0);
+    writeUint16(localHeader, 12, 0);
+    writeUint32(localHeader, 14, crc);
+    writeUint32(localHeader, 18, file.data.length);
+    writeUint32(localHeader, 22, file.data.length);
+    writeUint16(localHeader, 26, file.pathBytes.length);
+    writeUint16(localHeader, 28, 0);
+    localHeader.set(file.pathBytes, 30);
+    localRecords.push(localHeader, file.data);
+
+    const centralHeader = new Uint8Array(46 + file.pathBytes.length);
+    writeUint32(centralHeader, 0, 0x02014b50);
+    writeUint16(centralHeader, 4, 20);
+    writeUint16(centralHeader, 6, 20);
+    writeUint16(centralHeader, 8, 0);
+    writeUint16(centralHeader, 10, 0);
+    writeUint16(centralHeader, 12, 0);
+    writeUint16(centralHeader, 14, 0);
+    writeUint32(centralHeader, 16, crc);
+    writeUint32(centralHeader, 20, file.data.length);
+    writeUint32(centralHeader, 24, file.data.length);
+    writeUint16(centralHeader, 28, file.pathBytes.length);
+    writeUint16(centralHeader, 30, 0);
+    writeUint16(centralHeader, 32, 0);
+    writeUint16(centralHeader, 34, 0);
+    writeUint16(centralHeader, 36, 0);
+    writeUint32(centralHeader, 38, 0);
+    writeUint32(centralHeader, 42, offset);
+    centralHeader.set(file.pathBytes, 46);
+    centralRecords.push(centralHeader);
+    offset += localHeader.length + file.data.length;
+  }
+
+  const centralSize = centralRecords.reduce((sum, record) => sum + record.length, 0);
+  const endRecord = new Uint8Array(22);
+  writeUint32(endRecord, 0, 0x06054b50);
+  writeUint16(endRecord, 4, 0);
+  writeUint16(endRecord, 6, 0);
+  writeUint16(endRecord, 8, preparedFiles.length);
+  writeUint16(endRecord, 10, preparedFiles.length);
+  writeUint32(endRecord, 12, centralSize);
+  writeUint32(endRecord, 16, offset);
+  writeUint16(endRecord, 20, 0);
+
+  const output = new Uint8Array(offset + centralSize + endRecord.length);
+  let cursor = 0;
+  for (const record of [...localRecords, ...centralRecords, endRecord]) {
+    output.set(record, cursor);
+    cursor += record.length;
+  }
+  return output;
+}
+
+function buildXlsxWorkbookXml(sheets: XlsxWorksheet[]) {
+  const sheetXml = sheets.map((sheet, index) => (
+    `<sheet name="${escapeXmlValue(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`
+  )).join('');
+  const printAreas = sheets
+    .map((sheet, index) => sheet.printArea
+      ? `<definedName name="_xlnm.Print_Area" localSheetId="${index}">'${escapeXmlValue(sheet.name)}'!${sheet.printArea}</definedName>`
+      : '')
+    .join('');
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>${sheetXml}</sheets>
+  ${printAreas ? `<definedNames>${printAreas}</definedNames>` : ''}
+</workbook>`;
+}
+
+function buildXlsxWorkbookRelsXml(sheets: XlsxWorksheet[]) {
+  const sheetRels = sheets.map((_, index) => (
+    `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`
+  )).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${sheetRels}
+  <Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+}
+
+function buildXlsxContentTypesXml(sheets: XlsxWorksheet[]) {
+  const sheetOverrides = sheets.map((_, index) => (
+    `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`
+  )).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+  ${sheetOverrides}
+</Types>`;
+}
+
+function buildXlsxPackage(sheets: XlsxWorksheet[]) {
+  return createZip([
+    { path: '[Content_Types].xml', content: buildXlsxContentTypesXml(sheets) },
+    {
+      path: '_rels/.rels',
+      content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`
+    },
+    { path: 'xl/workbook.xml', content: buildXlsxWorkbookXml(sheets) },
+    { path: 'xl/_rels/workbook.xml.rels', content: buildXlsxWorkbookRelsXml(sheets) },
+    { path: 'xl/styles.xml', content: buildXlsxStylesXml() },
+    ...sheets.map((sheet, index) => ({
+      path: `xl/worksheets/sheet${index + 1}.xml`,
+      content: buildXlsxWorksheetXml(sheet)
+    }))
+  ]);
 }
 
 function buildLicenseGroupsWorkbook(
@@ -266,15 +584,20 @@ function buildLicenseGroupsWorkbook(
     }),
     { databaseCount: 0, organizationCount: 0, extraWorkplaces: 0, periodsCount: 0, componentsCount: 0 }
   );
+
   const organizationRows = [
-    buildSpreadsheetRow([buildCell(title, 'Title', 9)], undefined, 28),
-    buildSpreadsheetRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, 'Subtitle', 9)], undefined, 22),
-    buildSpreadsheetRow([buildCell('', 'Spacer', 9)], undefined, 8),
-    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус'], 'Header', 24),
+    buildRow([buildCell(title, XLSX_STYLES.title, 9)], 28),
+    buildRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Сформировано: ${generatedAt}`, XLSX_STYLES.subtitle, 9)], 22),
+    buildRow([buildCell('', XLSX_STYLES.spacer, 9)], 8),
+    buildRow(
+      ['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Баз', 'Организаций в базах', 'Доп. мест', 'Периодов', 'Строк состава', 'Статус']
+        .map((label) => buildCell(label, XLSX_STYLES.header)),
+      24
+    ),
     ...groups.map((row, index) => {
       const rowStyle = getRowStyle(index);
       const numberStyle = getNumberStyle(index);
-      return buildSpreadsheetRow([
+      return buildRow([
         buildCell(row.clientName, rowStyle),
         buildCell(row.inn || '', rowStyle),
         buildCell(row.mnemoOrg || '', rowStyle),
@@ -285,122 +608,135 @@ function buildLicenseGroupsWorkbook(
         buildCell(row.periodsCount, numberStyle),
         buildCell(row.componentsCount, numberStyle),
         buildCell(getGroupExportStatus(row), getWorkbookStatusStyle(row))
-      ], undefined, 22);
+      ], 22);
     }),
-    buildSpreadsheetRow([
-      buildCell('Итого', 'Total', 3),
-      buildCell(totals.databaseCount, 'TotalNumber'),
-      buildCell(totals.organizationCount, 'TotalNumber'),
-      buildCell(totals.extraWorkplaces, 'TotalNumber'),
-      buildCell(totals.periodsCount, 'TotalNumber'),
-      buildCell(totals.componentsCount, 'TotalNumber'),
-      buildCell('', 'Total')
-    ], undefined, 23)
+    buildRow([
+      buildCell('Итого', XLSX_STYLES.total, 3),
+      buildCell(totals.databaseCount, XLSX_STYLES.totalNumber),
+      buildCell(totals.organizationCount, XLSX_STYLES.totalNumber),
+      buildCell(totals.extraWorkplaces, XLSX_STYLES.totalNumber),
+      buildCell(totals.periodsCount, XLSX_STYLES.totalNumber),
+      buildCell(totals.componentsCount, XLSX_STYLES.totalNumber),
+      buildCell('', XLSX_STYLES.total)
+    ], 23)
   ];
 
-  const componentDataRows = groups.flatMap((row) => {
-    const periodRows = row.periods.flatMap((period) => {
-      if (period.components.length === 0) {
-        return [{
-          row,
-          period,
-          product: '',
-          modification: '',
-          nomenclature: '',
-          quantity: null,
-          number: '',
-          note: 'Состав не указан'
-        }];
-      }
+  const printRows = groups.flatMap((row, groupIndex) => {
+    const componentRows = row.periods.flatMap((period) => {
+      const periodComponents = period.components.length > 0
+        ? period.components
+        : [{
+            product: 'Парус',
+            modification: 'Состав не указан',
+            nomenclature: '',
+            quantity: '',
+            number: '',
+            regNumberAbonement: '',
+            regNumberClient: ''
+          }];
 
-      return period.components.map((component) => ({
-        row,
+      return periodComponents.map((component) => ({
         period,
-        product: component.product || '',
-        modification: component.modification || '',
-        nomenclature: component.nomenclature || '',
-        quantity: parseQuantityNumber(component.quantity) ?? formatQuantity(component.quantity),
-        number: component.number || '',
-        note: ''
+        product: component.nomenclature || component.product || 'Парус',
+        code: component.number || component.regNumberClient || component.regNumberAbonement || '',
+        module: component.modification || 'Состав лицензии',
+        quantity: parseQuantityNumber(component.quantity) ?? (formatQuantity(component.quantity) || '')
       }));
     });
 
-    return periodRows.length > 0
-      ? periodRows
+    const printableComponents = componentRows.length > 0
+      ? componentRows
       : [{
-          row,
           period: null,
-          product: '',
-          modification: '',
-          nomenclature: '',
-          quantity: null,
-          number: '',
-          note: 'Периоды не найдены'
+          product: 'Парус',
+          code: '',
+          module: 'Периоды не найдены',
+          quantity: ''
         }];
-  });
-  const totalPlaces = componentDataRows.reduce(
-    (sum, item) => sum + (typeof item.quantity === 'number' ? item.quantity : 0),
-    0
-  );
-  const componentRows = [
-    buildSpreadsheetRow([buildCell('Состав лицензий и количество мест', 'Title', 10)], undefined, 28),
-    buildSpreadsheetRow([buildCell(`Период: ${formatInputDate(range.from)} - ${formatInputDate(range.to)}   |   Статус: ${statusLabel}   |   Строк состава: ${componentDataRows.length}`, 'Subtitle', 10)], undefined, 22),
-    buildSpreadsheetRow([buildCell('', 'Spacer', 10)], undefined, 8),
-    buildSpreadsheetRow(['Организация', 'ИНН', 'Мнемоника', 'Лицензия', 'Период действия', 'Продукт', 'Модификация', 'Номенклатура', 'Кол-во мест', 'Номер строки', 'Примечание'], 'Header', 24),
-    ...componentDataRows.map((item, index) => {
-      const rowStyle = getRowStyle(index);
-      const numberStyle = getNumberStyle(index);
-      return buildSpreadsheetRow([
-        buildCell(item.row.clientName, rowStyle),
-        buildCell(item.row.inn || '', rowStyle),
-        buildCell(item.row.mnemoOrg || '', rowStyle),
-        buildCell(item.period?.licenseNumber || item.row.licenseNumber, rowStyle),
-        buildCell(item.period ? `${formatDate(item.period.dateSinceUtc)} - ${formatDate(item.period.dateToUtc)}` : '', rowStyle),
-        buildCell(item.product, rowStyle),
-        buildCell(item.modification, rowStyle),
-        buildCell(item.nomenclature, rowStyle),
-        buildCell(item.quantity, typeof item.quantity === 'number' ? numberStyle : rowStyle),
-        buildCell(item.number, rowStyle),
-        buildCell(item.note, item.note ? 'Note' : rowStyle)
-      ], undefined, 22);
-    }),
-    buildSpreadsheetRow([
-      buildCell('Итого мест', 'Total', 7),
-      buildCell(totalPlaces, 'TotalNumber'),
-      buildCell('', 'Total', 1)
-    ], undefined, 23)
-  ];
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-  xmlns:o="urn:schemas-microsoft-com:office:office"
-  xmlns:x="urn:schemas-microsoft-com:office:excel"
-  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
-  xmlns:html="http://www.w3.org/TR/REC-html40">
-  <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
-    <Title>${escapeXmlValue(title)}</Title>
-  </DocumentProperties>
-  <Styles>
-    <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Font ss:FontName="Calibri" ss:Size="11" /><Interior ss:Color="#FFFFFF" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="Title"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="16" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#DDEBFF" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="Subtitle"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Color="#475569" /><Interior ss:Color="#F8FBFF" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="Spacer"><Interior ss:Color="#FFFFFF" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="Header"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF" /><Interior ss:Color="#2563EB" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1D4ED8" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#93C5FD" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#93C5FD" /><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1D4ED8" /></Borders></Style>
-    <Style ss:ID="Cell"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
-    <Style ss:ID="CellAlt"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Interior ss:Color="#F8FAFC" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
-    <Style ss:ID="Number"><Alignment ss:Horizontal="Right" ss:Vertical="Center" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
-    <Style ss:ID="NumberAlt"><Alignment ss:Horizontal="Right" ss:Vertical="Center" /><Interior ss:Color="#F8FAFC" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#D8E2F1" /><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E2E8F0" /></Borders></Style>
-    <Style ss:ID="StatusActive"><Alignment ss:Horizontal="Center" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#047857" /><Interior ss:Color="#D1FAE5" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="StatusDanger"><Alignment ss:Horizontal="Center" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#B91C1C" /><Interior ss:Color="#FEE2E2" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="StatusMuted"><Alignment ss:Horizontal="Center" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#64748B" /><Interior ss:Color="#E2E8F0" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="Note"><Alignment ss:Vertical="Center" ss:WrapText="1" /><Font ss:FontName="Calibri" ss:Size="10" ss:Color="#92400E" /><Interior ss:Color="#FEF3C7" ss:Pattern="Solid" /><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#FDE68A" /></Borders></Style>
-    <Style ss:ID="Total"><Alignment ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#EAF1FF" ss:Pattern="Solid" /></Style>
-    <Style ss:ID="TotalNumber"><Alignment ss:Horizontal="Right" ss:Vertical="Center" /><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#0F172A" /><Interior ss:Color="#EAF1FF" ss:Pattern="Solid" /></Style>
-  </Styles>
-  ${buildSpreadsheetWorksheet('Организации', organizationRows, [260, 105, 160, 95, 60, 130, 90, 85, 100, 125], 4)}
-  ${buildSpreadsheetWorksheet('Состав лицензий', componentRows, [260, 105, 155, 95, 155, 140, 220, 290, 85, 95, 150], 4)}
-</Workbook>`;
+    const latestPeriod = row.periods[0] ?? null;
+    const totalPlaces = printableComponents.reduce(
+      (sum, item) => sum + (typeof item.quantity === 'number' ? item.quantity : 0),
+      0
+    );
+    const blockRows = [
+      buildRow([buildCell(row.clientName, XLSX_STYLES.printTitle, 11)], 24),
+      buildRow([
+        buildCell('№ заказа', XLSX_STYLES.printLabel, 1),
+        buildCell('Дата', XLSX_STYLES.printLabel, 1),
+        buildCell('Статус', XLSX_STYLES.printLabel, 1),
+        buildCell('Провайдер', XLSX_STYLES.printLabel, 1),
+        buildCell('ИНН', XLSX_STYLES.printLabel, 1),
+        buildCell('Рег. номер', XLSX_STYLES.printLabel, 1)
+      ], 20),
+      buildRow([
+        buildCell(row.clientId, XLSX_STYLES.printValue, 1),
+        buildCell(formatInputDate(range.to), XLSX_STYLES.printValue, 1),
+        buildCell(getGroupExportStatus(row), XLSX_STYLES.printValue, 1),
+        buildCell('ПУЛЬС ГРУП', XLSX_STYLES.printValue, 1),
+        buildCell(row.inn || '', XLSX_STYLES.printValue, 1),
+        buildCell(row.licenseNumber, XLSX_STYLES.printValue, 1)
+      ], 22),
+      buildRow([
+        buildCell('№', XLSX_STYLES.printHeader),
+        buildCell('Номенклатура', XLSX_STYLES.printHeader, 1),
+        buildCell('Мнемокод', XLSX_STYLES.printHeader, 1),
+        buildCell('Модуль / блок', XLSX_STYLES.printHeader, 2),
+        buildCell('Кол-во мест', XLSX_STYLES.printHeader),
+        buildCell('Нужен', XLSX_STYLES.printHeader),
+        buildCell('Проверено, шт.', XLSX_STYLES.printHeader, 1)
+      ], 30),
+      ...printableComponents.map((component, index) => buildRow([
+        buildCell(index + 1, XLSX_STYLES.printNumber),
+        buildCell(component.product, XLSX_STYLES.printCell, 1),
+        buildCell(component.code, XLSX_STYLES.printCell, 1),
+        buildCell(component.module, XLSX_STYLES.printCell, 2),
+        buildCell(component.quantity, typeof component.quantity === 'number' ? XLSX_STYLES.printNumber : XLSX_STYLES.printCell),
+        buildCell('□', XLSX_STYLES.printCheck),
+        buildCell('', XLSX_STYLES.printChecked, 1)
+      ], component.module.length > 64 ? 44 : 28)),
+      buildRow([
+        buildCell('Итого мест', XLSX_STYLES.printFooterLabel, 7),
+        buildCell(totalPlaces, XLSX_STYLES.printFooterLabel),
+        buildCell('', XLSX_STYLES.printFooterValue, 2)
+      ], 22),
+      buildRow([
+        buildCell('Лицензия', XLSX_STYLES.printLabel, 1),
+        buildCell(row.licenseNumber, XLSX_STYLES.printFooterValue, 2),
+        buildCell('ЛО до', XLSX_STYLES.printLabel, 1),
+        buildCell(latestPeriod ? formatDate(latestPeriod.dateToUtc) : '', XLSX_STYLES.printFooterValue, 1),
+        buildCell('', XLSX_STYLES.printFooterValue, 2)
+      ], 22)
+    ];
+
+    if (groupIndex < groups.length - 1) {
+      blockRows.push(buildRow([], 8));
+    }
+
+    return blockRows;
+  });
+
+  return buildXlsxPackage([
+    {
+      name: 'Организации',
+      columns: [32, 14, 20, 13, 8, 18, 12, 12, 14, 16],
+      rows: organizationRows,
+      freezeRow: 4,
+      printArea: `$A$1:$J$${organizationRows.length}`,
+      showGridLines: false,
+      landscape: true
+    },
+    {
+      name: 'Печать по заказам',
+      columns: [5, 18.5, 16, 17.5, 14, 12.5, 9, 10, 10, 8, 12.5, 16],
+      rows: printRows.length > 0
+        ? printRows
+        : [buildRow([buildCell('Нет данных для печати', XLSX_STYLES.printTitle, 11)], 24)],
+      printArea: `$A$1:$L$${Math.max(printRows.length, 1)}`,
+      showGridLines: false,
+      landscape: true
+    }
+  ]);
 }
 
 function InfoHeader({ label, info, onOpen }: { label: string; info: InfoDetails; onOpen: (info: InfoDetails) => void }) {
@@ -749,8 +1085,8 @@ export function AnalyticsPage() {
 
       const workbook = buildLicenseGroupsWorkbook(loadedGroups, appliedRange, groupStatus);
       saveBlob(
-        new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8' }),
-        `parus-license-groups-${appliedRange.from}-${appliedRange.to}.xls`
+        new Blob([workbook], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        `parus-license-groups-${appliedRange.from}-${appliedRange.to}.xlsx`
       );
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось подготовить выгрузку групп лицензий.'), 'error', 4000);
