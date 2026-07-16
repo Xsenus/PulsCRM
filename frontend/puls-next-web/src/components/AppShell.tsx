@@ -334,16 +334,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="sidebar-database"
             title={`База данных: ${databaseInfo.databaseName}${databaseInfo.applicationVersion ? `, версия: ${databaseInfo.applicationVersion}` : ''}`}
           >
-            <span className="sidebar-database-label">БД</span>
-            <span className="sidebar-database-main">
-              <span className="sidebar-database-name">{databaseInfo.databaseName}</span>
-              {applicationVersion ? (
-                <span className="sidebar-database-version" title={databaseInfo.applicationVersion ?? undefined}>
-                  <span className="sidebar-database-version-label">Версия</span>
-                  <span className="sidebar-database-version-number">{applicationVersion}</span>
-                </span>
-              ) : null}
-            </span>
+            <span className="sidebar-database-name">{databaseInfo.databaseName}</span>
+            {applicationVersion ? (
+              <span className="sidebar-database-version" title={databaseInfo.applicationVersion ?? undefined}>
+                v{applicationVersion}
+              </span>
+            ) : null}
           </div>
         ) : null}
       </aside>
