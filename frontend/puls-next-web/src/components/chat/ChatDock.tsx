@@ -1,9 +1,25 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOptionalChat } from '../../app/ChatContext';
 import { ConversationListItem, ConversationView } from '../../pages/ChatPage';
 import { NewChatDialog } from './ChatDialogs';
 import '../../chat.css';
+
+export const DOCK_DEFAULT_SIZE = { width: 390, height: 600 };
+export const DOCK_MIN_SIZE = { width: 320, height: 380 };
+const DOCK_MARGIN = 24;
+
+/** Окно не меньше минимума и не больше экрана (с отступами). */
+export function clampDockSize(size: { width: number; height: number }, viewport = { width: window.innerWidth, height: window.innerHeight }) {
+  const maxWidth = Math.max(DOCK_MIN_SIZE.width, viewport.width - DOCK_MARGIN * 2);
+  const maxHeight = Math.max(DOCK_MIN_SIZE.height, viewport.height - DOCK_MARGIN * 2);
+  return {
+    width: Math.round(Math.min(Math.max(size.width, DOCK_MIN_SIZE.width), maxWidth)),
+    height: Math.round(Math.min(Math.max(size.height, DOCK_MIN_SIZE.height), maxHeight))
+  };
+}
+
+type ResizeEdge = 'left' | 'top' | 'corner';
 
 function ChatBubbleIcon() {
   return (
@@ -26,6 +42,16 @@ export function ChatDock() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState('');
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [dragSize, setDragSize] = useState<{ width: number; height: number } | null>(null);
+  const [, setViewportTick] = useState(0);
+  const dragRef = useRef<{ edge: ResizeEdge; x: number; y: number; width: number; height: number; last: { width: number; height: number } } | null>(null);
+
+  useEffect(() => {
+    // При изменении размера браузера окно чата ужимается, чтобы не выходить за экран.
+    const onResize = () => setViewportTick((value) => value + 1);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const onChatPage = location.pathname === '/chat' || location.pathname.startsWith('/chat/');
   const visible = !!chat?.enabled && !onChatPage;
@@ -69,6 +95,66 @@ export function ChatDock() {
     );
   }
 
+  const savedSize = dock.width && dock.height ? { width: dock.width, height: dock.height } : DOCK_DEFAULT_SIZE;
+  const size = clampDockSize(dragSize ?? savedSize);
+
+  const startResize = (edge: ResizeEdge) => (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragRef.current = { edge, x: event.clientX, y: event.clientY, width: size.width, height: size.height, last: size };
+    setDragSize(size);
+  };
+
+  const moveResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) {
+      return;
+    }
+
+    // Окно прижато к правому нижнему углу: тянем влево — шире, вверх — выше.
+    const next = clampDockSize({
+      width: drag.edge === 'top' ? drag.width : drag.width + (drag.x - event.clientX),
+      height: drag.edge === 'left' ? drag.height : drag.height + (drag.y - event.clientY)
+    });
+    // Последний размер держим в ref: к моменту pointerup состояние React может быть еще не обновлено.
+    drag.last = next;
+    setDragSize(next);
+  };
+
+  const endResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) {
+      return;
+    }
+
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    dragRef.current = null;
+    const finalSize = clampDockSize(drag.last);
+    setDragSize(null);
+    chat.resizeDock(finalSize.width === DOCK_DEFAULT_SIZE.width && finalSize.height === DOCK_DEFAULT_SIZE.height ? null : finalSize);
+  };
+
+  const resizeHandle = (edge: ResizeEdge, label: string) => (
+    <div
+      className={`chat-dock-resize chat-dock-resize-${edge}`}
+      role="separator"
+      aria-label={label}
+      title="Потяните, чтобы изменить размер. Двойной клик — стандартный размер"
+      onPointerDown={startResize(edge)}
+      onPointerMove={moveResize}
+      onPointerUp={endResize}
+      onPointerCancel={endResize}
+      onDoubleClick={() => {
+        setDragSize(null);
+        chat.resizeDock(null);
+      }}
+    />
+  );
+
   const windowButtons = (
     <>
       <button
@@ -90,7 +176,14 @@ export function ChatDock() {
   );
 
   return (
-    <section className="chat-dock" aria-label="Окно чата">
+    <section
+      className={`chat-dock${dragSize ? ' chat-dock-resizing' : ''}`}
+      aria-label="Окно чата"
+      style={{ width: size.width, height: size.height }}
+    >
+      {resizeHandle('left', 'Изменить ширину окна чата')}
+      {resizeHandle('top', 'Изменить высоту окна чата')}
+      {resizeHandle('corner', 'Изменить размер окна чата')}
       {conversation ? (
         <ConversationView
           key={conversation.id}

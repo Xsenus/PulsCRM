@@ -17,6 +17,7 @@ export function ChatNotifications() {
   return (
     <div
       className={`chat-notifications${onChatPage(location.pathname) ? '' : chat.dock.open ? ' beside-dock' : ' above-dock'}`}
+      style={!onChatPage(location.pathname) && chat.dock.open && chat.dock.width ? { right: Math.min(chat.dock.width, window.innerWidth - 48) + 40 } : undefined}
       aria-live="polite"
     >
       {chat.notifications.map((notification) => (

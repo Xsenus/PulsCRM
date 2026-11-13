@@ -24,13 +24,26 @@ const DOCK_STATE_KEY = 'puls-chat-dock';
 export interface ChatDockState {
   open: boolean;
   conversationId: number | null;
+  /** Размер окна, если пользователь его менял; без значений — стандартный. */
+  width?: number;
+  height?: number;
+}
+
+function isPositiveNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 function readDockState(): ChatDockState {
   try {
     const parsed = JSON.parse(localStorage.getItem(DOCK_STATE_KEY) ?? 'null');
     if (parsed && typeof parsed.open === 'boolean') {
-      return { open: parsed.open, conversationId: typeof parsed.conversationId === 'number' ? parsed.conversationId : null };
+      const state: ChatDockState = { open: parsed.open, conversationId: typeof parsed.conversationId === 'number' ? parsed.conversationId : null };
+      if (isPositiveNumber(parsed.width) && isPositiveNumber(parsed.height)) {
+        state.width = Math.round(parsed.width);
+        state.height = Math.round(parsed.height);
+      }
+
+      return state;
     }
   } catch {
     // Повреждённое или недоступное хранилище — начинаем со свернутого окна.
@@ -93,6 +106,8 @@ interface ChatContextValue {
   dock: ChatDockState;
   openDock: (conversationId?: number | null) => void;
   minimizeDock: () => void;
+  /** Запоминает размер окна; null — вернуть стандартный. */
+  resizeDock: (size: { width: number; height: number } | null) => void;
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -486,11 +501,18 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
   }, [dock]);
 
   const openDock = useCallback((conversationId?: number | null) => {
-    setDock((current) => ({ open: true, conversationId: conversationId === undefined ? current.conversationId : conversationId }));
+    setDock((current) => ({ ...current, open: true, conversationId: conversationId === undefined ? current.conversationId : conversationId }));
   }, []);
 
   const minimizeDock = useCallback(() => {
     setDock((current) => ({ ...current, open: false }));
+  }, []);
+
+  const resizeDock = useCallback((size: { width: number; height: number } | null) => {
+    setDock((current) => {
+      const { width: _width, height: _height, ...rest } = current;
+      return size ? { ...rest, width: Math.round(size.width), height: Math.round(size.height) } : rest;
+    });
   }, []);
 
   const subscribe = useCallback((listener: (event: ChatEvent) => void) => {
@@ -525,12 +547,13 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     subscribe,
     dock,
     openDock,
-    minimizeDock
+    minimizeDock,
+    resizeDock
   }), [
     status, enabled, currentUserId, connectionState, conversations, conversationsLoaded, totalUnread, settings, onlineUserIds,
     typingByConversation, notifications, activeConversationId, refreshConversations, upsertConversation, removeConversation,
     markConversationReadLocally, applyMessageLocally, saveSettings, dismissNotification, sendTyping, subscribe,
-    dock, openDock, minimizeDock
+    dock, openDock, minimizeDock, resizeDock
   ]);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

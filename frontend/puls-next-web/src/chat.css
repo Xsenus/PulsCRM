@@ -1619,6 +1619,68 @@ textarea.chat-input {
   animation: chat-dock-in 0.18s ease;
 }
 
+/* Ручки изменения размера: окно прижато к правому нижнему углу, тянем за левый и верхний край */
+.chat-dock-resize {
+  position: absolute;
+  z-index: 30;
+  touch-action: none;
+}
+
+.chat-dock-resize-left {
+  top: 16px;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.chat-dock-resize-top {
+  top: 0;
+  left: 16px;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.chat-dock-resize-corner {
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+  border-top-left-radius: 20px;
+  cursor: nwse-resize;
+}
+
+.chat-dock-resize-corner::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid rgba(100, 116, 139, 0.55);
+  border-left: 2px solid rgba(100, 116, 139, 0.55);
+  border-top-left-radius: 3px;
+}
+
+.chat-dock-resize:hover,
+.chat-dock-resizing .chat-dock-resize {
+  background: rgba(37, 99, 235, 0.12);
+}
+
+.chat-dock-resizing {
+  /* animation не трогаем: при снятии класса браузер заново проиграл бы анимацию появления окна */
+  user-select: none;
+}
+
+.chat-dock-resizing * {
+  pointer-events: none;
+}
+
+.chat-dock-resizing .chat-dock-resize {
+  pointer-events: auto;
+}
+
 @keyframes chat-dock-in {
   from { transform: translateY(16px) scale(0.98); opacity: 0; }
   to { transform: none; opacity: 1; }
@@ -1738,10 +1800,14 @@ textarea.chat-input {
 @media (max-width: 600px) {
   .chat-dock {
     inset: 0;
-    width: auto;
-    height: auto;
+    width: auto !important;
+    height: auto !important;
     border-radius: 0;
     border: 0;
+  }
+
+  .chat-dock-resize {
+    display: none;
   }
 
   .chat-dock-fab {

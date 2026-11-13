@@ -233,6 +233,37 @@ describe('ChatProvider', () => {
     localStorage.removeItem('puls-chat-dock');
   });
 
+  it('remembers the window size and keeps it when reopening', async () => {
+    localStorage.removeItem('puls-chat-dock');
+    await mount();
+
+    act(() => latest!.openDock(10));
+    act(() => latest!.resizeDock({ width: 520.4, height: 700 }));
+    expect(latest!.dock).toEqual({ open: true, conversationId: 10, width: 520, height: 700 });
+    expect(JSON.parse(localStorage.getItem('puls-chat-dock')!)).toEqual({ open: true, conversationId: 10, width: 520, height: 700 });
+
+    act(() => latest!.minimizeDock());
+    act(() => latest!.openDock(11));
+    expect(latest!.dock).toEqual({ open: true, conversationId: 11, width: 520, height: 700 });
+
+    act(() => latest!.resizeDock(null));
+    expect(latest!.dock).toEqual({ open: true, conversationId: 11 });
+    localStorage.removeItem('puls-chat-dock');
+  });
+
+  it('restores open state and size after reload, ignoring broken values', async () => {
+    localStorage.setItem('puls-chat-dock', JSON.stringify({ open: true, conversationId: 10, width: 480, height: 640 }));
+    await mount();
+    expect(latest!.dock).toEqual({ open: true, conversationId: 10, width: 480, height: 640 });
+    act(() => root?.unmount());
+    container?.remove();
+
+    localStorage.setItem('puls-chat-dock', JSON.stringify({ open: false, conversationId: 'x', width: -5, height: 'big' }));
+    await mount();
+    expect(latest!.dock).toEqual({ open: false, conversationId: null });
+    localStorage.removeItem('puls-chat-dock');
+  });
+
   it('adds a conversation that is not in the list yet', async () => {
     apiMocks.getChatConversation.mockResolvedValue(conversation(30, { title: 'Новая группа', kind: 1, unreadCount: 1 }));
     await mount();
