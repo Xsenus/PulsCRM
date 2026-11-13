@@ -262,6 +262,9 @@ DB-переменные можно не задавать, тогда workflow т
 
 ## 9. Как работает workflow
 
+До мержа каждый Pull Request в `main` проверяет отдельный workflow `.github/workflows/ci.yml` («CI») на GitHub-hosted runner: те же тесты, аудит зависимостей и сборка, но без деплоя. Код из PR на production-сервере не выполняется.
+
+
 `.github/workflows/deploy.yml` делает:
 
 1. checkout репозитория
