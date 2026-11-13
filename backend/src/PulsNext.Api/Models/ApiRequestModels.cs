@@ -304,4 +304,22 @@ public sealed class ChatAttachmentUploadRequest
     /// </summary>
     [FromForm(Name = "file")]
     public IFormFile? File { get; set; }
+
+    /// <summary>
+    /// Уменьшенная копия изображения для ленты (JPEG, PNG или WebP), необязательно.
+    /// </summary>
+    [FromForm(Name = "thumbnail")]
+    public IFormFile? Thumbnail { get; set; }
+
+    /// <summary>
+    /// Ширина оригинала изображения в пикселях, необязательно.
+    /// </summary>
+    [FromForm(Name = "width")]
+    public int? Width { get; set; }
+
+    /// <summary>
+    /// Высота оригинала изображения в пикселях, необязательно.
+    /// </summary>
+    [FromForm(Name = "height")]
+    public int? Height { get; set; }
 }

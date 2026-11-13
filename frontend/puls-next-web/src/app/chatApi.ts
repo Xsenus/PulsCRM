@@ -1,5 +1,6 @@
 import { api } from './api';
 import { throwApiError } from './apiErrors';
+import type { ChatImageUploadExtras } from './chatImageThumbnail';
 import type {
   ChatAttachmentDto,
   ChatConversationDto,
@@ -89,9 +90,22 @@ export const getChatDockState = () => call(() => api.get<ChatDockStateDto>('/api
 export const updateChatDockState = (state: ChatDockStateDto) =>
   call(() => api.put<ChatDockStateDto>('/api/chat/dock', state));
 
-export function uploadChatAttachment(conversationId: number, file: File, onProgress?: (percent: number) => void) {
+export function uploadChatAttachment(
+  conversationId: number,
+  file: File,
+  onProgress?: (percent: number) => void,
+  extras: ChatImageUploadExtras = {}
+) {
   const formData = new FormData();
   formData.append('file', file);
+  if (extras.thumbnail) {
+    formData.append('thumbnail', extras.thumbnail, extras.thumbnail.type === 'image/webp' ? 'thumbnail.webp' : 'thumbnail.jpg');
+  }
+
+  if (extras.width && extras.height) {
+    formData.append('width', String(extras.width));
+    formData.append('height', String(extras.height));
+  }
   return call(() => api.post<ChatAttachmentDto>(`/api/chat/conversations/${conversationId}/attachments`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (event) => {
@@ -109,5 +123,8 @@ export const deletePendingChatAttachment = (attachmentId: number) =>
  * Вложения отдаются только с JWT, поэтому &lt;img src&gt; на прямой URL не работает:
  * качаем как blob и показываем через object URL.
  */
-export const fetchChatAttachmentBlob = (attachmentId: number, inline: boolean) =>
-  call(() => api.get<Blob>(`/api/chat/attachments/${attachmentId}`, { params: { inline: inline || undefined }, responseType: 'blob' }));
+export const fetchChatAttachmentBlob = (attachmentId: number, inline: boolean, thumbnail = false) =>
+  call(() => api.get<Blob>(`/api/chat/attachments/${attachmentId}`, {
+    params: { inline: inline || undefined, thumbnail: thumbnail || undefined },
+    responseType: 'blob'
+  }));

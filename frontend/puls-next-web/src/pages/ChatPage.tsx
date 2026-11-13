@@ -33,6 +33,7 @@ import { ChatAttachmentList } from '../components/chat/ChatAttachmentView';
 import { ChatSettingsDialog, ConversationInfoDialog, NewChatDialog } from '../components/chat/ChatDialogs';
 import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
 import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
+import { prepareChatImageUpload } from '../app/chatImageThumbnail';
 import '../chat.css';
 
 const PAGE_SIZE = 50;
@@ -444,9 +445,10 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
       const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
       setUploads((current) => [...current, { key, file, progress: 0, previewUrl }]);
-      uploadChatAttachment(conversation.id, file, (progress) => {
-        setUploads((current) => current.map((item) => item.key === key ? { ...item, progress } : item));
-      })
+      prepareChatImageUpload(file)
+        .then((extras) => uploadChatAttachment(conversation.id, file, (progress) => {
+          setUploads((current) => current.map((item) => item.key === key ? { ...item, progress } : item));
+        }, extras))
         .then((attachment) => setUploads((current) => current.map((item) => item.key === key ? { ...item, attachment, progress: 100 } : item)))
         .catch((error) => setUploads((current) => current.map((item) => item.key === key ? { ...item, error: getApiErrorMessage(error, 'Ошибка загрузки') } : item)));
     });

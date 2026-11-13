@@ -9,7 +9,7 @@ namespace PulsNext.Infrastructure.Tests;
 public sealed class ChatAttachmentCleanupTests
 {
     [Fact]
-    public async Task RemovesOnlyOldPendingAttachmentsWithFiles()
+    public async Task RemovesOnlyOldPendingAttachmentsWithFilesAndThumbnails()
     {
         using var unitOfWork = new ChatUnitOfWork(new SimpleDataLayer(new InMemoryDataStore()));
         var store = new RecordingFileStore();
@@ -18,6 +18,7 @@ public sealed class ChatAttachmentCleanupTests
         var conversation = new ChatConversation(unitOfWork) { Kind = ChatConversationKind.Direct, CreatedAtUtc = now, UpdatedAtUtc = now, LastMessageAtUtc = now };
         var message = new ChatMessage(unitOfWork) { Conversation = conversation, SenderUserId = 1, Text = "Файл", CreatedAtUtc = now };
         var oldPending = Attachment(unitOfWork, conversation, null, "old-pending", now.AddHours(-30));
+        oldPending.ThumbnailRelativePath = "old-pending.thumb";
         var freshPending = Attachment(unitOfWork, conversation, null, "fresh-pending", now.AddHours(-2));
         var oldSent = Attachment(unitOfWork, conversation, message, "old-sent", now.AddDays(-10));
         unitOfWork.CommitChanges();
@@ -27,7 +28,7 @@ public sealed class ChatAttachmentCleanupTests
         var removed = await cleaner.RemovePendingAsync(now.AddHours(-24), CancellationToken.None);
 
         Assert.Equal(1, removed);
-        Assert.Equal(["old-pending"], store.Deleted);
+        Assert.Equal(["old-pending", "old-pending.thumb"], store.Deleted);
         // XPO удаляет записи мягко (GCRecord): запросы приложения их больше не видят.
         var remaining = new XPQuery<ChatAttachment>(unitOfWork).Select(x => x.Oid).ToList();
         Assert.DoesNotContain(oldPendingId, remaining);
