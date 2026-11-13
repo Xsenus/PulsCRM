@@ -293,3 +293,15 @@ public sealed class FileUploadRequest
     [FromForm(Name = "isPublic")]
     public bool IsPublic { get; set; }
 }
+
+/// <summary>
+/// Загрузка вложения чата.
+/// </summary>
+public sealed class ChatAttachmentUploadRequest
+{
+    /// <summary>
+    /// Прикрепляемый файл.
+    /// </summary>
+    [FromForm(Name = "file")]
+    public IFormFile? File { get; set; }
+}
