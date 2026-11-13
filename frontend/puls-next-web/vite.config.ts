@@ -19,6 +19,11 @@ export default defineConfig(({ mode }) => {
         '/health': {
           target: apiUrl,
           changeOrigin: true
+        },
+        '/hubs': {
+          target: apiUrl,
+          changeOrigin: true,
+          ws: true
         }
       }
     },

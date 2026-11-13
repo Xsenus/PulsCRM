@@ -6,6 +6,7 @@ import { ToastViewport } from '../components/ToastViewport';
 import { LoginPage } from '../pages/LoginPage';
 
 const AppShell = lazy(() => import('../components/AppShell').then((module) => ({ default: module.AppShell })));
+const ChatPage = lazy(() => import('../pages/ChatPage').then((module) => ({ default: module.ChatPage })));
 const DashboardPage = lazy(() => import('../pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })));
 const EmployeesPage = lazy(() => import('../pages/EmployeesPage').then((module) => ({ default: module.EmployeesPage })));
@@ -37,6 +38,8 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ShellLayout />}>
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/chat/:conversationId" element={<ChatPage />} />
             <Route path="/analytics" element={<Navigate to="/analytics/parus-tornado" replace />} />
             <Route path="/analytics/parus-tornado" element={<AnalyticsPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
