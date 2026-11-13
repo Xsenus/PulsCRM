@@ -46,8 +46,11 @@ Install-WindowsFeature `
   Web-Stat-Compression, `
   Web-Filtering, `
   Web-Mgmt-Console, `
-  Web-Scripting-Tools
+  Web-Scripting-Tools, `
+  Web-WebSockets
 ```
+
+`Web-WebSockets` нужен для мгновенной доставки сообщений чата (SignalR). Если чат не используется, компонент можно не ставить. Настройка чата — `docs/chat.md`.
 
 Дополнительно установить:
 

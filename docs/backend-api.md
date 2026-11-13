@@ -111,3 +111,24 @@ Frontend использует эти маршруты на странице `/di
 - для каждого каталога API пытается создать директорию, записать временный probe-файл, прочитать его и удалить.
 
 Маршрут требует Bearer JWT и не добавлен в публичный `/health`, потому что возвращает абсолютные пути на сервере. Если `Keys.CanWrite=false` или `Secrets.CanProtectAndUnprotect=false`, нужно проверить права учетной записи IIS application pool или службы runner на каталог `C:\PulsCRMData\keys`. Потеря или недоступность ключей Data Protection может сделать уже сохраненные SMTP-пароли нечитаемыми.
+
+## Чат сотрудников
+
+Контроллер `/api/chat` (Bearer JWT) работает с отдельной базой PostgreSQL `ChatDb`. Пока чат выключен (`Chat:Enabled`), все маршруты, кроме `GET /api/chat/status`, отвечают 404 еще до создания контроллера. Настройка и включение — в `chat.md`.
+
+- `GET /api/chat/status` — включен ли чат, id текущего пользователя и лимиты (размер и число вложений, длина сообщения);
+- `GET /api/chat/users?search=&take=` — сотрудники, которым можно написать (без уволенных и без себя);
+- `GET /api/chat/conversations?includeArchived=` — диалоги пользователя с последним сообщением, числом непрочитанных и участниками;
+- `GET /api/chat/conversations/{id}`; `POST /api/chat/conversations/direct` (`userId`) — открыть или создать личный диалог; `POST /api/chat/conversations/group` (`title`, `icon`, `description`, `memberUserIds`);
+- `PUT /api/chat/conversations/{id}` — название/описание/иконка группы; `POST .../{id}/members`, `DELETE .../{id}/members/{userId}`, `PUT .../{id}/members/{userId}/role`, `POST .../{id}/leave`;
+- `PUT /api/chat/conversations/{id}/preferences` — личные «без звука», «закреплен», «в архиве»;
+- `GET /api/chat/conversations/{id}/messages?before=&take=` — страница сообщений от новых к старым (внутри страницы по возрастанию, `hasMoreBefore`);
+- `POST /api/chat/conversations/{id}/messages` — отправка (`text`, `replyToMessageId`, `attachmentIds`, `clientMessageId` для защиты от дублей);
+- `PUT /api/chat/messages/{id}`, `DELETE /api/chat/messages/{id}`, `POST /api/chat/messages/{id}/reactions` (`emoji`, повторный вызов снимает реакцию);
+- `POST /api/chat/conversations/{id}/read` (`messageId`) и `POST .../{id}/typing`;
+- `POST /api/chat/conversations/{id}/attachments` (multipart, поле `file`) — загрузка вложения до отправки; `DELETE /api/chat/attachments/{id}` — удалить неотправленное; `GET /api/chat/attachments/{id}?inline=` — скачать (только участникам диалога; `inline=true` для изображений);
+- `GET /api/chat/unread` — сумма непрочитанных без диалогов «без звука»; `GET/PUT /api/chat/settings` — оповещения, звук, громкость, показ текста.
+
+Права проверяются в `ChatService`: чужой диалог для пользователя «не существует» (404), действия без прав — 400 с текстом причины.
+
+SignalR-хаб `/hubs/chat` (подключается только при включенном чате; JWT передается в `access_token`) рассылает участникам события `messageCreated`, `messageUpdated`, `conversationUpdated`, `conversationRemoved`, `readStateChanged`, `typing` и `presenceChanged`; методы хаба — `Typing(conversationId)` и `GetOnlineUsers(userIds)`.
