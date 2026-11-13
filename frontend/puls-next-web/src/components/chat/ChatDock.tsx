@@ -4,6 +4,7 @@ import { useOptionalChat } from '../../app/ChatContext';
 import { ConversationListItem, ConversationView } from '../../pages/ChatPage';
 import { NewChatDialog } from './ChatDialogs';
 import '../../chat.css';
+import { ChatSearchResults, useChatMessageSearch } from './ChatSearch';
 
 export const DOCK_DEFAULT_SIZE = { width: 390, height: 600 };
 export const DOCK_MIN_SIZE = { width: 320, height: 380 };
@@ -41,6 +42,8 @@ export function ChatDock() {
   const location = useLocation();
   const navigate = useNavigate();
   const [filter, setFilter] = useState('');
+  const messageSearch = useChatMessageSearch(filter);
+  const [jump, setJump] = useState<{ conversationId: number; messageId: number; requestKey: string } | null>(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [dragSize, setDragSize] = useState<{ width: number; height: number } | null>(null);
   const [, setViewportTick] = useState(0);
@@ -191,6 +194,7 @@ export function ChatDock() {
           compact
           onBack={() => chat.openDock(null)}
           headerExtra={windowButtons}
+          jumpTo={jump && jump.conversationId === conversation.id ? jump : null}
         />
       ) : (
         <div className="chat-dock-list">
@@ -205,14 +209,21 @@ export function ChatDock() {
             {windowButtons}
           </header>
           <div className="chat-dock-search">
-            <input className="chat-input" type="search" placeholder="Поиск по чатам" value={filter} onChange={(event) => setFilter(event.target.value)} />
+            <input
+              className="chat-input"
+              type="search"
+              placeholder="Поиск по чатам и сообщениям"
+              aria-label="Поиск по чатам и сообщениям"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+            />
           </div>
           {chat.connectionState === 'reconnecting' || chat.connectionState === 'offline' ? (
             <div className="chat-connection-banner">{chat.connectionState === 'reconnecting' ? 'Переподключение…' : 'Нет связи с сервером чата'}</div>
           ) : null}
           <div className="chat-conversation-list">
             {!chat.conversationsLoaded ? <div className="chat-muted chat-list-hint">Загрузка…</div> : null}
-            {chat.conversationsLoaded && filtered.length === 0 ? (
+            {chat.conversationsLoaded && filtered.length === 0 && !messageSearch.enabled ? (
               <div className="chat-list-empty">
                 <div className="chat-muted">{chat.conversations.length === 0 ? 'Здесь появятся ваши диалоги.' : 'Ничего не найдено'}</div>
                 {chat.conversations.length === 0 ? (
@@ -220,9 +231,23 @@ export function ChatDock() {
                 ) : null}
               </div>
             ) : null}
+            {messageSearch.enabled && filtered.length > 0 ? <div className="chat-list-section">Чаты</div> : null}
             {filtered.map((item) => (
               <ConversationListItem key={item.id} conversation={item} active={false} onClick={() => chat.openDock(item.id)} />
             ))}
+            {messageSearch.enabled ? (
+              <>
+                <div className="chat-list-section">Сообщения</div>
+                <ChatSearchResults
+                  search={messageSearch}
+                  showConversation
+                  onSelect={(result) => {
+                    setJump({ conversationId: result.conversationId, messageId: result.message.id, requestKey: String(Date.now()) });
+                    chat.openDock(result.conversationId);
+                  }}
+                />
+              </>
+            ) : null}
           </div>
         </div>
       )}

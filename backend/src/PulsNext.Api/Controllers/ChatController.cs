@@ -158,6 +158,16 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
         => Ok(await chatService.UpdatePreferencesAsync(id, request, cancellationToken));
 
     /// <summary>
+    /// Поиск по тексту сообщений во всех диалогах сотрудника или в одном (<c>conversationId</c>).
+    /// Без учета регистра, от новых к старым; не меньше 2 символов.
+    /// </summary>
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<ChatSearchResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyCollection<ChatSearchResultDto>>> SearchMessages([FromQuery] string? q, [FromQuery] int? conversationId, [FromQuery] int? take, CancellationToken cancellationToken)
+        => Ok(await chatService.SearchMessagesAsync(q, conversationId, take ?? 0, cancellationToken));
+
+    /// <summary>
     /// Закрепляет сообщение над лентой диалога (<c>messageId: null</c> — открепляет).
     /// В групповом чате — только администраторы.
     /// </summary>

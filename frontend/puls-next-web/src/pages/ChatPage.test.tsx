@@ -18,6 +18,7 @@ const apiMocks = vi.hoisted(() => ({
   markChatRead: vi.fn(),
   updateChatPreferences: vi.fn(),
   pinChatMessage: vi.fn(),
+  searchChatMessages: vi.fn(),
   uploadChatAttachment: vi.fn(),
   deletePendingChatAttachment: vi.fn(),
   fetchChatAttachmentBlob: vi.fn(),
@@ -350,6 +351,68 @@ describe('ChatPage', () => {
     });
     await flush();
     expect(apiMocks.pinChatMessage).toHaveBeenCalledWith(10, 2);
+  });
+
+  it('searches messages across chats from the sidebar and opens the found message', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    apiMocks.searchChatMessages.mockResolvedValue([
+      { conversationId: 10, conversationTitle: 'Борис Петров', conversationKind: 0, peerUserId: PEER, message: message(2, { text: 'Пришлите отчет по лицензиям' }) }
+    ]);
+    render('/chat');
+    await flush();
+
+    const input = container!.querySelector('input[aria-label="Поиск по чатам и сообщениям"]') as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    act(() => {
+      setter.call(input, 'отчет');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    await flush();
+
+    expect(apiMocks.searchChatMessages).toHaveBeenCalledWith('отчет', undefined);
+    const result = container!.querySelector('.chat-search-result') as HTMLButtonElement;
+    expect(result.textContent).toContain('Борис Петров');
+    expect(result.querySelector('mark')?.textContent).toBe('отчет');
+
+    act(() => result.click());
+    await flush();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await flush();
+    expect(container!.querySelector('[data-message-id="2"]')?.classList.contains('chat-message-highlight')).toBe(true);
+  });
+
+  it('searches inside the open conversation', async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    apiMocks.searchChatMessages.mockResolvedValue([
+      { conversationId: 10, conversationTitle: 'Борис Петров', conversationKind: 0, peerUserId: PEER, message: message(1) }
+    ]);
+    render('/chat/10');
+    await flush();
+
+    act(() => buttonByLabel('Поиск в диалоге')!.click());
+    const input = container!.querySelector('input[aria-label="Найти в этом диалоге"]') as HTMLInputElement;
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    act(() => {
+      setter.call(input, 'Сообщение');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    await flush();
+
+    expect(apiMocks.searchChatMessages).toHaveBeenCalledWith('Сообщение', 10);
+    act(() => (container!.querySelector('.chat-conversation-search .chat-search-result') as HTMLButtonElement).click());
+    await flush();
+    expect(container!.querySelector('[data-message-id="1"]')?.classList.contains('chat-message-highlight')).toBe(true);
+
+    act(() => buttonByLabel('Закрыть поиск')!.click());
+    expect(container!.querySelector('.chat-conversation-search')).toBeNull();
   });
 
   it('toggles a quick reaction', async () => {

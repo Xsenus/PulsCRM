@@ -331,3 +331,26 @@ test('pinned message is shown above the feed and jumps to the message', async ({
   expect(pinRequests).toEqual([{ messageId: null }]);
   expect(await expectNoDocumentHorizontalOverflow(page)).toBe(true);
 });
+
+test('message search finds messages across chats and opens the conversation on the message', async ({ page }) => {
+  await mockChat(page);
+  const queries: string[] = [];
+  await page.route(/\/api\/chat\/search(\?.*)?$/, async (route) => {
+    queries.push(new URL(route.request().url()).searchParams.get('q') ?? '');
+    await fulfillJson(route, [
+      { conversationId: 10, conversationTitle: 'Петрова Анна Сергеевна', conversationKind: 0, peerUserId: 2, message: messages[0] }
+    ]);
+  });
+
+  await page.goto('/chat');
+  await page.getByLabel('Поиск по чатам и сообщениям').fill('лицензиям');
+  const result = page.locator('.chat-search-result');
+  await expect(result).toHaveCount(1);
+  await expect(result.locator('mark')).toHaveText('лицензиям');
+  expect(queries).toEqual(['лицензиям']);
+
+  await result.click();
+  await expect(page).toHaveURL(/\/chat\/10\?message=1$/);
+  await expect(page.locator('[data-message-id="1"]')).toHaveClass(/chat-message-highlight/);
+  expect(await expectNoDocumentHorizontalOverflow(page)).toBe(true);
+});
