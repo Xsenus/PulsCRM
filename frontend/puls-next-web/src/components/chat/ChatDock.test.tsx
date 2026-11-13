@@ -5,7 +5,7 @@ import { act } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatConversationDto } from '../../app/chatTypes';
-import { ChatDock } from './ChatDock';
+import { ChatDock, clampDockSize } from './ChatDock';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -68,6 +68,11 @@ function createChat(patch: Record<string, unknown> = {}) {
   };
   state.openDock = vi.fn((conversationId?: number | null) => {
     state.dock = { open: true, conversationId: conversationId === undefined ? state.dock.conversationId : conversationId };
+    rerender();
+  });
+  state.resizeDock = vi.fn((size: { width: number; height: number } | null) => {
+    const { width, height, ...rest } = state.dock;
+    state.dock = size ? { ...rest, ...size } : rest;
     rerender();
   });
   state.minimizeDock = vi.fn(() => {
@@ -199,5 +204,49 @@ describe('ChatDock', () => {
     await flush();
     click('Открыть на всю страницу');
     expect(currentPath).toBe('/chat/11');
+  });
+
+  it('clamps window size between minimum and the screen', () => {
+    const viewport = { width: 1440, height: 900 };
+    expect(clampDockSize({ width: 100, height: 100 }, viewport)).toEqual({ width: 320, height: 380 });
+    expect(clampDockSize({ width: 3000, height: 3000 }, viewport)).toEqual({ width: 1392, height: 852 });
+    expect(clampDockSize({ width: 500.4, height: 640.6 }, viewport)).toEqual({ width: 500, height: 641 });
+  });
+
+  it('resizes by dragging the corner, remembers the size and resets on double click', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1440 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 900 });
+    chatState.value = createChat({ dock: { open: true, conversationId: null, width: 400, height: 500 } });
+    render('/employees');
+
+    const dock = document.querySelector('.chat-dock') as HTMLElement;
+    expect(dock.style.width).toBe('400px');
+    expect(dock.style.height).toBe('500px');
+
+    const corner = document.querySelector('[aria-label="Изменить размер окна чата"]') as HTMLElement;
+    const Pointer = (window.PointerEvent ?? MouseEvent) as typeof MouseEvent;
+    act(() => {
+      corner.dispatchEvent(new Pointer('pointerdown', { bubbles: true, button: 0, clientX: 1000, clientY: 400 }));
+    });
+    act(() => {
+      corner.dispatchEvent(new Pointer('pointermove', { bubbles: true, clientX: 900, clientY: 250 }));
+    });
+    expect((document.querySelector('.chat-dock') as HTMLElement).style.width).toBe('500px');
+    expect((document.querySelector('.chat-dock') as HTMLElement).style.height).toBe('650px');
+    expect(chatState.value.resizeDock).not.toHaveBeenCalled();
+
+    act(() => {
+      corner.dispatchEvent(new Pointer('pointerup', { bubbles: true, clientX: 900, clientY: 250 }));
+    });
+    expect(chatState.value.resizeDock).toHaveBeenLastCalledWith({ width: 500, height: 650 });
+    expect((document.querySelector('.chat-dock') as HTMLElement).style.width).toBe('500px');
+
+    act(() => {
+      (document.querySelector('[aria-label="Изменить ширину окна чата"]') as HTMLElement)
+        .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    });
+    expect(chatState.value.resizeDock).toHaveBeenLastCalledWith(null);
+    expect((document.querySelector('.chat-dock') as HTMLElement).style.width).toBe('390px');
+    expect((document.querySelector('.chat-dock') as HTMLElement).style.height).toBe('600px');
   });
 });

@@ -128,3 +128,46 @@ test('floating chat window lets you write without leaving the page', async ({ pa
   await page.goto('/chat');
   await expect(page.getByRole('button', { name: /Открыть чат/ })).toBeHidden();
 });
+
+test('floating chat window can be resized and remembers size and open state', async ({ page }) => {
+  await mockChat(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('dock-test-started')) {
+      sessionStorage.setItem('dock-test-started', '1');
+      window.localStorage.removeItem('puls-chat-dock');
+    }
+  });
+  await page.route(/\/api\/employees(\?.*)?$/, (route) => fulfillJson(route, { totalCount: 0, items: [] }));
+  await page.goto('/employees');
+  await page.getByRole('button', { name: /Открыть чат/ }).click();
+
+  const dock = page.getByRole('region', { name: 'Окно чата' });
+  const width = async () => Math.round((await page.getByRole('region', { name: 'Окно чата' }).boundingBox())?.width ?? 0);
+  // Окно появляется с короткой анимацией масштаба — ждем, пока она закончится.
+  await expect.poll(width).toBe(390);
+  const before = (await dock.boundingBox())!;
+
+  const corner = page.getByRole('separator', { name: 'Изменить размер окна чата' });
+  const handle = (await corner.boundingBox())!;
+  await page.mouse.move(handle.x + 5, handle.y + 5);
+  await page.mouse.down();
+  await page.mouse.move(handle.x - 145, handle.y - 95, { steps: 5 });
+  await page.mouse.up();
+
+  const after = (await dock.boundingBox())!;
+  expect(Math.round(after.width)).toBe(540);
+  expect(Math.round(after.height)).toBe(700);
+  expect(Math.round(after.x + after.width)).toBe(Math.round(before.x + before.width));
+
+  await page.reload();
+  await expect.poll(width).toBe(540);
+  const restored = (await page.getByRole('region', { name: 'Окно чата' }).boundingBox())!;
+  expect(Math.round(restored.height)).toBe(700);
+
+  await page.getByRole('button', { name: 'Свернуть чат' }).click();
+  await page.reload();
+  await expect(page.getByRole('region', { name: 'Окно чата' })).toBeHidden();
+  await page.getByRole('button', { name: /Открыть чат/ }).click();
+  await expect.poll(width).toBe(540);
+});
