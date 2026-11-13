@@ -61,7 +61,11 @@ public interface IChatService
     Task<ChatAttachmentDto> UploadAttachmentAsync(int conversationId, ChatAttachmentUploadCommand command, CancellationToken cancellationToken);
     Task<(ChatAttachmentDto Metadata, Stream Content)?> OpenAttachmentAsync(int attachmentId, CancellationToken cancellationToken);
     Task DeletePendingAttachmentAsync(int attachmentId, CancellationToken cancellationToken);
-    Task NotifyTypingAsync(int conversationId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Рассылает «печатает». <paramref name="userId"/> передает SignalR-хаб, где HttpContext недоступен;
+    /// null — текущий пользователь HTTP-запроса.
+    /// </summary>
+    Task NotifyTypingAsync(int conversationId, int? userId, CancellationToken cancellationToken);
     Task<ChatUserSettingsDto> GetSettingsAsync(CancellationToken cancellationToken);
     Task<ChatUserSettingsDto> UpdateSettingsAsync(ChatUserSettingsDto request, CancellationToken cancellationToken);
 }
@@ -823,9 +827,9 @@ public sealed class ChatService(
         return Task.CompletedTask;
     }
 
-    public async Task NotifyTypingAsync(int conversationId, CancellationToken cancellationToken)
+    public async Task NotifyTypingAsync(int conversationId, int? userId, CancellationToken cancellationToken)
     {
-        var me = CurrentUserId;
+        var me = userId ?? CurrentUserId;
         var (conversation, _) = RequireMembership(conversationId, me);
         var recipients = GetActiveUserIds(conversation.Oid).Where(x => x != me).ToArray();
         await eventPublisher.PublishAsync(recipients, ChatEventNames.Typing, new ChatTypingEventDto

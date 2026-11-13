@@ -374,6 +374,24 @@ public sealed class ChatServiceTests : IDisposable
         await Assert.ThrowsAsync<ValidationException>(() => _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { Text = new string('a', 8001) }, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task NotifyTyping_GoesToOtherParticipantsOnly_AndUsesExplicitUser()
+    {
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob, Carol] }, CancellationToken.None);
+        _publisher.Events.Clear();
+
+        As(Outsider);
+        await _service.NotifyTypingAsync(group.Id, Bob, CancellationToken.None);
+
+        var typing = Assert.Single(_publisher.Events);
+        Assert.Equal(ChatEventNames.Typing, typing.Name);
+        Assert.Equal([Alice, Carol], typing.UserIds.Order());
+        Assert.Equal("Борис", ((ChatTypingEventDto)typing.Payload).DisplayName);
+
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.NotifyTypingAsync(group.Id, null, CancellationToken.None));
+    }
+
     private void As(int userId) => _currentUser.UserId = userId;
 
     private Task<ChatAttachmentDto> UploadAsync(int conversationId, string fileName, string contentType)

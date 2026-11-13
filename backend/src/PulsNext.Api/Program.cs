@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using PulsNext.Api;
+using PulsNext.Api.Chat;
 using PulsNext.Api.Models;
 using PulsNext.Domain.Mailing;
 using PulsNext.Infrastructure;
@@ -14,6 +15,9 @@ var importRequestSizeLimit = Math.Max(
     builder.Configuration.GetSection("Import").GetValue<long>("MaxRequestSizeBytes", 200L * 1024 * 1024));
 
 builder.Services.AddPulsNextInfrastructure(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ChatPresenceTracker>();
+builder.Services.AddSingleton<IChatEventPublisher, SignalRChatEventPublisher>();
 builder.Services.AddHostedService<SchedulerHostedService>();
 builder.Services.AddHostedService<QueuePumpHostedService>();
 builder.Services.AddHostedService<RecoveryHostedService>();
@@ -96,6 +100,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = signingKey,
             ClockSkew = TimeSpan.FromMinutes(1)
         };
+
+        // Браузер не может передать заголовок Authorization при подключении WebSocket/SSE,
+        // поэтому для хаба чата токен принимается из query-параметра access_token.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments(ChatHub.Path))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -138,6 +158,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+if (app.Services.GetRequiredService<ChatFeature>().IsEnabled)
+{
+    app.MapHub<ChatHub>(ChatHub.Path).RequireCors("web");
+}
 
 app.Run();
 
