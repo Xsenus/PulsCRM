@@ -32,6 +32,7 @@ import { ChatAvatar } from '../components/chat/ChatAvatar';
 import { ChatAttachmentList } from '../components/chat/ChatAttachmentView';
 import { ChatSettingsDialog, ConversationInfoDialog, NewChatDialog } from '../components/chat/ChatDialogs';
 import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
+import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
 import '../chat.css';
 
 const PAGE_SIZE = 50;
@@ -911,7 +912,13 @@ function MessageBubble({
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const navigate = useNavigate();
   const bigEmoji = !message.isDeleted && message.attachments.length === 0 && !message.replyTo && isEmojiOnly(message.text);
+  const textParts = useMemo(() => (message.text ? splitTextWithLinks(message.text) : []), [message.text]);
+  const appLinks = useMemo(
+    () => extractAppLinks(textParts.filter((part) => part.type === 'link').map((part) => (part as { href: string }).href)),
+    [textParts]
+  );
 
   const copy = async () => {
     try {
@@ -949,9 +956,35 @@ function MessageBubble({
             {message.attachments.length > 0 ? <ChatAttachmentList attachments={message.attachments} /> : null}
             {message.text ? (
               <div className="chat-bubble-text">
-                {splitTextWithLinks(message.text).map((part, index) => part.type === 'link'
-                  ? <a key={index} href={part.href} target="_blank" rel="noopener noreferrer">{part.value}</a>
-                  : <React.Fragment key={index}>{part.value}</React.Fragment>)}
+                {textParts.map((part, index) => {
+                  if (part.type !== 'link') {
+                    return <React.Fragment key={index}>{part.value}</React.Fragment>;
+                  }
+
+                  // Ссылки на объекты этой CRM открываются внутри приложения, остальные — в новой вкладке.
+                  const appLink = parseAppLink(part.href);
+                  return appLink ? (
+                    <a
+                      key={index}
+                      href={part.href}
+                      onClick={(event) => {
+                        if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) {
+                          event.preventDefault();
+                          navigate(appLink.path);
+                        }
+                      }}
+                    >
+                      {part.value}
+                    </a>
+                  ) : (
+                    <a key={index} href={part.href} target="_blank" rel="noopener noreferrer">{part.value}</a>
+                  );
+                })}
+              </div>
+            ) : null}
+            {appLinks.length > 0 ? (
+              <div className="chat-link-previews">
+                {appLinks.map((link) => <ChatLinkPreview key={link.path} link={link} />)}
               </div>
             ) : null}
           </>

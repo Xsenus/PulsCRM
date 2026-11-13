@@ -10,6 +10,7 @@ import { AppLoader, LoadingButtonLabel } from '../components/AppLoader';
 import { EmployeeEditorForm } from '../components/EmployeeEditorForm';
 import { Modal } from '../components/Modal';
 import { PageHeader } from '../components/PageHeader';
+import { WriteInChatButton } from '../components/chat/WriteInChat';
 
 function normalizeDateInput(value?: string) {
   return value ? value.slice(0, 10) : undefined;
@@ -238,6 +239,12 @@ export function EmployeeEditPage() {
         )}
         actions={(
           <>
+            {isEdit && !loading ? (
+              <WriteInChatButton
+                userId={employeeId}
+                userGroup={lookups?.groups?.find((group) => group.id === draft.userGroupId)?.name}
+              />
+            ) : null}
             {canEdit ? (
               <button type="button" className="primary-button button-inline" onClick={requestSave} disabled={pageDisabled}>
                 {saving ? <LoadingButtonLabel label="Сохраняем" /> : 'Сохранить'}

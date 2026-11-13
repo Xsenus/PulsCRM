@@ -1820,3 +1820,69 @@ textarea.chat-input {
     bottom: 84px;
   }
 }
+
+/* ---------- Карточки ссылок на объекты CRM ---------- */
+
+.chat-link-previews {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
+.chat-link-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 340px;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 3px solid var(--brand);
+  border-radius: 10px;
+  background: rgba(37, 99, 235, 0.07);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-message.own .chat-link-preview {
+  border-left-color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.chat-link-preview:hover {
+  background: rgba(37, 99, 235, 0.13);
+}
+
+.chat-link-preview-icon {
+  flex: none;
+  font-size: 22px;
+}
+
+.chat-link-preview-text {
+  min-width: 0;
+  display: grid;
+}
+
+.chat-link-preview-kind {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.75;
+}
+
+.chat-link-preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-link-preview-subtitle {
+  font-size: 12px;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

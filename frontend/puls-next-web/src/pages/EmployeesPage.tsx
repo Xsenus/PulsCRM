@@ -13,6 +13,7 @@ import { PageHeader } from '../components/PageHeader';
 import { Pagination } from '../components/Pagination';
 import { RowActionsMenu } from '../components/RowActionsMenu';
 import { SearchPanel } from '../components/SearchPanel';
+import { useWriteInChat } from '../components/chat/WriteInChat';
 
 const EMPTY_VALUE = '—';
 const EMPLOYEES_TABLE_STORAGE_ID = 'employees-list';
@@ -55,6 +56,7 @@ const employeeColumns: Array<DataTableColumn<EmployeeListItemDto>> = [
 ];
 
 export function EmployeesPage() {
+  const writeInChat = useWriteInChat();
   const navigate = useNavigate();
   const { user } = useAuth();
   const currentUserId = String(user?.id ?? 'guest');
@@ -217,6 +219,9 @@ export function EmployeesPage() {
             <RowActionsMenu
               actions={[
                 { key: 'edit', label: 'Редактировать', primary: true, onClick: () => navigate(`/employees/${row.id}/edit`) },
+                ...(writeInChat.canWrite(row.id, row.userGroup)
+                  ? [{ key: 'chat', label: 'Написать в чат', onClick: () => writeInChat.write(row.id) }]
+                  : []),
                 {
                   key: 'refresh',
                   label: 'Обновить',
@@ -288,6 +293,20 @@ export function EmployeesPage() {
           >
             Редактировать
           </button>
+          {writeInChat.canWrite(contextMenu.row.id, contextMenu.row.userGroup) ? (
+            <button
+              type="button"
+              className="row-context-menu-item"
+              aria-label={`Написать в чат сотруднику ${contextMenu.row.fullName || contextMenu.row.login || `#${contextMenu.row.id}`}`}
+              onClick={() => {
+                const target = contextMenu.row.id;
+                setContextMenu(null);
+                void writeInChat.write(target);
+              }}
+            >
+              Написать в чат
+            </button>
+          ) : null}
           <div className="row-context-menu-divider" aria-hidden="true" />
           <button
             type="button"
