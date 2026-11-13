@@ -272,7 +272,7 @@ DB-переменные можно не задавать, тогда workflow т
 3. вывод `dotnet --info`, `node --version`, `npm --version`: Node.js тоже берётся установленный на сервере, workflow ничего не скачивает и не устанавливает (см. раздел 2)
 4. `dotnet restore`
 5. `dotnet test` backend solution
-6. `dotnet list package --vulnerable`
+6. проверка уязвимых NuGet-пакетов (`scripts/check-nuget-vulnerabilities.ps1`, включая транзитивные): уязвимость High или Critical останавливает деплой
 7. `npm ci`
 8. `npm test`
 9. `npm audit --audit-level=moderate`

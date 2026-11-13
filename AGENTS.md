@@ -63,7 +63,7 @@
 Бэкенд (.NET 9, из корня репозитория):
 - `dotnet restore backend/PulsNextMailing.sln`
 - `dotnet test backend/PulsNextMailing.sln --configuration Release --no-restore` (собирает решение и гоняет `backend/tests/PulsNext.Infrastructure.Tests`)
-- `dotnet list backend/PulsNextMailing.sln package --vulnerable`
+- `pwsh ./scripts/check-nuget-vulnerabilities.ps1` (на Windows — `powershell .\scripts\check-nuget-vulnerabilities.ps1`): падает, если среди прямых или транзитивных пакетов есть уязвимости High/Critical; без PowerShell — `dotnet list backend/PulsNextMailing.sln package --vulnerable --include-transitive` и проверить, что уязвимостей нет
 - При ошибке `DX1001` см. `docs/devexpress-license.md`.
 
 Фронтенд (React + Vite, в `frontend/puls-next-web`, lock-файл `package-lock.json`):
