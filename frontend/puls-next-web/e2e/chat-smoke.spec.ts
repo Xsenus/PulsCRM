@@ -221,3 +221,38 @@ test('floating chat window state is stored on the server and follows the user to
   await expect(page.getByRole('button', { name: /Открыть чат/ })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Окно чата' })).toBeHidden();
 });
+
+test('links to CRM objects show a card and the employee card can start a chat', async ({ page, baseURL }) => {
+  await mockChat(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => window.localStorage.removeItem('puls-chat-dock'));
+
+  const orgLink = `${baseURL}/organizations/42/edit`;
+  await page.route(/\/api\/chat\/conversations\/10\/messages(\?.*)?$/, (route) => fulfillJson(route, {
+    items: [{ id: 1, conversationId: 10, kind: 0, senderUserId: 2, senderName: 'Петрова Анна Сергеевна', text: `Посмотри карточку ${orgLink} пожалуйста`, createdAtUtc: iso(5), isDeleted: false, attachments: [], reactions: [] }],
+    hasMoreBefore: false
+  }));
+  await page.route(/\/api\/organizations\/42$/, (route) => fulfillJson(route, { id: 42, name: 'ООО «Ромашка»', inn: '7701234567', raion: 'Центральный' }));
+
+  await page.goto('/chat/10');
+  const preview = page.locator('.chat-link-preview');
+  await expect(preview).toContainText('Организация #42');
+  await expect(preview).toContainText('ООО «Ромашка»');
+  await preview.click();
+  await expect(page).toHaveURL(/\/organizations\/42\/edit$/);
+
+  await page.route(/\/api\/employees\/lookups(\?.*)?$/, (route) => fulfillJson(route, { groups: [{ id: 5, name: 'Бухгалтерия' }], rules: [], privacyGroups: [] }));
+  await page.route(/\/api\/employees\/2$/, (route) => fulfillJson(route, { id: 2, login: 'petrova', fullName: 'Петрова Анна Сергеевна', userGroupId: 5, userGroup: 'Бухгалтерия' }));
+  let directRequest: unknown = null;
+  await page.route(/\/api\/chat\/conversations\/direct$/, async (route) => {
+    directRequest = route.request().postDataJSON();
+    await fulfillJson(route, conversations[0]);
+  });
+
+  await page.goto('/employees/2/edit');
+  await page.getByRole('button', { name: /Написать/ }).click();
+  await expect.poll(() => directRequest).toEqual({ userId: 2 });
+  const dock = page.getByRole('region', { name: 'Окно чата' });
+  await expect(dock.locator('.chat-view-name')).toHaveText('Петрова Анна Сергеевна');
+  await expect(page).toHaveURL(/\/employees\/2\/edit$/);
+});
