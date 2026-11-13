@@ -239,10 +239,11 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
         return item;
       }
 
-      const isNewer = !item.lastMessage || message.id >= item.lastMessage.id;
+      const withPinned = withUpdatedPinnedMessage(item, message);
+      const isNewer = !withPinned.lastMessage || message.id >= withPinned.lastMessage.id;
       return isNewer
-        ? { ...item, lastMessage: message, lastMessageAtUtc: message.id === item.lastMessage?.id ? item.lastMessageAtUtc : message.createdAtUtc }
-        : item;
+        ? { ...withPinned, lastMessage: message, lastMessageAtUtc: message.id === withPinned.lastMessage?.id ? withPinned.lastMessageAtUtc : message.createdAtUtc }
+        : withPinned;
     })));
   }, []);
 
@@ -394,7 +395,10 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     connection.on('messageCreated', (message: ChatMessageDto) => void handleMessageCreated(message));
     connection.on('messageUpdated', (message: ChatMessageDto) => {
       emit({ type: 'messageUpdated', message });
-      setConversations((current) => current.map((item) => item.lastMessage?.id === message.id ? { ...item, lastMessage: message } : item));
+      setConversations((current) => current.map((item) => {
+        const withPinned = withUpdatedPinnedMessage(item, message);
+        return withPinned.lastMessage?.id === message.id ? { ...withPinned, lastMessage: message } : withPinned;
+      }));
     });
     connection.on('conversationUpdated', (conversation: ChatConversationDto) => upsertConversation(conversation));
     connection.on('conversationRemoved', (payload: { conversationId: number }) => removeConversation(payload.conversationId));
@@ -722,4 +726,13 @@ export function useChat() {
 /** Для компонентов, которые могут рендериться и без провайдера (например, в тестах оболочки). */
 export function useOptionalChat() {
   return useContext(ChatContext);
+}
+
+/** Правка или удаление закрепленного сообщения сразу видны в плашке над лентой. */
+function withUpdatedPinnedMessage(conversation: ChatConversationDto, message: ChatMessageDto): ChatConversationDto {
+  if (conversation.pinnedMessage?.id !== message.id) {
+    return conversation;
+  }
+
+  return { ...conversation, pinnedMessage: message.isDeleted ? null : message };
 }

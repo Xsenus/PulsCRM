@@ -88,6 +88,9 @@ public class ChatConversation(Session session) : XPObject(session)
     private DateTime _lastMessageAtUtc;
     private int _lastMessageId;
     private bool _isRemoved;
+    private int _pinnedMessageId;
+    private int _pinnedByUserId;
+    private DateTime? _pinnedAtUtc;
 
     public ChatConversation() : this(Session.DefaultSession) { }
 
@@ -185,6 +188,33 @@ public class ChatConversation(Session session) : XPObject(session)
     {
         get => _lastMessageId;
         set => SetPropertyValue(nameof(LastMessageId), ref _lastMessageId, value);
+    }
+
+    /// <summary>
+    /// Закрепленное сообщение (0 — нет), видно всем участникам над лентой.
+    /// </summary>
+    public int PinnedMessageId
+    {
+        get => _pinnedMessageId;
+        set => SetPropertyValue(nameof(PinnedMessageId), ref _pinnedMessageId, value);
+    }
+
+    /// <summary>
+    /// Legacy-id сотрудника, закрепившего сообщение.
+    /// </summary>
+    public int PinnedByUserId
+    {
+        get => _pinnedByUserId;
+        set => SetPropertyValue(nameof(PinnedByUserId), ref _pinnedByUserId, value);
+    }
+
+    /// <summary>
+    /// Когда сообщение закреплено (UTC).
+    /// </summary>
+    public DateTime? PinnedAtUtc
+    {
+        get => _pinnedAtUtc;
+        set => SetPropertyValue(nameof(PinnedAtUtc), ref _pinnedAtUtc, value);
     }
 
     /// <summary>

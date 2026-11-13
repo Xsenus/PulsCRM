@@ -87,6 +87,17 @@ public sealed class ChatConversationDto
     public DateTime CreatedAtUtc { get; set; }
     public DateTime LastMessageAtUtc { get; set; }
     public ChatMessageDto? LastMessage { get; set; }
+
+    /// <summary>
+    /// Закрепленное сообщение, общее для всех участников.
+    /// </summary>
+    public ChatMessageDto? PinnedMessage { get; set; }
+
+    /// <summary>
+    /// Может ли текущий сотрудник закреплять сообщения: в личном диалоге — всегда, в группе — администраторы.
+    /// </summary>
+    public bool CanPinMessages { get; set; }
+
     public IReadOnlyCollection<ChatParticipantDto> Participants { get; set; } = Array.Empty<ChatParticipantDto>();
 }
 
@@ -257,6 +268,14 @@ public sealed class ChatConversationPreferencesRequest
     public bool? IsMuted { get; set; }
     public bool? IsPinned { get; set; }
     public bool? IsArchived { get; set; }
+}
+
+public sealed class ChatPinMessageRequest
+{
+    /// <summary>
+    /// Сообщение для закрепления; null — открепить.
+    /// </summary>
+    public int? MessageId { get; set; }
 }
 
 public sealed class ChatSendMessageRequest

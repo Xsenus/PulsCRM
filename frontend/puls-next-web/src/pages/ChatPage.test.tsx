@@ -17,6 +17,7 @@ const apiMocks = vi.hoisted(() => ({
   toggleChatReaction: vi.fn(),
   markChatRead: vi.fn(),
   updateChatPreferences: vi.fn(),
+  pinChatMessage: vi.fn(),
   uploadChatAttachment: vi.fn(),
   deletePendingChatAttachment: vi.fn(),
   fetchChatAttachmentBlob: vi.fn(),
@@ -295,6 +296,60 @@ describe('ChatPage', () => {
     await flush();
     expect(textarea.value).toBe('');
     expect(window.localStorage.getItem('puls-chat-draft:1:10')).toBeNull();
+  });
+
+  it('shows the pinned message, jumps to it loading older history and unpins', async () => {
+    const pinned = message(5, { text: 'Реквизиты для договора' });
+    chatState.value = createChat({ conversations: [conversation({ pinnedMessage: pinned, canPinMessages: true })] });
+    apiMocks.getChatMessages
+      .mockResolvedValueOnce({ items: [message(300), message(301), message(302, { senderUserId: ME, senderName: 'Алиса' })], hasMoreBefore: true })
+      .mockResolvedValueOnce({ items: [message(100), message(101)], hasMoreBefore: true })
+      .mockResolvedValueOnce({ items: [pinned, message(6)], hasMoreBefore: false });
+    apiMocks.pinChatMessage.mockResolvedValue(conversation({ pinnedMessage: null, canPinMessages: true }));
+    Element.prototype.scrollIntoView = vi.fn();
+
+    render('/chat/10');
+    await flush();
+    expect(container!.querySelector('.chat-pinned-bar')?.textContent).toContain('Реквизиты для договора');
+
+    act(() => (container!.querySelector('.chat-pinned-body') as HTMLButtonElement).click());
+    await flush();
+    await flush();
+
+    expect(apiMocks.getChatMessages).toHaveBeenNthCalledWith(2, 10, 300, 200);
+    expect(apiMocks.getChatMessages).toHaveBeenNthCalledWith(3, 10, 100, 200);
+    const target = container!.querySelector('[data-message-id="5"]');
+    expect(target?.classList.contains('chat-message-highlight')).toBe(true);
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+
+    act(() => buttonByLabel('Открепить сообщение')!.click());
+    await flush();
+    expect(apiMocks.pinChatMessage).toHaveBeenCalledWith(10, null);
+    expect(chatState.value.upsertConversation).toHaveBeenCalled();
+  });
+
+  it('pins a message from its menu only when allowed', async () => {
+    apiMocks.pinChatMessage.mockResolvedValue(conversation({ pinnedMessage: message(2), canPinMessages: true }));
+    chatState.value = createChat({ conversations: [conversation({ canPinMessages: false })] });
+    render('/chat/10');
+    await flush();
+    const second = container!.querySelectorAll('.chat-message')[1];
+    act(() => (second.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
+    expect(Array.from(second.querySelectorAll('button[role="menuitem"]')).map((item) => item.textContent)).not.toContain('Закрепить');
+    act(() => root?.unmount());
+    container?.remove();
+
+    chatState.value = createChat({ conversations: [conversation({ canPinMessages: true })] });
+    render('/chat/10');
+    await flush();
+    const message2 = container!.querySelectorAll('.chat-message')[1];
+    act(() => (message2.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
+    act(() => {
+      Array.from(message2.querySelectorAll('button[role="menuitem"]')).find((item) => item.textContent === 'Закрепить')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    await flush();
+    expect(apiMocks.pinChatMessage).toHaveBeenCalledWith(10, 2);
   });
 
   it('toggles a quick reaction', async () => {

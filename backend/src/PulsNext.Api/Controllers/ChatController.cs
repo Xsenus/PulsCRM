@@ -158,6 +158,15 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
         => Ok(await chatService.UpdatePreferencesAsync(id, request, cancellationToken));
 
     /// <summary>
+    /// Закрепляет сообщение над лентой диалога (<c>messageId: null</c> — открепляет).
+    /// В групповом чате — только администраторы.
+    /// </summary>
+    [HttpPut("conversations/{id:int}/pinned-message")]
+    [ProducesResponseType(typeof(ChatConversationDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ChatConversationDto>> PinMessage([FromRoute] int id, [FromBody] ChatPinMessageRequest request, CancellationToken cancellationToken)
+        => Ok(await chatService.PinMessageAsync(id, request?.MessageId, cancellationToken));
+
+    /// <summary>
     /// Сообщения диалога, от новых к старым страницами; внутри страницы — по возрастанию.
     /// </summary>
     [HttpGet("conversations/{id:int}/messages")]

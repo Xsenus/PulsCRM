@@ -341,6 +341,49 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task PinMessage_InDirectChat_VisibleToBothAndClearedOnDelete()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var message = await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { Text = "Реквизиты: ИНН 7701234567" }, CancellationToken.None);
+
+        As(Bob);
+        _publisher.Events.Clear();
+        var pinned = await _service.PinMessageAsync(conversation.Id, message.Id, CancellationToken.None);
+        Assert.Equal(message.Id, pinned.PinnedMessage?.Id);
+        Assert.True(pinned.CanPinMessages);
+        Assert.Contains(_publisher.Events, x => x.Name == ChatEventNames.ConversationUpdated && x.UserIds.Contains(Alice));
+
+        As(Alice);
+        Assert.Equal("Реквизиты: ИНН 7701234567", (await _service.GetConversationAsync(conversation.Id, CancellationToken.None)).PinnedMessage?.Text);
+
+        await _service.DeleteMessageAsync(message.Id, CancellationToken.None);
+        Assert.Null((await _service.GetConversationAsync(conversation.Id, CancellationToken.None)).PinnedMessage);
+    }
+
+    [Fact]
+    public async Task PinMessage_InGroup_OnlyAdminsAndOnlyOwnConversationMessages()
+    {
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob] }, CancellationToken.None);
+        var other = await _service.OpenDirectAsync(Carol, CancellationToken.None);
+        var foreign = await _service.SendMessageAsync(other.Id, new ChatSendMessageRequest { Text = "Чужой диалог" }, CancellationToken.None);
+
+        As(Bob);
+        var message = await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "План на неделю" }, CancellationToken.None);
+        Assert.False((await _service.GetConversationAsync(group.Id, CancellationToken.None)).CanPinMessages);
+        await Assert.ThrowsAsync<ValidationException>(() => _service.PinMessageAsync(group.Id, message.Id, CancellationToken.None));
+
+        As(Alice);
+        await Assert.ThrowsAsync<ValidationException>(() => _service.PinMessageAsync(group.Id, foreign.Id, CancellationToken.None));
+        var systemMessage = (await _service.GetMessagesAsync(group.Id, null, 50, CancellationToken.None)).Items.First(x => x.Kind == ChatMessageKind.System);
+        await Assert.ThrowsAsync<ValidationException>(() => _service.PinMessageAsync(group.Id, systemMessage.Id, CancellationToken.None));
+
+        Assert.Equal(message.Id, (await _service.PinMessageAsync(group.Id, message.Id, CancellationToken.None)).PinnedMessage?.Id);
+        Assert.Null((await _service.PinMessageAsync(group.Id, null, CancellationToken.None)).PinnedMessage);
+    }
+
+    [Fact]
     public async Task SendMessage_WithSameClientMessageId_DoesNotDuplicate()
     {
         As(Alice);

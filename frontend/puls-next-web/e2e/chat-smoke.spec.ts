@@ -307,3 +307,27 @@ test('large images are uploaded with a thumbnail and the feed loads the thumbnai
   expect(length - original.length).toBeLessThan(512 * 1024);
   await expect(page.locator('.chat-upload')).toHaveCount(1);
 });
+
+test('pinned message is shown above the feed and jumps to the message', async ({ page }) => {
+  await mockChat(page);
+  const pinnedConversations = conversations.map((item) => item.id === 10 ? { ...item, pinnedMessage: messages[0], canPinMessages: true } : item);
+  await page.route(/\/api\/chat\/conversations(\?.*)?$/, (route) => fulfillJson(route, pinnedConversations));
+  const pinRequests: unknown[] = [];
+  await page.route(/\/api\/chat\/conversations\/10\/pinned-message$/, async (route) => {
+    pinRequests.push(route.request().postDataJSON());
+    await fulfillJson(route, { ...pinnedConversations[0], pinnedMessage: null });
+  });
+
+  await page.goto('/chat/10');
+  const bar = page.locator('.chat-pinned-bar');
+  await expect(bar).toContainText('Закрепленное сообщение');
+  await expect(bar).toContainText('отчет по лицензиям');
+
+  await bar.locator('.chat-pinned-body').click();
+  await expect(page.locator('[data-message-id="1"]')).toHaveClass(/chat-message-highlight/);
+
+  await page.getByRole('button', { name: 'Открепить сообщение' }).click();
+  await expect(bar).toHaveCount(0);
+  expect(pinRequests).toEqual([{ messageId: null }]);
+  expect(await expectNoDocumentHorizontalOverflow(page)).toBe(true);
+});
