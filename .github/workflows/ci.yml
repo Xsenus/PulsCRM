@@ -1,0 +1,79 @@
+name: CI
+
+# Проверки на каждый Pull Request в main — до мержа, без деплоя.
+# Запускается на GitHub-hosted runner: код из PR не должен выполняться на production-сервере
+# (self-hosted runner с доступом к IIS используется только в deploy.yml).
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  FRONTEND_PATH: frontend/puls-next-web
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore solution
+        run: dotnet restore backend/PulsNextMailing.sln
+
+      - name: Test backend
+        run: dotnet test backend/PulsNextMailing.sln --configuration Release --no-restore
+
+      - name: Scan NuGet vulnerabilities
+        run: dotnet list backend/PulsNextMailing.sln package --vulnerable
+
+  frontend:
+    name: Frontend (React + Vite)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: ${{ env.FRONTEND_PATH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Test frontend
+        run: npm test
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=moderate
+
+      - name: Build frontend
+        run: npm run build
