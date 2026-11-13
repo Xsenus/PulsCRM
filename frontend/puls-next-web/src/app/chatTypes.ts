@@ -36,6 +36,11 @@ export interface ChatAttachmentDto {
   contentType: string;
   length: number;
   isImage: boolean;
+  /** Есть уменьшенная копия для ленты (`?thumbnail=true`). */
+  hasThumbnail?: boolean;
+  /** Размеры оригинала изображения в пикселях, если известны. */
+  width?: number | null;
+  height?: number | null;
   uploadedAtUtc: string;
 }
 

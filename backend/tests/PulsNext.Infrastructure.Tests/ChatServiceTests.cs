@@ -142,7 +142,7 @@ public sealed class ChatServiceTests : IDisposable
         Assert.Empty(deleted.Attachments);
         Assert.Empty(deleted.Reactions);
         Assert.Empty(_fileStore.Files);
-        Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, CancellationToken.None));
+        Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, false, CancellationToken.None));
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public sealed class ChatServiceTests : IDisposable
         Assert.Null(attachment.MessageId);
 
         As(Bob);
-        Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, CancellationToken.None));
+        Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, false, CancellationToken.None));
         await Assert.ThrowsAsync<ValidationException>(() => _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { AttachmentIds = [attachment.Id] }, CancellationToken.None));
 
         As(Alice);
@@ -216,13 +216,13 @@ public sealed class ChatServiceTests : IDisposable
         Assert.Equal("отчет.pdf", Assert.Single(message.Attachments).FileName);
 
         As(Bob);
-        var opened = await _service.OpenAttachmentAsync(attachment.Id, CancellationToken.None);
+        var opened = await _service.OpenAttachmentAsync(attachment.Id, false, CancellationToken.None);
         Assert.NotNull(opened);
         using var reader = new StreamReader(opened!.Value.Content);
         Assert.Equal("содержимое отчет.pdf", await reader.ReadToEndAsync());
 
         As(Outsider);
-        Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, CancellationToken.None));
+        Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, false, CancellationToken.None));
     }
 
     [Fact]
@@ -246,6 +246,98 @@ public sealed class ChatServiceTests : IDisposable
             Content = new MemoryStream(new byte[11]),
             FileName = "big.bin"
         }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UploadAttachment_StoresThumbnailAndServesItSeparately()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var original = new byte[4096];
+        byte[] thumbnailBytes = [0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4];
+
+        var image = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream(original),
+            FileName = "фото.png",
+            ContentType = "image/png",
+            Thumbnail = new MemoryStream(thumbnailBytes),
+            Width = 4000,
+            Height = 3000
+        }, CancellationToken.None);
+
+        Assert.True(image.HasThumbnail);
+        Assert.Equal(4000, image.Width);
+        Assert.Equal(3000, image.Height);
+        Assert.Equal(2, _fileStore.Files.Count);
+
+        await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { AttachmentIds = [image.Id] }, CancellationToken.None);
+
+        As(Bob);
+        var thumbnail = await _service.OpenAttachmentAsync(image.Id, true, CancellationToken.None);
+        Assert.NotNull(thumbnail);
+        Assert.Equal("image/jpeg", thumbnail!.Value.Metadata.ContentType);
+        Assert.Equal(thumbnailBytes, ReadAll(thumbnail.Value.Content));
+
+        var full = await _service.OpenAttachmentAsync(image.Id, false, CancellationToken.None);
+        Assert.Equal("image/png", full!.Value.Metadata.ContentType);
+        Assert.Equal(original.Length, ReadAll(full.Value.Content).Length);
+
+        As(Alice);
+        var message = Assert.Single((await _service.GetMessagesAsync(conversation.Id, null, 50, CancellationToken.None)).Items);
+        await _service.DeleteMessageAsync(message.Id, CancellationToken.None);
+        Assert.Empty(_fileStore.Files);
+    }
+
+    [Fact]
+    public async Task UploadAttachment_IgnoresInvalidThumbnails()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+
+        // Не картинка по сигнатуре.
+        var fake = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream(new byte[2048]),
+            FileName = "a.jpg",
+            Thumbnail = new MemoryStream("<script>alert(1)</script>"u8.ToArray()),
+            Width = -5,
+            Height = 100
+        }, CancellationToken.None);
+        Assert.False(fake.HasThumbnail);
+        Assert.Null(fake.Width);
+
+        // Больше предела.
+        var oversized = new byte[ChatService.MaxThumbnailBytes + 10];
+        oversized[0] = 0xFF; oversized[1] = 0xD8; oversized[2] = 0xFF;
+        var big = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream(new byte[ChatService.MaxThumbnailBytes * 2]),
+            FileName = "b.jpg",
+            Thumbnail = new MemoryStream(oversized)
+        }, CancellationToken.None);
+        Assert.False(big.HasThumbnail);
+
+        // Не изображение — копия не нужна.
+        var pdf = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream(new byte[2048]),
+            FileName = "c.pdf",
+            ContentType = "application/pdf",
+            Thumbnail = new MemoryStream([0xFF, 0xD8, 0xFF, 0xE0]),
+            Width = 10,
+            Height = 10
+        }, CancellationToken.None);
+        Assert.False(pdf.HasThumbnail);
+        Assert.Null(pdf.Width);
+        Assert.Equal(3, _fileStore.Files.Count);
+
+        // Без копии ?thumbnail=true отдает оригинал.
+        var opened = await _service.OpenAttachmentAsync(fake.Id, true, CancellationToken.None);
+        Assert.Equal(2048, ReadAll(opened!.Value.Content).Length);
+
+        await _service.DeletePendingAttachmentAsync(fake.Id, CancellationToken.None);
+        Assert.Equal(2, _fileStore.Files.Count);
     }
 
     [Fact]
@@ -522,6 +614,14 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     private void As(int userId) => _currentUser.UserId = userId;
+
+    private static byte[] ReadAll(Stream stream)
+    {
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        stream.Dispose();
+        return memory.ToArray();
+    }
 
     private Task<ChatAttachmentDto> UploadAsync(int conversationId, string fileName, string contentType)
         => _service.UploadAttachmentAsync(conversationId, new ChatAttachmentUploadCommand

@@ -256,3 +256,54 @@ test('links to CRM objects show a card and the employee card can start a chat', 
   await expect(dock.locator('.chat-view-name')).toHaveText('Петрова Анна Сергеевна');
   await expect(page).toHaveURL(/\/employees\/2\/edit$/);
 });
+
+test('large images are uploaded with a thumbnail and the feed loads the thumbnail', async ({ page }) => {
+  await mockChat(page);
+  const uploads: { body: string; length: number }[] = [];
+  await page.route(/\/api\/chat\/conversations\/10\/attachments$/, async (route) => {
+    const buffer = route.request().postDataBuffer() ?? Buffer.alloc(0);
+    uploads.push({ body: buffer.toString('latin1'), length: buffer.length });
+    await fulfillJson(route, { id: 601, conversationId: 10, fileName: 'фото.png', contentType: 'image/png', length: 1, isImage: true, hasThumbnail: true, width: 2000, height: 1500, uploadedAtUtc: new Date().toISOString() });
+  });
+  const imageRequests: string[] = [];
+  await page.route(/\/api\/chat\/attachments\/701(\?.*)?$/, (route) => {
+    imageRequests.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: 'image/png', body: pngPixel });
+  });
+  await page.route(/\/api\/chat\/conversations\/10\/messages(\?.*)?$/, (route) => fulfillJson(route, {
+    items: [{ id: 70, conversationId: 10, kind: 0, senderUserId: 2, senderName: 'Петрова Анна Сергеевна', text: null, createdAtUtc: iso(3), isDeleted: false, reactions: [], attachments: [
+      { id: 701, conversationId: 10, messageId: 70, fileName: 'план.jpg', contentType: 'image/jpeg', length: 5_000_000, isImage: true, hasThumbnail: true, width: 1600, height: 1200, uploadedAtUtc: iso(3) }
+    ] }],
+    hasMoreBefore: false
+  }));
+
+  await page.goto('/chat/10');
+  await expect(page.locator('.chat-image-thumb img')).toBeVisible();
+  expect(imageRequests.some((url) => url.includes('thumbnail=true'))).toBe(true);
+  expect(imageRequests.some((url) => !url.includes('thumbnail=true'))).toBe(false);
+
+  // Шумная картинка 2000×1500: PNG получается в несколько мегабайт.
+  const pngBase64 = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2000;
+    canvas.height = 1500;
+    const context = canvas.getContext('2d')!;
+    const data = context.createImageData(2000, 1500);
+    for (let index = 0; index < data.data.length; index += 1) {
+      data.data[index] = (index * 7919) % 251;
+    }
+    context.putImageData(data, 0, 0);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  const original = Buffer.from(pngBase64, 'base64');
+  await page.locator('input[type="file"]').setInputFiles({ name: 'фото.png', mimeType: 'image/png', buffer: original });
+
+  await expect.poll(() => uploads.length).toBe(1);
+  const { body, length } = uploads[0];
+  expect(body).toContain('name="thumbnail"');
+  expect(body).toMatch(/name="width"\r\n\r\n2000\r\n/);
+  expect(body).toMatch(/name="height"\r\n\r\n1500\r\n/);
+  // Копия добавляет к запросу заметно меньше оригинала.
+  expect(length - original.length).toBeLessThan(512 * 1024);
+  await expect(page.locator('.chat-upload')).toHaveCount(1);
+});

@@ -6,20 +6,22 @@ import type { ChatAttachmentDto } from '../../app/chatTypes';
 import { showToast } from '../../app/toast';
 
 /** Кэш object URL изображений на время сессии, чтобы при прокрутке ленты не качать повторно. */
-const imageUrlCache = new Map<number, Promise<string>>();
+const imageUrlCache = new Map<string, Promise<string>>();
 
-function loadImageUrl(attachmentId: number) {
-  let promise = imageUrlCache.get(attachmentId);
+function loadImageUrl(attachmentId: number, thumbnail: boolean) {
+  const key = `${attachmentId}:${thumbnail ? 'thumb' : 'full'}`;
+  let promise = imageUrlCache.get(key);
   if (!promise) {
-    promise = fetchChatAttachmentBlob(attachmentId, true).then((blob) => URL.createObjectURL(blob));
-    promise.catch(() => imageUrlCache.delete(attachmentId));
-    imageUrlCache.set(attachmentId, promise);
+    promise = fetchChatAttachmentBlob(attachmentId, true, thumbnail).then((blob) => URL.createObjectURL(blob));
+    promise.catch(() => imageUrlCache.delete(key));
+    imageUrlCache.set(key, promise);
   }
 
   return promise;
 }
 
-export function useChatImageUrl(attachmentId: number | null) {
+/** URL изображения; с thumbnail=true — уменьшенной копии (в ленте), иначе оригинала (в просмотре). */
+export function useChatImageUrl(attachmentId: number | null, thumbnail = false) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -30,13 +32,13 @@ export function useChatImageUrl(attachmentId: number | null) {
 
     let active = true;
     setFailed(false);
-    loadImageUrl(attachmentId)
+    loadImageUrl(attachmentId, thumbnail)
       .then((value) => active && setUrl(value))
       .catch(() => active && setFailed(true));
     return () => {
       active = false;
     };
-  }, [attachmentId]);
+  }, [attachmentId, thumbnail]);
 
   return { url, failed };
 }
@@ -72,8 +74,12 @@ function FileIcon({ fileName }: { fileName: string }) {
   );
 }
 
-function ChatImageThumb({ attachment, onOpen }: { attachment: ChatAttachmentDto; onOpen: () => void }) {
-  const { url, failed } = useChatImageUrl(attachment.id);
+function ChatImageThumb({ attachment, single, onOpen }: { attachment: ChatAttachmentDto; single: boolean; onOpen: () => void }) {
+  const { url, failed } = useChatImageUrl(attachment.id, Boolean(attachment.hasThumbnail));
+  // Пока картинка грузится, держим место по ее пропорциям, чтобы лента не прыгала.
+  const placeholderStyle = single && attachment.width && attachment.height
+    ? { aspectRatio: `${attachment.width} / ${attachment.height}`, width: attachment.width >= attachment.height ? 280 : 180, height: 'auto' }
+    : undefined;
 
   if (failed) {
     return (
@@ -89,7 +95,9 @@ function ChatImageThumb({ attachment, onOpen }: { attachment: ChatAttachmentDto;
 
   return (
     <button type="button" className="chat-image-thumb" onClick={onOpen} title={attachment.fileName} aria-label={`Открыть изображение ${attachment.fileName}`}>
-      {url ? <img src={url} alt={attachment.fileName} loading="lazy" /> : <span className="chat-image-placeholder" />}
+      {url
+        ? <img src={url} alt={attachment.fileName} loading="lazy" width={attachment.width ?? undefined} height={attachment.height ?? undefined} />
+        : <span className="chat-image-placeholder" style={placeholderStyle} />}
     </button>
   );
 }
@@ -104,7 +112,7 @@ export function ChatAttachmentList({ attachments }: { attachments: ChatAttachmen
       {images.length > 0 ? (
         <div className={`chat-image-grid chat-image-grid-${Math.min(images.length, 4)}`}>
           {images.map((attachment, index) => (
-            <ChatImageThumb key={attachment.id} attachment={attachment} onOpen={() => setOpenIndex(index)} />
+            <ChatImageThumb key={attachment.id} attachment={attachment} single={images.length === 1} onOpen={() => setOpenIndex(index)} />
           ))}
         </div>
       ) : null}

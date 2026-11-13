@@ -59,7 +59,7 @@ public interface IChatService
     Task MarkReadAsync(int conversationId, int? messageId, CancellationToken cancellationToken);
     Task<ChatUnreadSummaryDto> GetUnreadSummaryAsync(CancellationToken cancellationToken);
     Task<ChatAttachmentDto> UploadAttachmentAsync(int conversationId, ChatAttachmentUploadCommand command, CancellationToken cancellationToken);
-    Task<(ChatAttachmentDto Metadata, Stream Content)?> OpenAttachmentAsync(int attachmentId, CancellationToken cancellationToken);
+    Task<(ChatAttachmentDto Metadata, Stream Content)?> OpenAttachmentAsync(int attachmentId, bool thumbnail, CancellationToken cancellationToken);
     Task DeletePendingAttachmentAsync(int attachmentId, CancellationToken cancellationToken);
     /// <summary>
     /// Рассылает «печатает». <paramref name="userId"/> передает SignalR-хаб, где HttpContext недоступен;
@@ -207,6 +207,12 @@ public sealed class ChatService(
     {
         "image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp"
     };
+
+    /// <summary>
+    /// Предел для уменьшенной копии: она нужна, чтобы лента не качала многомегабайтные оригиналы.
+    /// </summary>
+    public const int MaxThumbnailBytes = 512 * 1024;
+    private const int MaxImageSide = 50_000;
 
     private ChatOptions Options => chatOptions.Value;
 
@@ -675,6 +681,7 @@ public sealed class ChatService(
             foreach (var attachment in new XPQuery<ChatAttachment>(unitOfWork).Where(x => x.Message == message).ToList())
             {
                 TryDeleteFile(attachment.RelativePath);
+                TryDeleteFile(attachment.ThumbnailRelativePath);
                 attachment.Delete();
             }
 
@@ -789,6 +796,8 @@ public sealed class ChatService(
         var storedFileName = $"{Guid.NewGuid():N}{(extension.Length <= 16 ? extension : string.Empty)}";
         var relativePath = await fileStore.SaveAsync(bytes, storedFileName, now, cancellationToken);
 
+        var contentType = NormalizeContentType(command.ContentType, extension);
+        var isImage = ImageContentTypes.Contains(contentType);
         var attachment = new ChatAttachment(unitOfWork)
         {
             Conversation = conversation,
@@ -796,17 +805,39 @@ public sealed class ChatService(
             OriginalFileName = fileName,
             StoredFileName = storedFileName,
             RelativePath = relativePath,
-            ContentType = NormalizeContentType(command.ContentType, extension),
+            ContentType = contentType,
             Length = bytes.LongLength,
             Sha256 = HashHelper.ComputeSha256(bytes),
             UploadedAtUtc = now
         };
 
+        if (isImage)
+        {
+            if (command.Width is > 0 and <= MaxImageSide && command.Height is > 0 and <= MaxImageSide)
+            {
+                attachment.ImageWidth = command.Width.Value;
+                attachment.ImageHeight = command.Height.Value;
+            }
+
+            if (command.Thumbnail is not null)
+            {
+                var thumbnail = await ReadThumbnailAsync(command.Thumbnail, cancellationToken);
+                // Копия должна быть действительно меньше оригинала, иначе она бессмысленна.
+                if (thumbnail is not null && thumbnail.Value.Bytes.LongLength < bytes.LongLength)
+                {
+                    var thumbnailName = $"{Path.GetFileNameWithoutExtension(storedFileName)}.thumb{thumbnail.Value.Extension}";
+                    attachment.ThumbnailRelativePath = await fileStore.SaveAsync(thumbnail.Value.Bytes, thumbnailName, now, cancellationToken);
+                    attachment.ThumbnailContentType = thumbnail.Value.ContentType;
+                    attachment.ThumbnailLength = thumbnail.Value.Bytes.LongLength;
+                }
+            }
+        }
+
         unitOfWork.CommitChanges();
         return ToAttachmentDto(attachment);
     }
 
-    public Task<(ChatAttachmentDto Metadata, Stream Content)?> OpenAttachmentAsync(int attachmentId, CancellationToken cancellationToken)
+    public Task<(ChatAttachmentDto Metadata, Stream Content)?> OpenAttachmentAsync(int attachmentId, bool thumbnail, CancellationToken cancellationToken)
     {
         var me = CurrentUserId;
         var attachment = unitOfWork.GetObjectByKey<ChatAttachment>(attachmentId);
@@ -824,8 +855,24 @@ public sealed class ChatService(
             return Task.FromResult<(ChatAttachmentDto, Stream)?>(null);
         }
 
+        var metadata = ToAttachmentDto(attachment);
+        if (thumbnail && !string.IsNullOrWhiteSpace(attachment.ThumbnailRelativePath))
+        {
+            try
+            {
+                var thumbnailStream = fileStore.OpenRead(attachment.ThumbnailRelativePath);
+                metadata.ContentType = attachment.ThumbnailContentType ?? "image/jpeg";
+                metadata.Length = attachment.ThumbnailLength;
+                return Task.FromResult<(ChatAttachmentDto, Stream)?>((metadata, thumbnailStream));
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Копия пропала с диска — отдаем оригинал, лента от этого не ломается.
+            }
+        }
+
         var stream = fileStore.OpenRead(attachment.RelativePath ?? string.Empty);
-        return Task.FromResult<(ChatAttachmentDto, Stream)?>((ToAttachmentDto(attachment), stream));
+        return Task.FromResult<(ChatAttachmentDto, Stream)?>((metadata, stream));
     }
 
     public Task DeletePendingAttachmentAsync(int attachmentId, CancellationToken cancellationToken)
@@ -838,6 +885,7 @@ public sealed class ChatService(
         }
 
         TryDeleteFile(attachment.RelativePath);
+        TryDeleteFile(attachment.ThumbnailRelativePath);
         attachment.Delete();
         unitOfWork.CommitChanges();
         return Task.CompletedTask;
@@ -1311,8 +1359,49 @@ public sealed class ChatService(
             ContentType = attachment.ContentType ?? "application/octet-stream",
             Length = attachment.Length,
             IsImage = ImageContentTypes.Contains(attachment.ContentType ?? string.Empty),
+            HasThumbnail = !string.IsNullOrWhiteSpace(attachment.ThumbnailRelativePath),
+            Width = attachment.ImageWidth > 0 && attachment.ImageHeight > 0 ? attachment.ImageWidth : null,
+            Height = attachment.ImageWidth > 0 && attachment.ImageHeight > 0 ? attachment.ImageHeight : null,
             UploadedAtUtc = ForceUtc(attachment.UploadedAtUtc)
         };
+
+    /// <summary>
+    /// Читает уменьшенную копию от браузера. Тип определяется по сигнатуре, а не по заявленному MIME:
+    /// принимаются только JPEG, PNG и WebP не больше <see cref="MaxThumbnailBytes"/>. Иначе копия игнорируется.
+    /// </summary>
+    private static async Task<(byte[] Bytes, string ContentType, string Extension)?> ReadThumbnailAsync(Stream content, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[MaxThumbnailBytes + 1];
+        var total = 0;
+        int read;
+        while (total < buffer.Length && (read = await content.ReadAsync(buffer.AsMemory(total, buffer.Length - total), cancellationToken)) > 0)
+        {
+            total += read;
+        }
+
+        if (total == 0 || total > MaxThumbnailBytes)
+        {
+            return null;
+        }
+
+        var bytes = buffer.AsSpan(0, total).ToArray();
+        if (bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF)
+        {
+            return (bytes, "image/jpeg", ".jpg");
+        }
+
+        if (bytes.Length >= 8 && bytes.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
+        {
+            return (bytes, "image/png", ".png");
+        }
+
+        if (bytes.Length >= 12 && bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8))
+        {
+            return (bytes, "image/webp", ".webp");
+        }
+
+        return null;
+    }
 
     private static ChatUserSettingsDto ToSettingsDto(ChatUserSettings settings)
         => new()

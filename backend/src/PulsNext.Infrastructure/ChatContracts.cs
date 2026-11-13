@@ -104,6 +104,17 @@ public sealed class ChatAttachmentDto
     /// </summary>
     public bool IsImage { get; set; }
 
+    /// <summary>
+    /// Есть уменьшенная копия (<c>?thumbnail=true</c>) — в ленте показывать ее, а не оригинал.
+    /// </summary>
+    public bool HasThumbnail { get; set; }
+
+    /// <summary>
+    /// Размеры оригинала изображения в пикселях, если известны.
+    /// </summary>
+    public int? Width { get; set; }
+    public int? Height { get; set; }
+
     public DateTime UploadedAtUtc { get; set; }
 }
 
@@ -279,6 +290,17 @@ public sealed class ChatAttachmentUploadCommand
     public required Stream Content { get; init; }
     public required string FileName { get; init; }
     public string? ContentType { get; init; }
+
+    /// <summary>
+    /// Уменьшенная копия изображения, подготовленная браузером (JPEG, PNG или WebP). Необязательна.
+    /// </summary>
+    public Stream? Thumbnail { get; init; }
+
+    /// <summary>
+    /// Размеры оригинала изображения в пикселях, если браузер их определил.
+    /// </summary>
+    public int? Width { get; init; }
+    public int? Height { get; init; }
 }
 
 /// <summary>

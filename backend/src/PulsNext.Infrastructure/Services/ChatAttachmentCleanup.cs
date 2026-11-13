@@ -46,6 +46,11 @@ public sealed class ChatAttachmentCleaner(ChatUnitOfWork unitOfWork, IChatFileSt
                     {
                         fileStore.Delete(attachment.RelativePath);
                     }
+
+                    if (!string.IsNullOrWhiteSpace(attachment.ThumbnailRelativePath))
+                    {
+                        fileStore.Delete(attachment.ThumbnailRelativePath);
+                    }
                 }
                 catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
                 {

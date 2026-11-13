@@ -432,6 +432,11 @@ public class ChatAttachment(Session session) : XPObject(session)
     private string? _sha256;
     private int _sortOrder;
     private DateTime _uploadedAtUtc;
+    private string? _thumbnailRelativePath;
+    private string? _thumbnailContentType;
+    private long _thumbnailLength;
+    private int _imageWidth;
+    private int _imageHeight;
 
     public ChatAttachment() : this(Session.DefaultSession) { }
 
@@ -539,6 +544,53 @@ public class ChatAttachment(Session session) : XPObject(session)
     {
         get => _uploadedAtUtc;
         set => SetPropertyValue(nameof(UploadedAtUtc), ref _uploadedAtUtc, value);
+    }
+
+    /// <summary>
+    /// Уменьшенная копия изображения для ленты (путь в хранилище); null — копии нет, показывается оригинал.
+    /// </summary>
+    [Size(1024)]
+    public string? ThumbnailRelativePath
+    {
+        get => _thumbnailRelativePath;
+        set => SetPropertyValue(nameof(ThumbnailRelativePath), ref _thumbnailRelativePath, value);
+    }
+
+    /// <summary>
+    /// MIME-тип уменьшенной копии.
+    /// </summary>
+    [Size(64)]
+    public string? ThumbnailContentType
+    {
+        get => _thumbnailContentType;
+        set => SetPropertyValue(nameof(ThumbnailContentType), ref _thumbnailContentType, value);
+    }
+
+    /// <summary>
+    /// Размер уменьшенной копии в байтах.
+    /// </summary>
+    public long ThumbnailLength
+    {
+        get => _thumbnailLength;
+        set => SetPropertyValue(nameof(ThumbnailLength), ref _thumbnailLength, value);
+    }
+
+    /// <summary>
+    /// Ширина оригинала в пикселях (0 — неизвестна), чтобы лента заранее резервировала место.
+    /// </summary>
+    public int ImageWidth
+    {
+        get => _imageWidth;
+        set => SetPropertyValue(nameof(ImageWidth), ref _imageWidth, value);
+    }
+
+    /// <summary>
+    /// Высота оригинала в пикселях (0 — неизвестна).
+    /// </summary>
+    public int ImageHeight
+    {
+        get => _imageHeight;
+        set => SetPropertyValue(nameof(ImageHeight), ref _imageHeight, value);
     }
 }
 

@@ -234,11 +234,15 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
         }
 
         await using var stream = request.File.OpenReadStream();
+        await using var thumbnail = request.Thumbnail is { Length: > 0 } ? request.Thumbnail.OpenReadStream() : null;
         return Ok(await chatService.UploadAttachmentAsync(id, new ChatAttachmentUploadCommand
         {
             Content = stream,
             FileName = request.File.FileName,
-            ContentType = request.File.ContentType
+            ContentType = request.File.ContentType,
+            Thumbnail = thumbnail,
+            Width = request.Width,
+            Height = request.Height
         }, cancellationToken));
     }
 
@@ -254,14 +258,15 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
     }
 
     /// <summary>
-    /// Скачивает вложение. С <c>inline=true</c> изображение отдается для просмотра в браузере.
+    /// Скачивает вложение. С <c>inline=true</c> изображение отдается для просмотра в браузере,
+    /// с <c>thumbnail=true</c> — его уменьшенная копия (если ее нет — оригинал).
     /// </summary>
     [HttpGet("attachments/{attachmentId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DownloadAttachment([FromRoute] int attachmentId, [FromQuery] bool inline, CancellationToken cancellationToken)
+    public async Task<IActionResult> DownloadAttachment([FromRoute] int attachmentId, [FromQuery] bool inline, [FromQuery] bool thumbnail, CancellationToken cancellationToken)
     {
-        var opened = await chatService.OpenAttachmentAsync(attachmentId, cancellationToken);
+        var opened = await chatService.OpenAttachmentAsync(attachmentId, thumbnail, cancellationToken);
         if (opened is null)
         {
             return NotFound();
@@ -269,6 +274,12 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
 
         var (metadata, content) = opened.Value;
         Response.Headers["X-Content-Type-Options"] = "nosniff";
+        if (thumbnail && metadata.IsImage)
+        {
+            Response.Headers["Cache-Control"] = "private, max-age=86400";
+            return File(content, metadata.ContentType);
+        }
+
         if (inline && metadata.IsImage)
         {
             Response.Headers["Cache-Control"] = "private, max-age=86400";
