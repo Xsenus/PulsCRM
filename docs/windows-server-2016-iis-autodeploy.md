@@ -283,13 +283,17 @@ DB-переменные можно не задавать, тогда workflow т
 
 Если backend/frontend тесты, `npm audit` или NuGet vulnerability scan падают, workflow останавливается до backup и до замены файлов на IIS.
 
-Запуск деплоя:
+Запуск деплоя: мерж Pull Request в `main` на GitHub. Workflow запускается на push в `main`, а мерж PR и есть такой push. Прямые коммиты и пуши в `main` запрещены, порядок работы с ветками и PR описан в `AGENTS.md` (раздел «Git: ветки и Pull Request'ы»).
 
 ```powershell
-git push origin main
+git fetch origin
+git switch -c fix/<задача> origin/main
+# изменения, коммит
+git push -u origin fix/<задача>
+# открыть PR в main, прогнать проверки, влить PR (gh pr merge)
 ```
 
-Или вручную:
+Повторный деплой текущего `main` без новых изменений — вручную:
 
 ```text
 GitHub -> Actions -> Deploy Production -> Run workflow
