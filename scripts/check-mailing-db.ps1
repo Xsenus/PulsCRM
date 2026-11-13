@@ -534,6 +534,43 @@ ORDER BY [FailedAtUtc] DESC, [Oid] DESC;
         }
     }
 
+    # Informational, read-only: the legacy model maps set_Dogovor.FlParus10Tornado to a column whose last
+    # three letters are Cyrillic (U+0430 U+0434 U+043E). Report the real column name(s) so a mismatch is visible.
+    $expectedParusColumn = "FlParus10Torn" + [char]0x0430 + [char]0x0434 + [char]0x043E
+    $legacyParusColumn = [pscustomobject]@{
+        Table = "set_Dogovor"
+        Expected = $expectedParusColumn
+        Found = @()
+        TableExists = $false
+        Matches = $false
+        Error = $null
+    }
+
+    try {
+        $tableObjectId = Invoke-SqlScalar -Connection $connection -CommandText "SELECT OBJECT_ID(N'dbo.set_Dogovor');"
+        $legacyParusColumn.TableExists = ($null -ne $tableObjectId) -and -not ($tableObjectId -is [System.DBNull])
+        $columnRows = Invoke-SqlDataTable -Connection $connection -CommandText @"
+SELECT c.[name] AS [ColumnName]
+FROM sys.columns AS c
+WHERE c.[object_id] = OBJECT_ID(N'dbo.set_Dogovor')
+  AND c.[name] LIKE N'FlParus10%'
+ORDER BY c.[name];
+"@
+        foreach ($row in $columnRows.Rows) {
+            $name = [string]$row["ColumnName"]
+            $codes = ($name.ToCharArray() | Where-Object { [int]$_ -gt 127 } | ForEach-Object { "U+{0:X4}" -f [int]$_ }) -join " "
+            $legacyParusColumn.Found += [pscustomobject]@{
+                Name = $name
+                NonAsciiChars = $(if ($codes) { $codes } else { "none (pure ASCII)" })
+            }
+        }
+
+        $legacyParusColumn.Matches = @($legacyParusColumn.Found | Where-Object { $_.Name -ceq $expectedParusColumn }).Count -eq 1
+    }
+    catch {
+        $legacyParusColumn.Error = $_.Exception.Message
+    }
+
     $issues = @()
     if ($missingTables.Count -gt 0) {
         $issues += [pscustomobject]@{
@@ -577,6 +614,7 @@ ORDER BY [FailedAtUtc] DESC, [Oid] DESC;
             RequireTransportProfile = [bool]$RequireTransportProfile
         }
         MissingTables = $missingTables
+        LegacyParusColumn = $legacyParusColumn
         Tables = $tableSummaries
         TransportProfiles = $transportProfiles
         CampaignsByStatus = $campaignCounts
@@ -612,6 +650,26 @@ ORDER BY [FailedAtUtc] DESC, [Oid] DESC;
         if ($issues.Count -gt 0) {
             Write-Host "Issues:"
             $issues | Format-Table -AutoSize
+        }
+
+        Write-Host "Legacy column check (read-only): set_Dogovor.FlParus10*"
+        if ($legacyParusColumn.Error) {
+            Write-Host "  could not read columns: $($legacyParusColumn.Error)"
+        }
+        elseif (-not $legacyParusColumn.TableExists) {
+            Write-Host "  skipped: table set_Dogovor is not in this database (legacy DB may be a separate database)."
+        }
+        elseif ($legacyParusColumn.Found.Count -eq 0) {
+            Write-Host "::warning::set_Dogovor has no FlParus10* column; the legacy model expects one (FlParus10Torn + U+0430 U+0434 U+043E)."
+        }
+        else {
+            $legacyParusColumn.Found | Format-Table -AutoSize
+            if ($legacyParusColumn.Matches) {
+                Write-Host "  OK: column name matches the model (last three letters are Cyrillic U+0430 U+0434 U+043E)."
+            }
+            else {
+                Write-Host "::warning::set_Dogovor FlParus10* column name differs from the model (expected FlParus10Torn + U+0430 U+0434 U+043E)."
+            }
         }
     }
 

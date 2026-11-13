@@ -1613,6 +1613,8 @@ public class LegacyDogovor(Session session) : XPObject(session)
     public string? NumKontrakt;
     public bool FlProlongation;
 
+    // Последние три буквы имени колонки — кириллические (U+0430 U+0434 U+043E): так колонка названа в legacy-БД.
+    // Не «исправляйте» на латиницу без сверки: scripts/check-mailing-db.ps1 при деплое выводит реальное имя колонки.
     [Persistent("FlParus10Tornадо")]
     public bool FlParus10Tornado;
 
