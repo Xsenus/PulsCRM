@@ -475,6 +475,49 @@ public sealed class ChatServiceTests : IDisposable
         Assert.Equivalent(new ChatUserSettingsDto(), settings);
     }
 
+    [Fact]
+    public async Task Group_WhenOwnerIsFired_OldestAdminBecomesOwner()
+    {
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob, Carol] }, CancellationToken.None);
+        await _service.SetMemberRoleAsync(group.Id, Carol, ChatParticipantRole.Admin, CancellationToken.None);
+
+        _directory.Fire(Alice);
+
+        As(Bob);
+        var forBob = await _service.GetConversationAsync(group.Id, CancellationToken.None);
+        Assert.Equal(ChatParticipantRole.Member, forBob.MyRole);
+        Assert.Equal(ChatParticipantRole.Owner, forBob.Participants.Single(x => x.UserId == Carol).Role);
+        Assert.Contains("Вера теперь владелец чата", forBob.LastMessage!.Text);
+
+        As(Carol);
+        await _service.AddMembersAsync(group.Id, [Outsider], CancellationToken.None);
+        await _service.SetMemberRoleAsync(group.Id, Bob, ChatParticipantRole.Admin, CancellationToken.None);
+
+        // Повторная проверка ничего не меняет и не плодит системных сообщений.
+        var messagesBefore = (await _service.GetMessagesAsync(group.Id, null, 100, CancellationToken.None)).Items.Count;
+        await _service.GetConversationsAsync(includeArchived: false, CancellationToken.None);
+        Assert.Equal(messagesBefore, (await _service.GetMessagesAsync(group.Id, null, 100, CancellationToken.None)).Items.Count);
+    }
+
+    [Fact]
+    public async Task Group_WhenOwnerIsFiredAndNoAdmins_OldestMemberBecomesOwnerAndCanManage()
+    {
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob, Carol] }, CancellationToken.None);
+
+        _directory.Fire(Alice);
+
+        As(Carol);
+        var list = await _service.GetConversationsAsync(includeArchived: false, CancellationToken.None);
+        var owner = Assert.Single(list).Participants.Single(x => x.Role == ChatParticipantRole.Owner);
+        Assert.Contains(owner.UserId, new[] { Bob, Carol });
+
+        As(owner.UserId);
+        var renamed = await _service.UpdateGroupAsync(group.Id, new ChatUpdateGroupRequest { Title = "Отдел продаж" }, CancellationToken.None);
+        Assert.Equal("Отдел продаж", renamed.Title);
+    }
+
     private void As(int userId) => _currentUser.UserId = userId;
 
     private Task<ChatAttachmentDto> UploadAsync(int conversationId, string fileName, string contentType)
