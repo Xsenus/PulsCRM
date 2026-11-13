@@ -239,7 +239,8 @@ public sealed class ChatService(
             .Where(x => includeArchived || !x.IsArchived)
             .ToList();
 
-        var conversations = myParticipations.Select(x => x.Conversation!).ToList();
+        var hidden = GetHiddenDirectConversationIds(myParticipations.Select(x => x.Conversation!), me);
+        var conversations = myParticipations.Select(x => x.Conversation!).Where(x => !hidden.Contains(x.Oid)).ToList();
         var result = BuildConversationDtos(conversations, me)
             .OrderByDescending(x => x.IsPinned)
             .ThenByDescending(x => x.LastMessageAtUtc)
@@ -266,13 +267,13 @@ public sealed class ChatService(
             throw new KeyNotFoundException("Сотрудник не найден.");
         }
 
+        ValidationHelper.Guard(!peer.IsInactive, "Сотрудник уволен, переписка с ним недоступна.");
         var key = BuildDirectKey(me, userId);
         var conversation = new XPQuery<ChatConversation>(unitOfWork)
             .FirstOrDefault(x => x.DirectKey == key && !x.IsRemoved);
 
         if (conversation is null)
         {
-            ValidationHelper.Guard(!peer.IsInactive, "Сотрудник уволен, начать с ним диалог нельзя.");
             var now = DateTime.UtcNow;
             conversation = new ChatConversation(unitOfWork)
             {
@@ -744,7 +745,11 @@ public sealed class ChatService(
             .Where(x => x.UserId == me && x.LeftAtUtc == null && x.Conversation != null && !x.Conversation.IsRemoved)
             .ToList();
 
-        var counts = participations.Where(x => !x.IsMuted).Select(x => CountUnread(x.Conversation!, x, me)).ToArray();
+        var hidden = GetHiddenDirectConversationIds(participations.Select(x => x.Conversation!), me);
+        var counts = participations
+            .Where(x => !x.IsMuted && !hidden.Contains(x.Conversation!.Oid))
+            .Select(x => CountUnread(x.Conversation!, x, me))
+            .ToArray();
         return Task.FromResult(new ChatUnreadSummaryDto
         {
             TotalUnread = counts.Sum(),
@@ -871,12 +876,42 @@ public sealed class ChatService(
     {
         var conversation = unitOfWork.GetObjectByKey<ChatConversation>(conversationId);
         var participant = conversation is null || conversation.IsRemoved ? null : FindParticipant(conversation.Oid, userId);
-        if (conversation is null || participant is null || participant.LeftAtUtc is not null)
+        if (conversation is null || participant is null || participant.LeftAtUtc is not null
+            || GetHiddenDirectConversationIds([conversation], userId).Count > 0)
         {
             throw new KeyNotFoundException("Диалог не найден.");
         }
 
         return (conversation, participant);
+    }
+
+    /// <summary>
+    /// Личные диалоги с уволенными (или удаленными из legacy-БД) сотрудниками в чате не показываются:
+    /// история остается в базе, но диалог пропадает из списка, счетчиков и недоступен по id.
+    /// </summary>
+    private HashSet<int> GetHiddenDirectConversationIds(IEnumerable<ChatConversation> conversations, int me)
+    {
+        var directIds = conversations
+            .Where(x => x.Kind == ChatConversationKind.Direct)
+            .Select(x => x.Oid)
+            .Distinct()
+            .ToArray();
+        if (directIds.Length == 0)
+        {
+            return new HashSet<int>();
+        }
+
+        var peers = new XPQuery<ChatParticipant>(unitOfWork)
+            .Where(x => x.Conversation != null && directIds.Contains(x.Conversation.Oid) && x.UserId != me)
+            .ToList()
+            .Select(x => (ConversationId: x.Conversation!.Oid, x.UserId))
+            .ToList();
+        var users = userDirectory.GetUsers(peers.Select(x => x.UserId));
+
+        return peers
+            .Where(x => users.GetValueOrDefault(x.UserId) is not { IsInactive: false })
+            .Select(x => x.ConversationId)
+            .ToHashSet();
     }
 
     private (ChatConversation Conversation, ChatParticipant Participant) RequireGroupAdmin(int conversationId, int userId)
@@ -993,7 +1028,10 @@ public sealed class ChatService(
         {
             var conversationParticipants = participants.Where(x => x.Conversation!.Oid == conversation.Oid).ToList();
             var mine = conversationParticipants.First(x => x.UserId == me);
-            var active = conversationParticipants.Where(x => x.LeftAtUtc == null).ToList();
+            // Уволенные сотрудники в составе чата не показываются.
+            var active = conversationParticipants
+                .Where(x => x.LeftAtUtc == null && users.GetValueOrDefault(x.UserId) is { IsInactive: false })
+                .ToList();
             var peer = conversation.Kind == ChatConversationKind.Direct
                 ? conversationParticipants.FirstOrDefault(x => x.UserId != me)
                 : null;
