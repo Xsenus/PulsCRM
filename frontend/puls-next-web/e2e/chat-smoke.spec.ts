@@ -354,3 +354,27 @@ test('message search finds messages across chats and opens the conversation on t
   await expect(page.locator('[data-message-id="1"]')).toHaveClass(/chat-message-highlight/);
   expect(await expectNoDocumentHorizontalOverflow(page)).toBe(true);
 });
+
+test('a message can be forwarded to another chat', async ({ page }) => {
+  await mockChat(page);
+  const forwards: unknown[] = [];
+  await page.route(/\/api\/chat\/messages\/1\/forward$/, async (route) => {
+    forwards.push(route.request().postDataJSON());
+    await fulfillJson(route, [{ ...messages[0], id: 200, conversationId: 11, senderUserId: currentUser.id, senderName: currentUser.fullName, forwardedFrom: { userId: 2, name: 'Петрова Анна Сергеевна' } }]);
+  });
+
+  await page.goto('/chat/10');
+  const first = page.locator('[data-message-id="1"]');
+  await first.hover();
+  await first.getByRole('button', { name: 'Еще' }).click();
+  await first.getByRole('menuitem', { name: 'Переслать' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Переслать сообщение' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Найти чат').fill('продаж');
+  await dialog.getByRole('option', { name: /Отдел продаж/ }).click();
+  await dialog.getByRole('button', { name: 'Переслать (1)' }).click();
+
+  await expect(dialog).toHaveCount(0);
+  expect(forwards).toEqual([{ conversationIds: [11] }]);
+});

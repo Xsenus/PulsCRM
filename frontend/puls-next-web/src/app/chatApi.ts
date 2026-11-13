@@ -61,6 +61,10 @@ export const leaveChat = (id: number) => call(() => api.post<void>(`/api/chat/co
 export const updateChatPreferences = (id: number, request: ChatConversationPreferencesRequest) =>
   call(() => api.put<ChatConversationDto>(`/api/chat/conversations/${id}/preferences`, request));
 
+/** Пересылает сообщение (текст и копии файлов) в выбранные диалоги. */
+export const forwardChatMessage = (messageId: number, conversationIds: number[]) =>
+  call(() => api.post<ChatMessageDto[]>(`/api/chat/messages/${messageId}/forward`, { conversationIds }));
+
 /** Поиск по тексту сообщений: во всех диалогах или в одном. */
 export const searchChatMessages = (q: string, conversationId?: number, take = 50) =>
   call(() => api.get<ChatSearchResultDto[]>('/api/chat/search', { params: { q, conversationId, take } }));

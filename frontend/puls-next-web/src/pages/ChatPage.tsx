@@ -32,7 +32,7 @@ import { getApiErrorMessage } from '../app/apiErrors';
 import { showToast } from '../app/toast';
 import { ChatAvatar } from '../components/chat/ChatAvatar';
 import { ChatAttachmentList } from '../components/chat/ChatAttachmentView';
-import { ChatSettingsDialog, ConversationInfoDialog, NewChatDialog } from '../components/chat/ChatDialogs';
+import { ChatSettingsDialog, ConversationInfoDialog, ForwardMessageDialog, NewChatDialog } from '../components/chat/ChatDialogs';
 import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
 import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
 import { prepareChatImageUpload } from '../app/chatImageThumbnail';
@@ -261,6 +261,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const [dragOver, setDragOver] = useState(false);
   const [newBelow, setNewBelow] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [forwarding, setForwarding] = useState<ChatMessageDto | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const conversationSearch = useChatMessageSearch(searchOpen ? searchQuery : '', conversation.id);
   const [firstUnreadId] = useState(() => (conversation.unreadCount > 0 ? conversation.myLastReadMessageId : null));
@@ -939,6 +940,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
                     ? (conversation.pinnedMessage?.id === message.id ? 'pinned' : 'unpinned')
                     : null}
                   onTogglePin={() => void changePinnedMessage(conversation.pinnedMessage?.id === message.id ? null : message.id)}
+                  onForward={() => setForwarding(message)}
                 />
               )}
             </React.Fragment>
@@ -1084,6 +1086,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
       {dragOver ? <div className="chat-drop-overlay">Отпустите, чтобы прикрепить файлы</div> : null}
 
       <ConversationInfoDialog open={infoOpen} conversation={conversation} onClose={() => setInfoOpen(false)} onLeft={onBack} />
+      <ForwardMessageDialog message={forwarding} onClose={() => setForwarding(null)} />
     </div>
   );
 }
@@ -1115,7 +1118,8 @@ function MessageBubble({
   onReact,
   onReplyClick,
   pinState = null,
-  onTogglePin
+  onTogglePin,
+  onForward
 }: {
   message: ChatMessageDto;
   own: boolean;
@@ -1131,6 +1135,7 @@ function MessageBubble({
   /** null — закреплять нельзя. */
   pinState?: 'pinned' | 'unpinned' | null;
   onTogglePin?: () => void;
+  onForward?: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -1159,6 +1164,10 @@ function MessageBubble({
     >
       <div className={`chat-bubble${message.isDeleted ? ' deleted' : ''}${bigEmoji ? ' emoji-only' : ''}`}>
         {showAuthor ? <div className="chat-bubble-author">{message.senderName}</div> : null}
+
+        {message.forwardedFrom && !message.isDeleted ? (
+          <div className="chat-bubble-forwarded">↪ Переслано от <strong>{message.forwardedFrom.name}</strong></div>
+        ) : null}
 
         {message.replyTo ? (
           <button type="button" className="chat-bubble-reply" onClick={() => onReplyClick(message.replyTo!.id)}>
@@ -1252,6 +1261,9 @@ function MessageBubble({
             <div className="chat-message-menu" role="menu">
               {message.text ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); void copy(); }}>Копировать текст</button> : null}
               {own ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onEdit(); }}>Изменить</button> : null}
+              {!message.isDeleted && onForward ? (
+                <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onForward(); }}>Переслать</button>
+              ) : null}
               {pinState ? (
                 <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onTogglePin?.(); }}>
                   {pinState === 'pinned' ? 'Открепить' : 'Закрепить'}

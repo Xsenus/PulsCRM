@@ -56,6 +56,7 @@ public interface IChatService
     Task<ChatMessagePageDto> GetMessagesAsync(int conversationId, int? beforeMessageId, int take, CancellationToken cancellationToken);
     Task<ChatMessageDto> SendMessageAsync(int conversationId, ChatSendMessageRequest request, CancellationToken cancellationToken);
     Task<ChatMessageDto> EditMessageAsync(int messageId, string? text, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ChatMessageDto>> ForwardMessageAsync(int messageId, IReadOnlyCollection<int> conversationIds, CancellationToken cancellationToken);
     Task<ChatMessageDto> DeleteMessageAsync(int messageId, CancellationToken cancellationToken);
     Task<ChatMessageDto> ToggleReactionAsync(int messageId, string? emoji, CancellationToken cancellationToken);
     Task MarkReadAsync(int conversationId, int? messageId, CancellationToken cancellationToken);
@@ -215,6 +216,7 @@ public sealed class ChatService(
     /// </summary>
     public const int MaxThumbnailBytes = 512 * 1024;
     private const int MinSearchLength = 2;
+    private const int MaxForwardTargets = 10;
     private const int MaxSearchLength = 200;
     private const int MaxImageSide = 50_000;
 
@@ -683,12 +685,7 @@ public sealed class ChatService(
         ValidationHelper.Guard(text is not null || attachmentIds.Length > 0, "Сообщение пустое.");
         ValidationHelper.Guard(attachmentIds.Length <= Options.MaxAttachmentsPerMessage, $"К сообщению можно прикрепить не больше {Options.MaxAttachmentsPerMessage} файлов.");
 
-        if (conversation.Kind == ChatConversationKind.Direct)
-        {
-            var peerId = GetParticipants(conversation.Oid).Select(x => x.UserId).FirstOrDefault(x => x != me);
-            var peer = userDirectory.GetUsers([peerId]).GetValueOrDefault(peerId);
-            ValidationHelper.Guard(peer is { IsInactive: false }, "Сотрудник уволен, отправить ему сообщение нельзя.");
-        }
+        EnsureCanWrite(conversation, me);
 
         var attachments = attachmentIds.Length == 0
             ? new List<ChatAttachment>()
@@ -725,7 +722,124 @@ public sealed class ChatService(
         }
 
         unitOfWork.CommitChanges();
+        return await CompleteNewMessageAsync(conversation, mine, message, now, cancellationToken);
+    }
 
+    public async Task<IReadOnlyCollection<ChatMessageDto>> ForwardMessageAsync(int messageId, IReadOnlyCollection<int> conversationIds, CancellationToken cancellationToken)
+    {
+        var me = CurrentUserId;
+        var source = RequireVisibleMessage(messageId, me);
+        ValidationHelper.Guard(source.Kind == ChatMessageKind.Text && source.DeletedAtUtc is null, "Это сообщение переслать нельзя.");
+        var participation = FindParticipant(source.Conversation!.Oid, me);
+        ValidationHelper.Guard(participation is { LeftAtUtc: null }, "Это сообщение переслать нельзя.");
+
+        var targetIds = (conversationIds ?? Array.Empty<int>()).Where(x => x > 0).Distinct().ToArray();
+        ValidationHelper.Guard(targetIds.Length > 0, "Выберите, куда переслать сообщение.");
+        ValidationHelper.Guard(targetIds.Length <= MaxForwardTargets, $"Переслать можно не больше чем в {MaxForwardTargets} диалогов за раз.");
+        var targets = targetIds.Select(id => RequireMembership(id, me)).ToList();
+        foreach (var (conversation, _) in targets)
+        {
+            EnsureCanWrite(conversation, me);
+        }
+
+        // При пересылке пересланного автором остается автор оригинала.
+        var originalAuthorId = source.ForwardedFromUserId > 0 ? source.ForwardedFromUserId : source.SenderUserId;
+        var originalAuthorName = source.ForwardedFromUserId > 0 && !string.IsNullOrWhiteSpace(source.ForwardedFromName)
+            ? source.ForwardedFromName!
+            : GetDisplayName(originalAuthorId);
+        var sourceAttachments = new XPQuery<ChatAttachment>(unitOfWork)
+            .Where(x => x.Message == source)
+            .ToList()
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Oid)
+            .ToList();
+
+        var result = new List<ChatMessageDto>(targets.Count);
+        foreach (var (conversation, mine) in targets)
+        {
+            var now = DateTime.UtcNow;
+            var message = new ChatMessage(unitOfWork)
+            {
+                Conversation = conversation,
+                SenderUserId = me,
+                Kind = ChatMessageKind.Text,
+                Text = source.Text,
+                ForwardedFromUserId = originalAuthorId,
+                ForwardedFromName = Truncate(originalAuthorName, 256),
+                CreatedAtUtc = now
+            };
+
+            // Файлы копируются: у копии свой жизненный цикл (удаление оригинала ее не затрагивает).
+            foreach (var attachment in sourceAttachments)
+            {
+                await CopyAttachmentAsync(attachment, conversation, message, me, now, cancellationToken);
+            }
+
+            unitOfWork.CommitChanges();
+            result.Add(await CompleteNewMessageAsync(conversation, mine, message, now, cancellationToken));
+        }
+
+        return result;
+    }
+
+    private async Task CopyAttachmentAsync(ChatAttachment source, ChatConversation conversation, ChatMessage message, int me, DateTime now, CancellationToken cancellationToken)
+    {
+        var extension = Path.GetExtension(source.StoredFileName ?? string.Empty);
+        var storedFileName = $"{Guid.NewGuid():N}{(extension.Length <= 16 ? extension : string.Empty)}";
+        var bytes = await ReadStoredFileAsync(source.RelativePath, cancellationToken);
+        ValidationHelper.Guard(bytes is not null, $"Файл «{source.OriginalFileName}» больше недоступен, переслать его нельзя.");
+        var copy = new ChatAttachment(unitOfWork)
+        {
+            Conversation = conversation,
+            Message = message,
+            UploadedByUserId = me,
+            OriginalFileName = source.OriginalFileName,
+            StoredFileName = storedFileName,
+            RelativePath = await fileStore.SaveAsync(bytes!, storedFileName, now, cancellationToken),
+            ContentType = source.ContentType,
+            Length = source.Length,
+            Sha256 = source.Sha256,
+            SortOrder = source.SortOrder,
+            UploadedAtUtc = now,
+            ImageWidth = source.ImageWidth,
+            ImageHeight = source.ImageHeight
+        };
+
+        var thumbnail = await ReadStoredFileAsync(source.ThumbnailRelativePath, cancellationToken);
+        if (thumbnail is not null)
+        {
+            var thumbnailName = $"{Path.GetFileNameWithoutExtension(storedFileName)}.thumb{Path.GetExtension(source.ThumbnailRelativePath)}";
+            copy.ThumbnailRelativePath = await fileStore.SaveAsync(thumbnail, thumbnailName, now, cancellationToken);
+            copy.ThumbnailContentType = source.ThumbnailContentType;
+            copy.ThumbnailLength = source.ThumbnailLength;
+        }
+    }
+
+    private async Task<byte[]?> ReadStoredFileAsync(string? relativePath, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+        {
+            return null;
+        }
+
+        try
+        {
+            await using var stream = fileStore.OpenRead(relativePath);
+            using var memory = new MemoryStream();
+            await stream.CopyToAsync(memory, cancellationToken);
+            return memory.ToArray();
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or KeyNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Общая часть отправки: последнее сообщение диалога, «прочитано» у автора, возврат из архива и рассылка.
+    /// </summary>
+    private async Task<ChatMessageDto> CompleteNewMessageAsync(ChatConversation conversation, ChatParticipant mine, ChatMessage message, DateTime now, CancellationToken cancellationToken)
+    {
         conversation.LastMessageId = message.Oid;
         conversation.LastMessageAtUtc = now;
         mine.LastReadMessageId = message.Oid;
@@ -737,9 +851,24 @@ public sealed class ChatService(
 
         unitOfWork.CommitChanges();
 
-        var dto = BuildMessageDtos([message], me).Single();
+        var dto = BuildMessageDtos([message], mine.UserId).Single();
         await eventPublisher.PublishAsync(GetActiveUserIds(conversation.Oid), ChatEventNames.MessageCreated, dto, cancellationToken);
         return dto;
+    }
+
+    /// <summary>
+    /// Уволенному сотруднику в личный диалог писать нельзя.
+    /// </summary>
+    private void EnsureCanWrite(ChatConversation conversation, int me)
+    {
+        if (conversation.Kind != ChatConversationKind.Direct)
+        {
+            return;
+        }
+
+        var peerId = GetParticipants(conversation.Oid).Select(x => x.UserId).FirstOrDefault(x => x != me);
+        var peer = userDirectory.GetUsers([peerId]).GetValueOrDefault(peerId);
+        ValidationHelper.Guard(peer is { IsInactive: false }, "Сотрудник уволен, отправить ему сообщение нельзя.");
     }
 
     public async Task<ChatMessageDto> EditMessageAsync(int messageId, string? text, CancellationToken cancellationToken)
@@ -1447,6 +1576,9 @@ public sealed class ChatService(
                 EditedAtUtc = ForceUtc(message.EditedAtUtc),
                 IsDeleted = isDeleted,
                 ReplyTo = isDeleted ? null : reply,
+                ForwardedFrom = isDeleted || message.ForwardedFromUserId <= 0
+                    ? null
+                    : new ChatForwardedFromDto { UserId = message.ForwardedFromUserId, Name = message.ForwardedFromName ?? NameOf(message.ForwardedFromUserId) },
                 Attachments = isDeleted
                     ? Array.Empty<ChatAttachmentDto>()
                     : (attachments.GetValueOrDefault(message.Oid) ?? new List<ChatAttachment>()).Select(ToAttachmentDto).ToArray(),

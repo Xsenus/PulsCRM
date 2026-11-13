@@ -158,6 +158,15 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
         => Ok(await chatService.UpdatePreferencesAsync(id, request, cancellationToken));
 
     /// <summary>
+    /// Пересылает сообщение (текст и копии файлов) в выбранные диалоги, до 10 за раз.
+    /// </summary>
+    [HttpPost("messages/{messageId:int}/forward")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<ChatMessageDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyCollection<ChatMessageDto>>> ForwardMessage([FromRoute] int messageId, [FromBody] ChatForwardMessageRequest request, CancellationToken cancellationToken)
+        => Ok(await chatService.ForwardMessageAsync(messageId, request?.ConversationIds ?? Array.Empty<int>(), cancellationToken));
+
+    /// <summary>
     /// Поиск по тексту сообщений во всех диалогах сотрудника или в одном (<c>conversationId</c>).
     /// Без учета регистра, от новых к старым; не меньше 2 символов.
     /// </summary>
