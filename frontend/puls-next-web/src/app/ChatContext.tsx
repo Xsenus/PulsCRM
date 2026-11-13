@@ -2,11 +2,12 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import type { ReactNode } from 'react';
 import { HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from '@microsoft/signalr';
 import { getToken } from './api';
-import { getChatConversation, getChatConversations, getChatSettings, getChatStatus, updateChatSettings } from './chatApi';
+import { getChatConversation, getChatConversations, getChatDockState, getChatSettings, getChatStatus, updateChatDockState, updateChatSettings } from './chatApi';
 import { describeLastMessage, sortConversations } from './chatFormat';
 import { playChatSound } from './chatSounds';
 import type {
   ChatConversationDto,
+  ChatDockStateDto,
   ChatMessageDto,
   ChatPresenceEventDto,
   ChatReadStateEventDto,
@@ -20,6 +21,28 @@ const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 const TYPING_TTL_MS = 6000;
 const POLL_INTERVAL_MS = 30000;
 const DOCK_STATE_KEY = 'puls-chat-dock';
+/** Отметка «изменение окна еще не подтверждено сервером»: такое локальное состояние важнее серверного. */
+const DOCK_UNSYNCED_KEY = 'puls-chat-dock-unsynced';
+
+function setDockUnsynced(value: boolean) {
+  try {
+    if (value) {
+      localStorage.setItem(DOCK_UNSYNCED_KEY, '1');
+    } else {
+      localStorage.removeItem(DOCK_UNSYNCED_KEY);
+    }
+  } catch {
+    // Хранилище недоступно — синхронизация просто менее устойчива к обрыву.
+  }
+}
+
+function isDockUnsynced() {
+  try {
+    return localStorage.getItem(DOCK_UNSYNCED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 export interface ChatDockState {
   open: boolean;
@@ -50,6 +73,25 @@ function readDockState(): ChatDockState {
   }
 
   return { open: false, conversationId: null };
+}
+
+export function dockStateFromServer(dto: ChatDockStateDto): ChatDockState {
+  const state: ChatDockState = { open: !!dto.open, conversationId: isPositiveNumber(dto.conversationId) ? dto.conversationId : null };
+  if (isPositiveNumber(dto.width) && isPositiveNumber(dto.height)) {
+    state.width = Math.round(dto.width);
+    state.height = Math.round(dto.height);
+  }
+
+  return state;
+}
+
+export function dockStateToServer(state: ChatDockState): ChatDockStateDto {
+  return {
+    open: state.open,
+    conversationId: state.conversationId,
+    width: state.width ?? null,
+    height: state.height ?? null
+  };
 }
 
 export const DEFAULT_CHAT_SETTINGS: ChatUserSettingsDto = {
@@ -125,6 +167,11 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [dock, setDock] = useState<ChatDockState>(readDockState);
+  // Серверная синхронизация окна: что последним сохранено или пришло с сервера и менял ли пользователь окно до загрузки.
+  const dockServerLoadedRef = useRef(false);
+  const dockChangedByUserRef = useRef(false);
+  const dockLastSyncedRef = useRef<string | null>(null);
+  const dockPendingRef = useRef<ChatDockState | null>(null);
 
   const connectionRef = useRef<HubConnection | null>(null);
   const listenersRef = useRef(new Set<(event: ChatEvent) => void>());
@@ -500,15 +547,108 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     }
   }, [dock]);
 
+  useEffect(() => {
+    dockServerLoadedRef.current = false;
+    dockLastSyncedRef.current = null;
+    if (!enabled) {
+      return;
+    }
+
+    let disposed = false;
+    getChatDockState()
+      .then((value) => {
+        if (disposed) {
+          return;
+        }
+
+        const serverState = dockStateFromServer(value);
+        dockLastSyncedRef.current = JSON.stringify(dockStateToServer(serverState));
+        dockServerLoadedRef.current = true;
+        // Если пользователь уже успел свернуть/развернуть окно (сейчас или до прошлой перезагрузки,
+        // а сохранение тогда оборвалось) — его действие важнее, оно и уйдет на сервер.
+        if (!dockChangedByUserRef.current && !isDockUnsynced()) {
+          setDock(serverState);
+        } else {
+          setDock((current) => ({ ...current }));
+        }
+      })
+      .catch(() => {
+        // Сервер недоступен — работаем с локальной копией.
+      });
+
+    return () => {
+      disposed = true;
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || !dockServerLoadedRef.current) {
+      return;
+    }
+
+    const payload = JSON.stringify(dockStateToServer(dock));
+    if (payload === dockLastSyncedRef.current) {
+      dockPendingRef.current = null;
+      return;
+    }
+
+    // Сохраняем сразу: изменения окна редкие (размер пишется только при отпускании мыши),
+    // а задержка рисковала потерять действие при быстрой перезагрузке страницы.
+    dockPendingRef.current = dock;
+    dockLastSyncedRef.current = payload;
+    updateChatDockState(dockStateToServer(dock))
+      .then(() => {
+        if (dockPendingRef.current === dock) {
+          dockPendingRef.current = null;
+          setDockUnsynced(false);
+        }
+      })
+      .catch(() => {
+        dockLastSyncedRef.current = null;
+      });
+  }, [dock, enabled]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    // Вкладку закрыли, пока сохранение еще шло, — повторяем его запросом, который переживет закрытие страницы.
+    const flush = () => {
+      const pending = dockPendingRef.current;
+      const token = getToken();
+      if (!pending || !token || typeof fetch !== 'function') {
+        return;
+      }
+
+      dockPendingRef.current = null;
+      void fetch(`${API_BASE}/api/chat/dock`, {
+        method: 'PUT',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(dockStateToServer(pending))
+      }).catch(() => undefined);
+    };
+
+    window.addEventListener('pagehide', flush);
+    return () => window.removeEventListener('pagehide', flush);
+  }, [enabled]);
+
   const openDock = useCallback((conversationId?: number | null) => {
+    dockChangedByUserRef.current = true;
+    setDockUnsynced(true);
     setDock((current) => ({ ...current, open: true, conversationId: conversationId === undefined ? current.conversationId : conversationId }));
   }, []);
 
   const minimizeDock = useCallback(() => {
+    dockChangedByUserRef.current = true;
+    setDockUnsynced(true);
     setDock((current) => ({ ...current, open: false }));
   }, []);
 
   const resizeDock = useCallback((size: { width: number; height: number } | null) => {
+    dockChangedByUserRef.current = true;
+    setDockUnsynced(true);
     setDock((current) => {
       const { width: _width, height: _height, ...rest } = current;
       return size ? { ...rest, width: Math.round(size.width), height: Math.round(size.height) } : rest;

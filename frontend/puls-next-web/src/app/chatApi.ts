@@ -4,6 +4,7 @@ import type {
   ChatAttachmentDto,
   ChatConversationDto,
   ChatConversationPreferencesRequest,
+  ChatDockStateDto,
   ChatCreateGroupRequest,
   ChatMessageDto,
   ChatMessagePageDto,
@@ -82,6 +83,11 @@ export const getChatSettings = () => call(() => api.get<ChatUserSettingsDto>('/a
 
 export const updateChatSettings = (settings: ChatUserSettingsDto) =>
   call(() => api.put<ChatUserSettingsDto>('/api/chat/settings', settings));
+
+export const getChatDockState = () => call(() => api.get<ChatDockStateDto>('/api/chat/dock'));
+
+export const updateChatDockState = (state: ChatDockStateDto) =>
+  call(() => api.put<ChatDockStateDto>('/api/chat/dock', state));
 
 export function uploadChatAttachment(conversationId: number, file: File, onProgress?: (percent: number) => void) {
   const formData = new FormData();

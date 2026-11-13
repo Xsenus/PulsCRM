@@ -595,7 +595,7 @@ public class ChatReaction(Session session) : XPObject(session)
 }
 
 /// <summary>
-/// Настройки оповещений чата для сотрудника.
+/// Настройки оповещений и плавающего окна чата для сотрудника.
 /// </summary>
 [Persistent("ChatUserSettings")]
 public class ChatUserSettings(Session session) : XPObject(session)
@@ -606,6 +606,10 @@ public class ChatUserSettings(Session session) : XPObject(session)
     private string? _soundName;
     private int _soundVolume;
     private bool _showMessagePreview;
+    private bool _dockOpen;
+    private int _dockConversationId;
+    private int _dockWidth;
+    private int _dockHeight;
     private DateTime _updatedAtUtc;
 
     public ChatUserSettings() : this(Session.DefaultSession) { }
@@ -664,6 +668,42 @@ public class ChatUserSettings(Session session) : XPObject(session)
     {
         get => _showMessagePreview;
         set => SetPropertyValue(nameof(ShowMessagePreview), ref _showMessagePreview, value);
+    }
+
+    /// <summary>
+    /// Плавающее окно чата развернуто.
+    /// </summary>
+    public bool DockOpen
+    {
+        get => _dockOpen;
+        set => SetPropertyValue(nameof(DockOpen), ref _dockOpen, value);
+    }
+
+    /// <summary>
+    /// Диалог, открытый в плавающем окне; 0 — список диалогов.
+    /// </summary>
+    public int DockConversationId
+    {
+        get => _dockConversationId;
+        set => SetPropertyValue(nameof(DockConversationId), ref _dockConversationId, value);
+    }
+
+    /// <summary>
+    /// Ширина плавающего окна в пикселях; 0 — стандартная.
+    /// </summary>
+    public int DockWidth
+    {
+        get => _dockWidth;
+        set => SetPropertyValue(nameof(DockWidth), ref _dockWidth, value);
+    }
+
+    /// <summary>
+    /// Высота плавающего окна в пикселях; 0 — стандартная.
+    /// </summary>
+    public int DockHeight
+    {
+        get => _dockHeight;
+        set => SetPropertyValue(nameof(DockHeight), ref _dockHeight, value);
     }
 
     /// <summary>

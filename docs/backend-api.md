@@ -128,6 +128,7 @@ Frontend использует эти маршруты на странице `/di
 - `POST /api/chat/conversations/{id}/read` (`messageId`) и `POST .../{id}/typing`;
 - `POST /api/chat/conversations/{id}/attachments` (multipart, поле `file`) — загрузка вложения до отправки; `DELETE /api/chat/attachments/{id}` — удалить неотправленное; `GET /api/chat/attachments/{id}?inline=` — скачать (только участникам диалога; `inline=true` для изображений);
 - `GET /api/chat/unread` — сумма непрочитанных без диалогов «без звука»; `GET/PUT /api/chat/settings` — оповещения, звук, громкость, показ текста.
+- `GET/PUT /api/chat/dock` — состояние плавающего окна (`open`, `conversationId`, `width`, `height`; размер задается парой или `null` — стандартный). Недоступный пользователю диалог не запоминается.
 
 Права проверяются в `ChatService`: чужой диалог для пользователя «не существует» (404), действия без прав — 400 с текстом причины.
 

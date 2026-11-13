@@ -171,6 +171,32 @@ public sealed class ChatUserSettingsDto
 }
 
 /// <summary>
+/// Состояние плавающего окна чата: хранится на сервере, чтобы быть одинаковым на всех компьютерах пользователя.
+/// </summary>
+public sealed class ChatDockStateDto
+{
+    public const int MinSize = 200;
+    public const int MaxSize = 4000;
+
+    /// <summary>
+    /// Окно развернуто.
+    /// </summary>
+    public bool Open { get; set; }
+
+    /// <summary>
+    /// Диалог в окне; null — список диалогов.
+    /// </summary>
+    public int? ConversationId { get; set; }
+
+    /// <summary>
+    /// Размер окна; null — стандартный. Задаются вместе.
+    /// </summary>
+    public int? Width { get; set; }
+
+    public int? Height { get; set; }
+}
+
+/// <summary>
 /// Звуки оповещений, которые есть во фронтенде.
 /// </summary>
 public static class ChatSoundNames

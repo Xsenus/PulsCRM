@@ -68,6 +68,8 @@ public interface IChatService
     Task NotifyTypingAsync(int conversationId, int? userId, CancellationToken cancellationToken);
     Task<ChatUserSettingsDto> GetSettingsAsync(CancellationToken cancellationToken);
     Task<ChatUserSettingsDto> UpdateSettingsAsync(ChatUserSettingsDto request, CancellationToken cancellationToken);
+    Task<ChatDockStateDto> GetDockStateAsync(CancellationToken cancellationToken);
+    Task<ChatDockStateDto> UpdateDockStateAsync(ChatDockStateDto request, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -859,8 +861,7 @@ public sealed class ChatService(
         ValidationHelper.Guard(ChatSoundNames.All.Contains(request.SoundName), "Неизвестный звук оповещения.");
         ValidationHelper.Guard(request.SoundVolume is >= 0 and <= 100, "Громкость должна быть от 0 до 100.");
 
-        var settings = new XPQuery<ChatUserSettings>(unitOfWork).FirstOrDefault(x => x.UserId == me)
-            ?? new ChatUserSettings(unitOfWork) { UserId = me };
+        var settings = GetOrCreateSettings(me);
         settings.NotificationsEnabled = request.NotificationsEnabled;
         settings.SoundEnabled = request.SoundEnabled;
         settings.SoundName = request.SoundName;
@@ -870,6 +871,85 @@ public sealed class ChatService(
         unitOfWork.CommitChanges();
 
         return Task.FromResult(ToSettingsDto(settings));
+    }
+
+    public Task<ChatDockStateDto> GetDockStateAsync(CancellationToken cancellationToken)
+    {
+        var me = CurrentUserId;
+        var settings = new XPQuery<ChatUserSettings>(unitOfWork).FirstOrDefault(x => x.UserId == me);
+        if (settings is null)
+        {
+            return Task.FromResult(new ChatDockStateDto());
+        }
+
+        var conversationId = settings.DockConversationId > 0 && CanAccessConversation(settings.DockConversationId, me)
+            ? settings.DockConversationId
+            : (int?)null;
+        var hasSize = settings.DockWidth > 0 && settings.DockHeight > 0;
+        return Task.FromResult(new ChatDockStateDto
+        {
+            Open = settings.DockOpen,
+            ConversationId = conversationId,
+            Width = hasSize ? settings.DockWidth : null,
+            Height = hasSize ? settings.DockHeight : null
+        });
+    }
+
+    public Task<ChatDockStateDto> UpdateDockStateAsync(ChatDockStateDto request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var me = CurrentUserId;
+        ValidationHelper.Guard(request.Width is null == request.Height is null, "Укажите и ширину, и высоту окна.");
+        ValidationHelper.Guard(request.Width is null || request.Width is >= ChatDockStateDto.MinSize and <= ChatDockStateDto.MaxSize, "Недопустимая ширина окна.");
+        ValidationHelper.Guard(request.Height is null || request.Height is >= ChatDockStateDto.MinSize and <= ChatDockStateDto.MaxSize, "Недопустимая высота окна.");
+
+        var settings = GetOrCreateSettings(me);
+        settings.DockOpen = request.Open;
+        // Чужой или недоступный диалог не запоминаем — окно откроется со списком.
+        settings.DockConversationId = request.ConversationId is > 0 && CanAccessConversation(request.ConversationId.Value, me) ? request.ConversationId.Value : 0;
+        settings.DockWidth = request.Width ?? 0;
+        settings.DockHeight = request.Height ?? 0;
+        settings.UpdatedAtUtc = DateTime.UtcNow;
+        unitOfWork.CommitChanges();
+
+        return GetDockStateAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Строка настроек может впервые появиться из-за окна чата — тогда оповещения и звук включены по умолчанию.
+    /// </summary>
+    private ChatUserSettings GetOrCreateSettings(int userId)
+    {
+        var existing = new XPQuery<ChatUserSettings>(unitOfWork).FirstOrDefault(x => x.UserId == userId);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var defaults = new ChatUserSettingsDto();
+        return new ChatUserSettings(unitOfWork)
+        {
+            UserId = userId,
+            NotificationsEnabled = defaults.NotificationsEnabled,
+            SoundEnabled = defaults.SoundEnabled,
+            SoundName = defaults.SoundName,
+            SoundVolume = defaults.SoundVolume,
+            ShowMessagePreview = defaults.ShowMessagePreview,
+            UpdatedAtUtc = DateTime.UtcNow
+        };
+    }
+
+    private bool CanAccessConversation(int conversationId, int userId)
+    {
+        try
+        {
+            RequireMembership(conversationId, userId);
+            return true;
+        }
+        catch (KeyNotFoundException)
+        {
+            return false;
+        }
     }
 
     private (ChatConversation Conversation, ChatParticipant Participant) RequireMembership(int conversationId, int userId)
