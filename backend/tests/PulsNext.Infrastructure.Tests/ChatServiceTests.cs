@@ -351,8 +351,11 @@ public sealed class ChatServiceTests : IDisposable
         Assert.True(defaults.SoundEnabled);
         Assert.Equal(ChatSoundNames.Default, defaults.SoundName);
 
-        await _service.UpdateSettingsAsync(new ChatUserSettingsDto { SoundEnabled = false, SoundName = "pop", SoundVolume = 30 }, CancellationToken.None);
+        Assert.False(defaults.DesktopNotificationsEnabled);
+
+        await _service.UpdateSettingsAsync(new ChatUserSettingsDto { SoundEnabled = false, SoundName = "pop", SoundVolume = 30, DesktopNotificationsEnabled = true }, CancellationToken.None);
         var saved = await _service.GetSettingsAsync(CancellationToken.None);
+        Assert.True(saved.DesktopNotificationsEnabled);
         Assert.False(saved.SoundEnabled);
         Assert.Equal("pop", saved.SoundName);
         Assert.Equal(30, saved.SoundVolume);

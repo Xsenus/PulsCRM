@@ -108,6 +108,7 @@ export interface ChatUserSettingsDto {
   soundName: ChatSoundName;
   soundVolume: number;
   showMessagePreview: boolean;
+  desktopNotificationsEnabled?: boolean;
 }
 
 /** Состояние плавающего окна чата на сервере. */

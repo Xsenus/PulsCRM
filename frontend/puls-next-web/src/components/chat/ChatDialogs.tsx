@@ -12,6 +12,7 @@ import {
   updateGroupChat
 } from '../../app/chatApi';
 import { CHAT_SOUNDS, playChatSound } from '../../app/chatSounds';
+import { getDesktopNotificationStatus, requestDesktopNotificationPermission, type DesktopNotificationStatus } from '../../app/desktopNotifications';
 import type { ChatConversationDto, ChatSoundName, ChatUserDto, ChatUserSettingsDto } from '../../app/chatTypes';
 import { isGroupConversation, roleRank } from '../../app/chatTypes';
 import { getApiErrorMessage } from '../../app/apiErrors';
@@ -470,6 +471,11 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
           />
           <span>Показывать текст сообщения в оповещении</span>
         </label>
+        <DesktopNotificationsToggle
+          enabled={!!draft.desktopNotificationsEnabled}
+          disabled={!draft.notificationsEnabled}
+          onChange={(value) => update({ desktopNotificationsEnabled: value })}
+        />
         <label className="chat-toggle">
           <input type="checkbox" checked={draft.soundEnabled} onChange={(event) => update({ soundEnabled: event.target.checked })} />
           <span>Звук при новом сообщении</span>
@@ -523,5 +529,43 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
         <div className="chat-muted">Звук и оповещения не срабатывают для диалогов, у которых включен режим «Без звука».</div>
       </div>
     </Modal>
+  );
+}
+
+const DESKTOP_STATUS_TEXT: Record<DesktopNotificationStatus, string> = {
+  granted: 'Браузер разрешил оповещения.',
+  default: 'Браузер спросит разрешение, когда вы включите оповещения.',
+  denied: 'Оповещения запрещены в настройках браузера для этого сайта — разрешите их там (значок замка слева от адреса).',
+  insecure: 'Недоступно: браузер показывает системные оповещения только для сайтов по HTTPS. Оповещения внутри системы и звук работают.',
+  unsupported: 'Этот браузер не поддерживает системные оповещения.'
+};
+
+function DesktopNotificationsToggle({ enabled, disabled, onChange }: { enabled: boolean; disabled: boolean; onChange: (value: boolean) => void }) {
+  const [status, setStatus] = useState<DesktopNotificationStatus>(getDesktopNotificationStatus);
+  const unavailable = status === 'insecure' || status === 'unsupported';
+
+  return (
+    <div className="chat-desktop-toggle">
+      <label className="chat-toggle">
+        <input
+          type="checkbox"
+          checked={enabled && !unavailable}
+          disabled={disabled || unavailable}
+          onChange={async (event) => {
+            const value = event.target.checked;
+            if (value && status !== 'granted') {
+              const result = await requestDesktopNotificationPermission();
+              setStatus(result);
+              onChange(result === 'granted');
+              return;
+            }
+
+            onChange(value);
+          }}
+        />
+        <span>Системные оповещения Windows, когда вкладка свернута</span>
+      </label>
+      <div className={`chat-muted chat-desktop-status${status === 'denied' || unavailable ? ' warn' : ''}`}>{DESKTOP_STATUS_TEXT[status]}</div>
+    </div>
   );
 }

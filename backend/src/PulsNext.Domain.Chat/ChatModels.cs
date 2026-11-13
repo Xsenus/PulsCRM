@@ -606,6 +606,7 @@ public class ChatUserSettings(Session session) : XPObject(session)
     private string? _soundName;
     private int _soundVolume;
     private bool _showMessagePreview;
+    private bool _desktopNotificationsEnabled;
     private bool _dockOpen;
     private int _dockConversationId;
     private int _dockWidth;
@@ -668,6 +669,15 @@ public class ChatUserSettings(Session session) : XPObject(session)
     {
         get => _showMessagePreview;
         set => SetPropertyValue(nameof(ShowMessagePreview), ref _showMessagePreview, value);
+    }
+
+    /// <summary>
+    /// Системные оповещения браузера, когда вкладка в фоне.
+    /// </summary>
+    public bool DesktopNotificationsEnabled
+    {
+        get => _desktopNotificationsEnabled;
+        set => SetPropertyValue(nameof(DesktopNotificationsEnabled), ref _desktopNotificationsEnabled, value);
     }
 
     /// <summary>

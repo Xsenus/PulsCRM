@@ -876,6 +876,7 @@ public sealed class ChatService(
         settings.SoundName = request.SoundName;
         settings.SoundVolume = request.SoundVolume;
         settings.ShowMessagePreview = request.ShowMessagePreview;
+        settings.DesktopNotificationsEnabled = request.DesktopNotificationsEnabled;
         settings.UpdatedAtUtc = DateTime.UtcNow;
         unitOfWork.CommitChanges();
 
@@ -944,6 +945,7 @@ public sealed class ChatService(
             SoundName = defaults.SoundName,
             SoundVolume = defaults.SoundVolume,
             ShowMessagePreview = defaults.ShowMessagePreview,
+            DesktopNotificationsEnabled = defaults.DesktopNotificationsEnabled,
             UpdatedAtUtc = DateTime.UtcNow
         };
     }
@@ -1319,7 +1321,8 @@ public sealed class ChatService(
             SoundEnabled = settings.SoundEnabled,
             SoundName = ChatSoundNames.All.Contains(settings.SoundName) ? settings.SoundName! : ChatSoundNames.Default,
             SoundVolume = Math.Clamp(settings.SoundVolume, 0, 100),
-            ShowMessagePreview = settings.ShowMessagePreview
+            ShowMessagePreview = settings.ShowMessagePreview,
+            DesktopNotificationsEnabled = settings.DesktopNotificationsEnabled
         };
 
     private void TryDeleteFile(string? relativePath)

@@ -168,6 +168,11 @@ public sealed class ChatUserSettingsDto
     public string SoundName { get; set; } = ChatSoundNames.Default;
     public int SoundVolume { get; set; } = 70;
     public bool ShowMessagePreview { get; set; } = true;
+
+    /// <summary>
+    /// Системные оповещения браузера (Windows), когда вкладка в фоне. Выключены по умолчанию: нужно разрешение браузера.
+    /// </summary>
+    public bool DesktopNotificationsEnabled { get; set; }
 }
 
 /// <summary>

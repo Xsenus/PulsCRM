@@ -5,6 +5,7 @@ import { getToken } from './api';
 import { getChatConversation, getChatConversations, getChatDockState, getChatSettings, getChatStatus, updateChatDockState, updateChatSettings } from './chatApi';
 import { describeLastMessage, sortConversations } from './chatFormat';
 import { playChatSound } from './chatSounds';
+import { showDesktopNotification } from './desktopNotifications';
 import type {
   ChatConversationDto,
   ChatDockStateDto,
@@ -99,7 +100,8 @@ export const DEFAULT_CHAT_SETTINGS: ChatUserSettingsDto = {
   soundEnabled: true,
   soundName: 'chime',
   soundVolume: 70,
-  showMessagePreview: true
+  showMessagePreview: true,
+  desktopNotificationsEnabled: false
 };
 
 export type ChatEvent =
@@ -272,6 +274,15 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
       icon: conversation.icon,
       isGroup
     };
+
+    // Вкладка в фоне — дополнительно системное оповещение (если пользователь включил и браузер разрешил).
+    if (current.desktopNotificationsEnabled && document.visibilityState === 'hidden') {
+      showDesktopNotification({
+        title: isGroup ? `${conversation.title} — ${message.senderName}` : message.senderName,
+        body: preview,
+        conversationId: conversation.id
+      });
+    }
 
     setNotifications((items) => [...items.filter((item) => item.conversationId !== conversation.id), notification].slice(-4));
     window.setTimeout(() => {
