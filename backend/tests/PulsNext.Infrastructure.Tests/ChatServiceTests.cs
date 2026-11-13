@@ -392,6 +392,39 @@ public sealed class ChatServiceTests : IDisposable
         await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.NotifyTypingAsync(group.Id, null, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task DirectConversationWithFiredEmployee_IsHiddenEverywhere()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        As(Bob);
+        await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { Text = "Привет" }, CancellationToken.None);
+
+        _directory.Fire(Bob);
+
+        As(Alice);
+        Assert.Empty(await _service.GetConversationsAsync(includeArchived: true, CancellationToken.None));
+        Assert.Equal(0, (await _service.GetUnreadSummaryAsync(CancellationToken.None)).TotalUnread);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetConversationAsync(conversation.Id, CancellationToken.None));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetMessagesAsync(conversation.Id, null, 50, CancellationToken.None));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { Text = "Ау" }, CancellationToken.None));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.OpenDirectAsync(Bob, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GroupConversation_HidesFiredMembersButStaysAvailable()
+    {
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob, Carol] }, CancellationToken.None);
+
+        _directory.Fire(Carol);
+
+        var reloaded = await _service.GetConversationAsync(group.Id, CancellationToken.None);
+        Assert.Equal([Alice, Bob], reloaded.Participants.Select(x => x.UserId).Order());
+        Assert.Single(await _service.GetConversationsAsync(includeArchived: false, CancellationToken.None));
+        await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "Работаем дальше" }, CancellationToken.None);
+    }
+
     private void As(int userId) => _currentUser.UserId = userId;
 
     private Task<ChatAttachmentDto> UploadAsync(int conversationId, string fileName, string contentType)
@@ -421,6 +454,8 @@ public sealed class ChatServiceTests : IDisposable
             [Fired] = new ChatUserDto { Id = Fired, Login = "fired", DisplayName = "Уволенный", IsInactive = true },
             [Outsider] = new ChatUserDto { Id = Outsider, Login = "out", DisplayName = "Посторонний" }
         };
+
+        public void Fire(int userId) => _users[userId].IsInactive = true;
 
         public IReadOnlyDictionary<int, ChatUserDto> GetUsers(IEnumerable<int> userIds)
             => userIds.Distinct().Where(_users.ContainsKey).ToDictionary(x => x, x => _users[x]);
