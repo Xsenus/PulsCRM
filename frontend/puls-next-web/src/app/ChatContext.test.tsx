@@ -46,7 +46,9 @@ const apiMocks = vi.hoisted(() => ({
   getChatConversations: vi.fn(),
   getChatConversation: vi.fn(),
   getChatSettings: vi.fn(),
-  updateChatSettings: vi.fn()
+  updateChatSettings: vi.fn(),
+  getChatDockState: vi.fn(),
+  updateChatDockState: vi.fn()
 }));
 vi.mock('./chatApi', () => apiMocks);
 vi.mock('./api', () => ({ getToken: () => 'token' }));
@@ -138,10 +140,13 @@ beforeEach(() => {
   apiMocks.getChatStatus.mockResolvedValue({ enabled: true, currentUserId: 1, maxAttachmentBytes: 1, maxAttachmentsPerMessage: 1, maxMessageLength: 1 });
   apiMocks.getChatConversations.mockResolvedValue([conversation(10), conversation(20, { isMuted: true })]);
   apiMocks.getChatSettings.mockResolvedValue({ notificationsEnabled: true, soundEnabled: true, soundName: 'bell', soundVolume: 40, showMessagePreview: true });
+  apiMocks.getChatDockState.mockResolvedValue({ open: false, conversationId: null, width: null, height: null });
+  apiMocks.updateChatDockState.mockImplementation(async (state: unknown) => state);
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
 });
 
 afterEach(() => {
+  localStorage.removeItem('puls-chat-dock-unsynced');
   act(() => root?.unmount());
   container?.remove();
   latest = null;
@@ -163,6 +168,7 @@ describe('ChatProvider', () => {
     expect(latest!.enabled).toBe(false);
     expect(hub.start).not.toHaveBeenCalled();
     expect(apiMocks.getChatConversations).not.toHaveBeenCalled();
+    expect(apiMocks.getChatDockState).not.toHaveBeenCalled();
   });
 
   it('counts unread, plays sound and shows notification for a background conversation', async () => {
@@ -251,7 +257,8 @@ describe('ChatProvider', () => {
     localStorage.removeItem('puls-chat-dock');
   });
 
-  it('restores open state and size after reload, ignoring broken values', async () => {
+  it('restores open state and size from the local copy when the server is unavailable, ignoring broken values', async () => {
+    apiMocks.getChatDockState.mockRejectedValue(new Error('offline'));
     localStorage.setItem('puls-chat-dock', JSON.stringify({ open: true, conversationId: 10, width: 480, height: 640 }));
     await mount();
     expect(latest!.dock).toEqual({ open: true, conversationId: 10, width: 480, height: 640 });
@@ -261,6 +268,69 @@ describe('ChatProvider', () => {
     localStorage.setItem('puls-chat-dock', JSON.stringify({ open: false, conversationId: 'x', width: -5, height: 'big' }));
     await mount();
     expect(latest!.dock).toEqual({ open: false, conversationId: null });
+    localStorage.removeItem('puls-chat-dock');
+  });
+
+  it('takes window state from the server so it is the same on every computer', async () => {
+    localStorage.setItem('puls-chat-dock', JSON.stringify({ open: false, conversationId: null }));
+    apiMocks.getChatDockState.mockResolvedValue({ open: true, conversationId: 20, width: 600, height: 720 });
+    await mount();
+
+    expect(latest!.dock).toEqual({ open: true, conversationId: 20, width: 600, height: 720 });
+    expect(JSON.parse(localStorage.getItem('puls-chat-dock')!)).toEqual({ open: true, conversationId: 20, width: 600, height: 720 });
+    // Пришедшее с сервера состояние обратно не отправляется.
+    await flush();
+    expect(apiMocks.updateChatDockState).not.toHaveBeenCalled();
+    localStorage.removeItem('puls-chat-dock');
+  });
+
+  it('saves each window change to the server and skips unchanged states', async () => {
+    await mount();
+    act(() => latest!.openDock(10));
+    await flush();
+    expect(apiMocks.updateChatDockState).toHaveBeenLastCalledWith({ open: true, conversationId: 10, width: null, height: null });
+
+    act(() => latest!.resizeDock({ width: 520, height: 640 }));
+    await flush();
+    expect(apiMocks.updateChatDockState).toHaveBeenLastCalledWith({ open: true, conversationId: 10, width: 520, height: 640 });
+
+    act(() => latest!.openDock(10));
+    await flush();
+    expect(apiMocks.updateChatDockState).toHaveBeenCalledTimes(2);
+
+    act(() => latest!.minimizeDock());
+    await flush();
+    expect(apiMocks.updateChatDockState).toHaveBeenLastCalledWith({ open: false, conversationId: 10, width: 520, height: 640 });
+    localStorage.removeItem('puls-chat-dock');
+  });
+
+  it('keeps what the user did before the server answered and saves it', async () => {
+    let resolveDock: (value: unknown) => void = () => undefined;
+    apiMocks.getChatDockState.mockReturnValue(new Promise((resolve) => { resolveDock = resolve; }));
+    await mount();
+    act(() => latest!.openDock(10));
+
+    await act(async () => {
+      resolveDock({ open: false, conversationId: null, width: 700, height: 800 });
+      await Promise.resolve();
+    });
+    expect(latest!.dock).toEqual({ open: true, conversationId: 10 });
+
+    await flush();
+    expect(apiMocks.updateChatDockState).toHaveBeenCalledWith({ open: true, conversationId: 10, width: null, height: null });
+    localStorage.removeItem('puls-chat-dock');
+  });
+
+  it('prefers a local change that the server never confirmed (e.g. page reloaded mid-save)', async () => {
+    localStorage.setItem('puls-chat-dock', JSON.stringify({ open: false, conversationId: 10 }));
+    localStorage.setItem('puls-chat-dock-unsynced', '1');
+    apiMocks.getChatDockState.mockResolvedValue({ open: true, conversationId: 10, width: null, height: null });
+    await mount();
+
+    expect(latest!.dock).toEqual({ open: false, conversationId: 10 });
+    await flush();
+    expect(apiMocks.updateChatDockState).toHaveBeenCalledWith({ open: false, conversationId: 10, width: null, height: null });
+    expect(localStorage.getItem('puls-chat-dock-unsynced')).toBeNull();
     localStorage.removeItem('puls-chat-dock');
   });
 

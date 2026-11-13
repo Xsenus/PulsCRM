@@ -425,6 +425,56 @@ public sealed class ChatServiceTests : IDisposable
         await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "Работаем дальше" }, CancellationToken.None);
     }
 
+    [Fact]
+    public async Task DockState_IsStoredPerUserAndValidated()
+    {
+        As(Alice);
+        Assert.Equivalent(new ChatDockStateDto(), await _service.GetDockStateAsync(CancellationToken.None));
+
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var saved = await _service.UpdateDockStateAsync(new ChatDockStateDto { Open = true, ConversationId = conversation.Id, Width = 520, Height = 700 }, CancellationToken.None);
+        Assert.Equivalent(new ChatDockStateDto { Open = true, ConversationId = conversation.Id, Width = 520, Height = 700 }, saved);
+        Assert.Equivalent(saved, await _service.GetDockStateAsync(CancellationToken.None));
+
+        var reset = await _service.UpdateDockStateAsync(new ChatDockStateDto { Open = false, ConversationId = conversation.Id }, CancellationToken.None);
+        Assert.Null(reset.Width);
+        Assert.False(reset.Open);
+
+        await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateDockStateAsync(new ChatDockStateDto { Open = true, Width = 500 }, CancellationToken.None));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateDockStateAsync(new ChatDockStateDto { Open = true, Width = 50, Height = 50 }, CancellationToken.None));
+
+        As(Bob);
+        Assert.False((await _service.GetDockStateAsync(CancellationToken.None)).Open);
+    }
+
+    [Fact]
+    public async Task DockState_DoesNotKeepInaccessibleConversation()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        await _service.UpdateDockStateAsync(new ChatDockStateDto { Open = true, ConversationId = conversation.Id }, CancellationToken.None);
+
+        As(Outsider);
+        var foreign = await _service.UpdateDockStateAsync(new ChatDockStateDto { Open = true, ConversationId = conversation.Id }, CancellationToken.None);
+        Assert.Null(foreign.ConversationId);
+
+        _directory.Fire(Bob);
+        As(Alice);
+        var state = await _service.GetDockStateAsync(CancellationToken.None);
+        Assert.True(state.Open);
+        Assert.Null(state.ConversationId);
+    }
+
+    [Fact]
+    public async Task DockState_FirstSave_KeepsNotificationDefaults()
+    {
+        As(Alice);
+        await _service.UpdateDockStateAsync(new ChatDockStateDto { Open = true }, CancellationToken.None);
+
+        var settings = await _service.GetSettingsAsync(CancellationToken.None);
+        Assert.Equivalent(new ChatUserSettingsDto(), settings);
+    }
+
     private void As(int userId) => _currentUser.UserId = userId;
 
     private Task<ChatAttachmentDto> UploadAsync(int conversationId, string fileName, string contentType)

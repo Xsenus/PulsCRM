@@ -35,6 +35,9 @@ const conversations = [
     participants: [participants[0], { userId: 4, displayName: 'Смирнов Дмитрий', role: 0, isInactive: false, lastReadMessageId: 7 }] }
 ];
 
+/** Что сохранялось в серверное состояние окна чата — по странице теста. */
+const dockSavesByPage = new WeakMap<Page, unknown[]>();
+
 async function mockChat(page: Page) {
   const sent: unknown[] = [];
   await setupAuthenticatedSession(page);
@@ -53,6 +56,17 @@ async function mockChat(page: Page) {
     await fulfillJson(route, { items: messages, hasMoreBefore: false });
   });
   await page.route(/\/api\/chat\/conversations\/\d+\/read$/, (route) => route.fulfill({ status: 204 }));
+  let dockState: unknown = { open: false, conversationId: null, width: null, height: null };
+  const dockSaves: unknown[] = [];
+  await page.route(/\/api\/chat\/dock$/, async (route) => {
+    if (route.request().method() === 'PUT') {
+      dockState = route.request().postDataJSON();
+      dockSaves.push(dockState);
+    }
+
+    await fulfillJson(route, dockState);
+  });
+  dockSavesByPage.set(page, dockSaves);
   await page.route(/\/api\/chat\/attachments\/501(\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: pngPixel }));
   return sent;
 }
@@ -170,4 +184,40 @@ test('floating chat window can be resized and remembers size and open state', as
   await expect(page.getByRole('region', { name: 'Окно чата' })).toBeHidden();
   await page.getByRole('button', { name: /Открыть чат/ }).click();
   await expect.poll(width).toBe(540);
+});
+
+test('floating chat window state is stored on the server and follows the user to another computer', async ({ page }) => {
+  await mockChat(page);
+  const dockSaves = dockSavesByPage.get(page)!;
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // Каждая загрузка — как будто новый компьютер: локальной копии нет, все берется с сервера.
+  await page.addInitScript(() => window.localStorage.removeItem('puls-chat-dock'));
+  await page.route(/\/api\/employees(\?.*)?$/, (route) => fulfillJson(route, { totalCount: 0, items: [] }));
+  await page.goto('/employees');
+
+  await page.getByRole('button', { name: /Открыть чат/ }).click();
+  await page.getByRole('region', { name: 'Окно чата' }).locator('.chat-conversation-item', { hasText: 'Петрова' }).click();
+  await expect.poll(() => dockSaves.at(-1)).toEqual({ open: true, conversationId: 10, width: null, height: null });
+
+  const corner = page.getByRole('separator', { name: 'Изменить размер окна чата' });
+  const handle = (await corner.boundingBox())!;
+  await page.mouse.move(handle.x + 5, handle.y + 5);
+  await page.mouse.down();
+  await page.mouse.move(handle.x - 95, handle.y - 45, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(() => dockSaves.at(-1)).toEqual({ open: true, conversationId: 10, width: 490, height: 650 });
+  const savesAfterResize = dockSaves.length;
+  expect(savesAfterResize).toBeLessThanOrEqual(3);
+
+  await page.reload();
+  const dock = page.getByRole('region', { name: 'Окно чата' });
+  await expect(dock.locator('.chat-view-name')).toHaveText('Петрова Анна Сергеевна');
+  await expect.poll(async () => Math.round((await dock.boundingBox())?.width ?? 0)).toBe(490);
+  await expect.poll(async () => Math.round((await dock.boundingBox())?.height ?? 0)).toBe(650);
+
+  await dock.getByRole('button', { name: 'Свернуть чат' }).click();
+  await expect.poll(() => dockSaves.at(-1)).toEqual({ open: false, conversationId: 10, width: 490, height: 650 });
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Открыть чат/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Окно чата' })).toBeHidden();
 });

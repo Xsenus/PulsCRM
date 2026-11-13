@@ -110,6 +110,14 @@ export interface ChatUserSettingsDto {
   showMessagePreview: boolean;
 }
 
+/** Состояние плавающего окна чата на сервере. */
+export interface ChatDockStateDto {
+  open: boolean;
+  conversationId?: number | null;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface ChatReadStateEventDto {
   conversationId: number;
   userId: number;

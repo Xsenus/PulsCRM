@@ -295,6 +295,23 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
         => Ok(await chatService.GetSettingsAsync(cancellationToken));
 
     /// <summary>
+    /// Состояние плавающего окна чата: открыто ли, какой диалог и размер.
+    /// </summary>
+    [HttpGet("dock")]
+    [ProducesResponseType(typeof(ChatDockStateDto), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ChatDockStateDto>> GetDockState(CancellationToken cancellationToken)
+        => Ok(await chatService.GetDockStateAsync(cancellationToken));
+
+    /// <summary>
+    /// Сохраняет состояние плавающего окна чата.
+    /// </summary>
+    [HttpPut("dock")]
+    [ProducesResponseType(typeof(ChatDockStateDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ChatDockStateDto>> UpdateDockState([FromBody] ChatDockStateDto request, CancellationToken cancellationToken)
+        => Ok(await chatService.UpdateDockStateAsync(request, cancellationToken));
+
+    /// <summary>
     /// Сохраняет настройки оповещений: звук, громкость, предпросмотр текста.
     /// </summary>
     [HttpPut("settings")]
