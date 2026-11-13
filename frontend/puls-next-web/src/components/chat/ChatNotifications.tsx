@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useOptionalChat } from '../../app/ChatContext';
 import { ChatAvatar } from './ChatAvatar';
 import '../../chat.css';
@@ -8,13 +8,17 @@ import '../../chat.css';
 export function ChatNotifications() {
   const chat = useOptionalChat();
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!chat || chat.notifications.length === 0) {
     return null;
   }
 
   return (
-    <div className="chat-notifications" aria-live="polite">
+    <div
+      className={`chat-notifications${onChatPage(location.pathname) ? '' : chat.dock.open ? ' beside-dock' : ' above-dock'}`}
+      aria-live="polite"
+    >
       {chat.notifications.map((notification) => (
         <div key={notification.id} className="chat-notification" role="status">
           <button
@@ -22,7 +26,12 @@ export function ChatNotifications() {
             className="chat-notification-body"
             onClick={() => {
               chat.dismissNotification(notification.id);
-              navigate(`/chat/${notification.conversationId}`);
+              if (onChatPage(location.pathname)) {
+                navigate(`/chat/${notification.conversationId}`);
+              } else {
+                // Не уводим со страницы — открываем диалог в плавающем окне.
+                chat.openDock(notification.conversationId);
+              }
             }}
           >
             <ChatAvatar
@@ -47,4 +56,8 @@ export function ChatNotifications() {
       ))}
     </div>
   );
+}
+
+function onChatPage(pathname: string) {
+  return pathname === '/chat' || pathname.startsWith('/chat/');
 }

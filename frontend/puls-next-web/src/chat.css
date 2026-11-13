@@ -1554,3 +1554,203 @@ textarea.chat-input {
     width: min(320px, calc(100vw - 40px));
   }
 }
+
+/* ---------- Плавающее окно чата ---------- */
+
+.chat-dock-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 880;
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(37, 99, 235, 0.38);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chat-dock-fab:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 18px 38px rgba(37, 99, 235, 0.45);
+}
+
+.chat-dock-fab-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-dock {
+  --chat-own: #2563eb;
+  --chat-own-text: #ffffff;
+  --chat-other: #ffffff;
+  --chat-bg: #eef3fa;
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 880;
+  width: 390px;
+  height: min(600px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  background: var(--chat-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  overflow: hidden;
+  animation: chat-dock-in 0.18s ease;
+}
+
+@keyframes chat-dock-in {
+  from { transform: translateY(16px) scale(0.98); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.chat-dock-list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fbfdff;
+}
+
+.chat-dock-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 10px 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-dock-title {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.chat-dock-search {
+  padding: 10px 10px 4px;
+}
+
+.chat-dock .chat-view {
+  min-height: 0;
+}
+
+/* Компактный режим переписки (в окне) */
+.chat-view-compact .chat-back-button {
+  display: inline-flex;
+}
+
+.chat-view-compact .chat-view-head {
+  gap: 2px;
+  padding: 8px 6px;
+}
+
+.chat-view-compact .chat-view-title {
+  gap: 8px;
+}
+
+.chat-view-compact .chat-icon-button {
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+}
+
+.chat-view-compact .chat-messages {
+  padding: 8px 10px 12px;
+}
+
+.chat-view-compact .chat-message {
+  max-width: 86%;
+}
+
+.chat-view-compact .chat-message-actions,
+.chat-view-compact .chat-message.own .chat-message-actions {
+  top: -16px;
+  left: auto;
+  right: 4px;
+}
+
+.chat-view-compact .chat-message.own .chat-message-actions {
+  right: auto;
+  left: 4px;
+}
+
+.chat-view-compact .chat-composer {
+  padding: 8px;
+}
+
+.chat-view-compact .chat-jump-bottom {
+  right: 12px;
+  bottom: 80px;
+}
+
+.chat-view-compact .chat-image-thumb img {
+  max-width: 240px;
+}
+
+.chat-view-compact .chat-file-card {
+  min-width: 0;
+  max-width: 260px;
+}
+
+/* Оповещения не перекрывают кнопку и окно */
+.chat-notifications.above-dock {
+  bottom: 96px;
+  right: 24px;
+}
+
+.chat-notifications.beside-dock {
+  right: 430px;
+  bottom: 24px;
+}
+
+@media (max-width: 860px) {
+  .chat-notifications.beside-dock {
+    right: 16px;
+    bottom: auto;
+    top: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .chat-dock {
+    inset: 0;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    border: 0;
+  }
+
+  .chat-dock-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .chat-notifications.above-dock {
+    right: 16px;
+    bottom: 84px;
+  }
+}

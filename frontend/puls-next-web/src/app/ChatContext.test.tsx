@@ -218,6 +218,21 @@ describe('ChatProvider', () => {
     expect(latest!.onlineUserIds.has(2)).toBe(false);
   });
 
+  it('remembers the floating window state between reloads', async () => {
+    localStorage.removeItem('puls-chat-dock');
+    await mount();
+    expect(latest!.dock).toEqual({ open: false, conversationId: null });
+
+    act(() => latest!.openDock(10));
+    expect(latest!.dock).toEqual({ open: true, conversationId: 10 });
+    expect(JSON.parse(localStorage.getItem('puls-chat-dock')!)).toEqual({ open: true, conversationId: 10 });
+
+    act(() => latest!.minimizeDock());
+    act(() => latest!.openDock());
+    expect(latest!.dock).toEqual({ open: true, conversationId: 10 });
+    localStorage.removeItem('puls-chat-dock');
+  });
+
   it('adds a conversation that is not in the list yet', async () => {
     apiMocks.getChatConversation.mockResolvedValue(conversation(30, { title: 'Новая группа', kind: 1, unreadCount: 1 }));
     await mount();
