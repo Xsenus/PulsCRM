@@ -251,6 +251,10 @@ textarea.chat-input {
   text-overflow: ellipsis;
 }
 
+.chat-conversation-draft {
+  color: #dc2626;
+}
+
 .chat-conversation-preview.typing,
 .chat-view-subtitle.typing {
   color: var(--brand);

@@ -178,6 +178,7 @@ afterEach(() => {
   container?.remove();
   root = null;
   container = null;
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -252,6 +253,48 @@ describe('ChatPage', () => {
     expect(apiMocks.editChatMessage).toHaveBeenCalledWith(3, 'Исправленный текст');
     expect(container!.textContent).toContain('Исправленный текст');
     expect(container!.textContent).toContain('изменено');
+  });
+
+  it('keeps an unsent draft after leaving the conversation and shows it in the list', async () => {
+    render('/chat/10');
+    await flush();
+    setTextarea('Недописанный ответ');
+    act(() => root?.unmount());
+    container?.remove();
+
+    // В открытом диалоге черновик не дублируется в списке.
+    render('/chat/10');
+    await flush();
+    expect((container!.querySelector('textarea') as HTMLTextAreaElement).value).toBe('Недописанный ответ');
+    expect(container!.querySelector('.chat-conversation-draft')).toBeNull();
+    act(() => root?.unmount());
+    container?.remove();
+
+    render('/chat');
+    await flush();
+    expect(container!.querySelector('.chat-conversation-preview')?.textContent).toBe('Черновик: Недописанный ответ');
+  });
+
+  it('restores the draft after editing a message and clears it after sending', async () => {
+    render('/chat/10');
+    await flush();
+    const textarea = setTextarea('Мой черновик');
+    const ownMessage = container!.querySelectorAll('.chat-message')[2];
+    act(() => (ownMessage.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
+    act(() => {
+      Array.from(ownMessage.querySelectorAll('button[role="menuitem"]')).find((button) => button.textContent === 'Изменить')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    expect(container!.querySelector('.chat-composer-context')?.textContent).toContain('Редактирование');
+    expect(textarea.value).toBe('Сообщение 3');
+    pressKey(textarea, 'Escape');
+    expect(textarea.value).toBe('Мой черновик');
+
+    setTextarea('Отправляю');
+    pressKey(textarea, 'Enter');
+    await flush();
+    expect(textarea.value).toBe('');
+    expect(window.localStorage.getItem('puls-chat-draft:1:10')).toBeNull();
   });
 
   it('toggles a quick reaction', async () => {

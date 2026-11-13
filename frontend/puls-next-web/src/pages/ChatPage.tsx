@@ -34,6 +34,7 @@ import { ChatSettingsDialog, ConversationInfoDialog, NewChatDialog } from '../co
 import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
 import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
 import { prepareChatImageUpload } from '../app/chatImageThumbnail';
+import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
 import '../chat.css';
 
 const PAGE_SIZE = 50;
@@ -166,6 +167,8 @@ export function ConversationListItem({ conversation, active, onClick }: { conver
   const isGroup = isGroupConversation(conversation);
   const typing = typingByConversation[conversation.id] ?? [];
   const online = !isGroup && conversation.peerUserId ? onlineUserIds.has(conversation.peerUserId) : false;
+  const draft = useChatDraft(currentUserId, conversation.id);
+  const showDraft = !active && typing.length === 0 && draft.trim().length > 0;
 
   return (
     <button type="button" className={`chat-conversation-item${active ? ' active' : ''}`} onClick={onClick} aria-current={active ? 'true' : undefined}>
@@ -181,7 +184,9 @@ export function ConversationListItem({ conversation, active, onClick }: { conver
           <span className={`chat-conversation-preview${typing.length > 0 ? ' typing' : ''}`}>
             {typing.length > 0
               ? `${isGroup ? `${typing[0].displayName.split(' ')[0]} ` : ''}печатает…`
-              : describeLastMessage(conversation, currentUserId)}
+              : showDraft
+                ? <><span className="chat-conversation-draft">Черновик:</span> {draft.replace(/\s+/g, ' ').trim()}</>
+                : describeLastMessage(conversation, currentUserId)}
           </span>
           {conversation.unreadCount > 0 ? (
             <span className={`chat-unread-badge${conversation.isMuted ? ' muted' : ''}`}>{conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}</span>
@@ -217,7 +222,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const [hasMoreBefore, setHasMoreBefore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => loadChatDraft(currentUserId, conversation.id));
   const [replyTo, setReplyTo] = useState<ChatMessageDto | null>(null);
   const [editing, setEditing] = useState<ChatMessageDto | null>(null);
   const [uploads, setUploads] = useState<PendingUpload[]>([]);
@@ -236,6 +241,25 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const scrollToBottomRef = useRef<'instant' | 'smooth' | null>(null);
   const initialScrollDoneRef = useRef(false);
   const lastMarkedRef = useRef(0);
+  /** Черновик, отложенный на время редактирования своего сообщения. */
+  const stashedDraftRef = useRef('');
+  const latestDraftRef = useRef({ text, editing: false });
+  latestDraftRef.current = { text, editing: editing !== null };
+
+  // Черновик сохраняется с небольшой задержкой и сразу — при уходе из диалога.
+  useEffect(() => {
+    if (editing) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => saveChatDraft(currentUserId, conversation.id, text), 400);
+    return () => window.clearTimeout(timer);
+  }, [conversation.id, currentUserId, editing, text]);
+
+  useEffect(() => () => {
+    const latest = latestDraftRef.current;
+    saveChatDraft(currentUserId, conversation.id, latest.editing ? stashedDraftRef.current : latest.text);
+  }, [conversation.id, currentUserId]);
 
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : 0;
   const peer = !isGroup ? conversation.participants.find((item) => item.userId !== currentUserId) : undefined;
@@ -466,10 +490,21 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   };
 
-  const resetComposer = () => {
-    setText('');
-    setReplyTo(null);
+  const finishEditing = () => {
+    setText(stashedDraftRef.current);
+    stashedDraftRef.current = '';
     setEditing(null);
+  };
+
+  const resetComposer = () => {
+    if (editing) {
+      finishEditing();
+    } else {
+      setText('');
+      saveChatDraft(currentUserId, conversation.id, '');
+    }
+
+    setReplyTo(null);
     uploads.forEach((item) => item.previewUrl && URL.revokeObjectURL(item.previewUrl));
     setUploads([]);
   };
@@ -514,6 +549,10 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
   const startEdit = (message: ChatMessageDto) => {
     setReplyTo(null);
+    if (!editing) {
+      stashedDraftRef.current = text;
+    }
+
     setEditing(message);
     setText(message.text ?? '');
     window.setTimeout(() => {
@@ -533,10 +572,9 @@ export function ConversationView({ conversation, onBack, compact = false, header
     if (event.key === 'Escape' && (editing || replyTo)) {
       event.preventDefault();
       if (editing) {
-        setText('');
+        finishEditing();
       }
 
-      setEditing(null);
       setReplyTo(null);
       return;
     }
@@ -749,10 +787,9 @@ export function ConversationView({ conversation, onBack, compact = false, header
               className="chat-icon-button"
               onClick={() => {
                 if (editing) {
-                  setText('');
+                  finishEditing();
                 }
 
-                setEditing(null);
                 setReplyTo(null);
               }}
               aria-label="Отменить"
