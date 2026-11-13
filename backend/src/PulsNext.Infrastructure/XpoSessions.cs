@@ -120,6 +120,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IChatFileStore, DiskChatFileStore>();
             services.TryAddSingleton<IChatEventPublisher, NullChatEventPublisher>();
             services.AddScoped<IChatService, ChatService>();
+            services.AddScoped<IChatAttachmentCleaner, ChatAttachmentCleaner>();
+            services.AddHostedService<ChatAttachmentCleanupHostedService>();
         }
 
         services.AddDataProtection()

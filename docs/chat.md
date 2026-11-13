@@ -49,6 +49,8 @@ CREATE DATABASE pulschat OWNER pulschat ENCODING 'UTF8' TEMPLATE template0;
 | `Chat:MaxAttachmentsPerMessage` | `10` | файлов в одном сообщении |
 | `Chat:MaxMessageLength` | `8000` | символов в сообщении |
 | `Chat:MaxGroupMembers` | `200` | участников группового чата |
+| `Chat:PendingAttachmentLifetimeHours` | `24` | через сколько часов удаляется загруженное, но не отправленное вложение (вместе с файлом) |
+| `Chat:PendingAttachmentCleanupIntervalMinutes` | `360` | как часто запускается эта очистка |
 
 Лимит размера запроса IIS (`maxAllowedContentLength` в `web.config` API, 200 МБ) больше лимита вложения — менять его не нужно.
 

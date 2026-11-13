@@ -75,4 +75,14 @@ public sealed class ChatOptions
     public int MaxMessageLength { get; set; } = 8000;
     public int MaxGroupMembers { get; set; } = 200;
     public int PageSize { get; set; } = 50;
+
+    /// <summary>
+    /// Через сколько часов неотправленное вложение удаляется вместе с файлом.
+    /// </summary>
+    public int PendingAttachmentLifetimeHours { get; set; } = 24;
+
+    /// <summary>
+    /// Как часто запускается очистка неотправленных вложений, минут.
+    /// </summary>
+    public int PendingAttachmentCleanupIntervalMinutes { get; set; } = 360;
 }
