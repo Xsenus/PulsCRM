@@ -354,6 +354,8 @@ public class ChatMessage(Session session) : XPObject(session)
     private DateTime _createdAtUtc;
     private DateTime? _editedAtUtc;
     private DateTime? _deletedAtUtc;
+    private int _forwardedFromUserId;
+    private string? _forwardedFromName;
 
     public ChatMessage() : this(Session.DefaultSession) { }
 
@@ -403,6 +405,25 @@ public class ChatMessage(Session session) : XPObject(session)
     {
         get => _replyToMessageId;
         set => SetPropertyValue(nameof(ReplyToMessageId), ref _replyToMessageId, value);
+    }
+
+    /// <summary>
+    /// Пересланное сообщение: legacy-id автора оригинала (0 — сообщение не пересланное).
+    /// </summary>
+    public int ForwardedFromUserId
+    {
+        get => _forwardedFromUserId;
+        set => SetPropertyValue(nameof(ForwardedFromUserId), ref _forwardedFromUserId, value);
+    }
+
+    /// <summary>
+    /// Имя автора оригинала на момент пересылки: сохраняется, даже если сотрудника потом удалят из legacy-БД.
+    /// </summary>
+    [Size(256)]
+    public string? ForwardedFromName
+    {
+        get => _forwardedFromName;
+        set => SetPropertyValue(nameof(ForwardedFromName), ref _forwardedFromName, value);
     }
 
     /// <summary>

@@ -72,6 +72,8 @@ export interface ChatMessageDto {
   editedAtUtc?: string | null;
   isDeleted: boolean;
   replyTo?: ChatReplyPreviewDto | null;
+  /** Автор оригинала, если сообщение переслано. */
+  forwardedFrom?: { userId: number; name: string } | null;
   attachments: ChatAttachmentDto[];
   reactions: ChatReactionDto[];
 }

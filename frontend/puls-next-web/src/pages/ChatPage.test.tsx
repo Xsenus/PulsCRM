@@ -19,6 +19,7 @@ const apiMocks = vi.hoisted(() => ({
   updateChatPreferences: vi.fn(),
   pinChatMessage: vi.fn(),
   searchChatMessages: vi.fn(),
+  forwardChatMessage: vi.fn(),
   uploadChatAttachment: vi.fn(),
   deletePendingChatAttachment: vi.fn(),
   fetchChatAttachmentBlob: vi.fn(),
@@ -413,6 +414,38 @@ describe('ChatPage', () => {
 
     act(() => buttonByLabel('Закрыть поиск')!.click());
     expect(container!.querySelector('.chat-conversation-search')).toBeNull();
+  });
+
+  it('forwards a message to selected chats and marks forwarded messages', async () => {
+    const group = conversation({ id: 11, kind: 1, title: 'Отдел продаж', peerUserId: null, lastMessage: null });
+    chatState.value = createChat({ conversations: [conversation(), group] });
+    apiMocks.getChatMessages.mockResolvedValue({
+      items: [message(1), message(2, { forwardedFrom: { userId: 7, name: 'Иванов Олег' } })],
+      hasMoreBefore: false
+    });
+    apiMocks.forwardChatMessage.mockResolvedValue([message(90, { conversationId: 11, senderUserId: ME, forwardedFrom: { userId: PEER, name: 'Борис Петров' } })]);
+    render('/chat/10');
+    await flush();
+
+    expect(container!.querySelectorAll('.chat-message')[1].querySelector('.chat-bubble-forwarded')?.textContent).toBe('↪ Переслано от Иванов Олег');
+
+    const first = container!.querySelectorAll('.chat-message')[0];
+    act(() => (first.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
+    act(() => {
+      Array.from(first.querySelectorAll('button[role="menuitem"]')).find((item) => item.textContent === 'Переслать')!
+        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+
+    const options = Array.from(document.querySelectorAll('[aria-label="Куда переслать"] [role="option"]')) as HTMLButtonElement[];
+    expect(options.map((item) => item.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Отдел продаж')]));
+    act(() => options.find((item) => item.textContent?.includes('Отдел продаж'))!.click());
+    const submit = Array.from(document.querySelectorAll('button')).find((item) => item.textContent === 'Переслать (1)') as HTMLButtonElement;
+    act(() => submit.click());
+    await flush();
+
+    expect(apiMocks.forwardChatMessage).toHaveBeenCalledWith(1, [11]);
+    expect(chatState.value.applyMessageLocally).toHaveBeenCalledWith(expect.objectContaining({ id: 90 }));
+    expect(document.querySelector('[aria-label="Куда переслать"]')).toBeNull();
   });
 
   it('toggles a quick reaction', async () => {

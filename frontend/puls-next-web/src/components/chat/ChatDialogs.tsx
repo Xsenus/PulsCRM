@@ -4,6 +4,7 @@ import { useChat } from '../../app/ChatContext';
 import {
   addChatMembers,
   createGroupChat,
+  forwardChatMessage,
   leaveChat,
   openDirectChat,
   removeChatMember,
@@ -13,11 +14,12 @@ import {
 } from '../../app/chatApi';
 import { CHAT_SOUNDS, playChatSound } from '../../app/chatSounds';
 import { getDesktopNotificationStatus, requestDesktopNotificationPermission, type DesktopNotificationStatus } from '../../app/desktopNotifications';
-import type { ChatConversationDto, ChatSoundName, ChatUserDto, ChatUserSettingsDto } from '../../app/chatTypes';
+import type { ChatConversationDto, ChatMessageDto, ChatSoundName, ChatUserDto, ChatUserSettingsDto } from '../../app/chatTypes';
 import { isGroupConversation, roleRank } from '../../app/chatTypes';
 import { getApiErrorMessage } from '../../app/apiErrors';
 import { showToast } from '../../app/toast';
 import { ChatAvatar } from './ChatAvatar';
+import { describeMessageBody } from '../../app/chatFormat';
 import { GROUP_ICONS } from './EmojiPicker';
 
 function useUserSearch(open: boolean) {
@@ -96,6 +98,126 @@ function UserPicker({ users, loading, search, onSearch, selected, onToggle, excl
         })}
       </div>
     </div>
+  );
+}
+
+export const MAX_FORWARD_TARGETS = 10;
+
+/** Выбор диалогов для пересылки сообщения. */
+export function ForwardMessageDialog({ message, onClose }: {
+  /** null — окно закрыто. */
+  message: ChatMessageDto | null;
+  onClose: () => void;
+}) {
+  const { conversations, currentUserId, applyMessageLocally } = useChat();
+  const [filter, setFilter] = useState('');
+  const [selected, setSelected] = useState<number[]>([]);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (message) {
+      setFilter('');
+      setSelected([]);
+    }
+  }, [message]);
+
+  const candidates = useMemo(() => {
+    const term = filter.trim().toLowerCase();
+    return conversations.filter((item) => {
+      // В личный диалог с уволенным писать нельзя.
+      const peer = !isGroupConversation(item) ? item.participants.find((participant) => participant.userId !== currentUserId) : null;
+      if (peer?.isInactive) {
+        return false;
+      }
+
+      return !term || item.title.toLowerCase().includes(term);
+    });
+  }, [conversations, currentUserId, filter]);
+
+  const toggle = (conversationId: number) => {
+    setSelected((current) => {
+      if (current.includes(conversationId)) {
+        return current.filter((id) => id !== conversationId);
+      }
+
+      if (current.length >= MAX_FORWARD_TARGETS) {
+        showToast(`Переслать можно не больше чем в ${MAX_FORWARD_TARGETS} чатов за раз.`, 'warning');
+        return current;
+      }
+
+      return [...current, conversationId];
+    });
+  };
+
+  const submit = async () => {
+    if (!message || selected.length === 0) {
+      return;
+    }
+
+    setSending(true);
+    try {
+      const created = await forwardChatMessage(message.id, selected);
+      created.forEach((item) => applyMessageLocally(item));
+      showToast(created.length === 1 ? 'Сообщение переслано.' : `Сообщение переслано в ${created.length} чата.`, 'success', 2000);
+      onClose();
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось переслать сообщение.'), 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={!!message}
+      title="Переслать сообщение"
+      onClose={onClose}
+      maxWidth={520}
+      actions={(
+        <div className="button-group">
+          <button type="button" className="secondary-button button-inline" onClick={onClose}>Отмена</button>
+          <button type="button" className="primary-button button-inline" disabled={sending || selected.length === 0} onClick={() => void submit()}>
+            Переслать{selected.length > 0 ? ` (${selected.length})` : ''}
+          </button>
+        </div>
+      )}
+    >
+      {message ? <div className="chat-forward-preview">{describeMessageBody(message) || 'Сообщение'}</div> : null}
+      <div className="chat-user-picker">
+        <input
+          className="chat-input"
+          type="search"
+          placeholder="Найти чат"
+          aria-label="Найти чат"
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          autoFocus
+        />
+        <div className="chat-user-list" role="listbox" aria-multiselectable="true" aria-label="Куда переслать">
+          {candidates.length === 0 ? <div className="chat-muted">Чатов не нашли</div> : null}
+          {candidates.map((item) => {
+            const isSelected = selected.includes(item.id);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                className={`chat-user-row${isSelected ? ' selected' : ''}`}
+                onClick={() => toggle(item.id)}
+              >
+                <ChatAvatar name={item.title} seed={item.peerUserId ?? `g${item.id}`} icon={item.icon} group={isGroupConversation(item)} size={36} />
+                <span className="chat-user-row-text">
+                  <span className="chat-user-row-name">{item.title}</span>
+                  <span className="chat-user-row-meta">{isGroupConversation(item) ? `Групповой · ${item.participants.length}` : 'Личный'}</span>
+                </span>
+                <span className={`chat-check${isSelected ? ' checked' : ''}`} aria-hidden="true">{isSelected ? '✓' : ''}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </Modal>
   );
 }
 

@@ -163,6 +163,12 @@ public sealed class ChatMessageDto
     public DateTime? EditedAtUtc { get; set; }
     public bool IsDeleted { get; set; }
     public ChatReplyPreviewDto? ReplyTo { get; set; }
+
+    /// <summary>
+    /// Автор оригинала, если сообщение переслано.
+    /// </summary>
+    public ChatForwardedFromDto? ForwardedFrom { get; set; }
+
     public IReadOnlyCollection<ChatAttachmentDto> Attachments { get; set; } = Array.Empty<ChatAttachmentDto>();
     public IReadOnlyCollection<ChatReactionDto> Reactions { get; set; } = Array.Empty<ChatReactionDto>();
 }
@@ -281,6 +287,20 @@ public sealed class ChatSearchResultDto
     public string? ConversationIcon { get; set; }
     public int? PeerUserId { get; set; }
     public ChatMessageDto Message { get; set; } = new();
+}
+
+public sealed class ChatForwardedFromDto
+{
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+}
+
+public sealed class ChatForwardMessageRequest
+{
+    /// <summary>
+    /// Диалоги, в которые переслать (не больше 10).
+    /// </summary>
+    public IReadOnlyCollection<int> ConversationIds { get; set; } = Array.Empty<int>();
 }
 
 public sealed class ChatPinMessageRequest

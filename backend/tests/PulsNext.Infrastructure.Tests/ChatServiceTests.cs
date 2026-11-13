@@ -410,6 +410,64 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ForwardMessage_CopiesTextAndFilesAndKeepsOriginalAuthor()
+    {
+        As(Bob);
+        var withAlice = await _service.OpenDirectAsync(Alice, CancellationToken.None);
+        var file = await UploadAsync(withAlice.Id, "счет.pdf", "application/pdf");
+        var original = await _service.SendMessageAsync(withAlice.Id, new ChatSendMessageRequest { Text = "Счет на оплату", AttachmentIds = [file.Id] }, CancellationToken.None);
+
+        As(Alice);
+        var withCarol = await _service.OpenDirectAsync(Carol, CancellationToken.None);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Бухгалтерия", MemberUserIds = [Carol] }, CancellationToken.None);
+        _publisher.Events.Clear();
+        var forwarded = await _service.ForwardMessageAsync(original.Id, [withCarol.Id, group.Id, withCarol.Id], CancellationToken.None);
+
+        Assert.Equal(2, forwarded.Count);
+        Assert.All(forwarded, message =>
+        {
+            Assert.Equal(Alice, message.SenderUserId);
+            Assert.Equal("Счет на оплату", message.Text);
+            Assert.Equal(Bob, message.ForwardedFrom?.UserId);
+            Assert.Equal("Борис", message.ForwardedFrom?.Name);
+            Assert.NotEqual(file.Id, Assert.Single(message.Attachments).Id);
+        });
+        Assert.Equal(2, _publisher.Events.Count(x => x.Name == ChatEventNames.MessageCreated));
+        Assert.Equal(3, _fileStore.Files.Count);
+
+        // Удаление оригинала не трогает копии.
+        As(Bob);
+        await _service.DeleteMessageAsync(original.Id, CancellationToken.None);
+        Assert.Equal(2, _fileStore.Files.Count);
+
+        // Пересылка пересланного сохраняет автора оригинала.
+        As(Carol);
+        var again = Assert.Single(await _service.ForwardMessageAsync(forwarded.First().Id, [group.Id], CancellationToken.None));
+        Assert.Equal(Bob, again.ForwardedFrom?.UserId);
+        Assert.Equal(Carol, again.SenderUserId);
+    }
+
+    [Fact]
+    public async Task ForwardMessage_RequiresAccessToSourceAndTargets()
+    {
+        As(Alice);
+        var withBob = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var message = await _service.SendMessageAsync(withBob.Id, new ChatSendMessageRequest { Text = "Секрет" }, CancellationToken.None);
+
+        As(Carol);
+        var carolChat = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.ForwardMessageAsync(message.Id, [carolChat.Id], CancellationToken.None));
+
+        As(Alice);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.ForwardMessageAsync(message.Id, [carolChat.Id], CancellationToken.None));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.ForwardMessageAsync(message.Id, [], CancellationToken.None));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.ForwardMessageAsync(message.Id, Enumerable.Range(100, 11).ToArray(), CancellationToken.None));
+
+        await _service.DeleteMessageAsync(message.Id, CancellationToken.None);
+        await Assert.ThrowsAsync<ValidationException>(() => _service.ForwardMessageAsync(message.Id, [withBob.Id], CancellationToken.None));
+    }
+
+    [Fact]
     public async Task SendMessage_WithSameClientMessageId_DoesNotDuplicate()
     {
         As(Alice);
