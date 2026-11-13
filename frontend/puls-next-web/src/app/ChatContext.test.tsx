@@ -56,6 +56,9 @@ vi.mock('./api', () => ({ getToken: () => 'token' }));
 const soundMock = vi.hoisted(() => ({ playChatSound: vi.fn() }));
 vi.mock('./chatSounds', () => soundMock);
 
+const desktopMock = vi.hoisted(() => ({ showDesktopNotification: vi.fn() }));
+vi.mock('./desktopNotifications', () => desktopMock);
+
 function conversation(id: number, patch: Partial<ChatConversationDto> = {}): ChatConversationDto {
   return {
     id,
@@ -332,6 +335,33 @@ describe('ChatProvider', () => {
     expect(apiMocks.updateChatDockState).toHaveBeenCalledWith({ open: false, conversationId: 10, width: null, height: null });
     expect(localStorage.getItem('puls-chat-dock-unsynced')).toBeNull();
     localStorage.removeItem('puls-chat-dock');
+  });
+
+  it('shows a system notification only when enabled and the tab is in the background', async () => {
+    apiMocks.getChatSettings.mockResolvedValue({ notificationsEnabled: true, soundEnabled: false, soundName: 'chime', soundVolume: 70, showMessagePreview: true, desktopNotificationsEnabled: true });
+    await mount();
+
+    emit('messageCreated', message(5, 10));
+    await flush();
+    expect(desktopMock.showDesktopNotification).not.toHaveBeenCalled();
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    emit('messageCreated', message(6, 10, { text: 'Срочно' }));
+    await flush();
+    expect(desktopMock.showDesktopNotification).toHaveBeenCalledWith({ title: 'Борис', body: 'Срочно', conversationId: 10 });
+
+    emit('messageCreated', message(7, 20));
+    await flush();
+    expect(desktopMock.showDesktopNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not show system notifications when the user did not enable them', async () => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    await mount();
+    emit('messageCreated', message(5, 10));
+    await flush();
+    expect(desktopMock.showDesktopNotification).not.toHaveBeenCalled();
+    expect(latest!.notifications).toHaveLength(1);
   });
 
   it('adds a conversation that is not in the list yet', async () => {

@@ -1885,4 +1885,17 @@ textarea.chat-input {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+
+.chat-desktop-toggle {
+  display: grid;
+  gap: 2px;
+}
+
+.chat-desktop-status {
+  padding-left: 28px;
+  font-size: 12px;
+}
+
+.chat-desktop-status.warn {
+  color: #9a3412;
 }

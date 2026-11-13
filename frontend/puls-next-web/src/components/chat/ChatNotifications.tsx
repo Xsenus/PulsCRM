@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOptionalChat } from '../../app/ChatContext';
+import { CHAT_OPEN_EVENT } from '../../app/desktopNotifications';
 import { ChatAvatar } from './ChatAvatar';
 import '../../chat.css';
 
@@ -9,6 +10,34 @@ export function ChatNotifications() {
   const chat = useOptionalChat();
   const navigate = useNavigate();
   const location = useLocation();
+
+  /** На странице «Чат» — переход к диалогу, на остальных — диалог в плавающем окне, без смены страницы. */
+  const openConversation = (conversationId: number) => {
+    if (!chat) {
+      return;
+    }
+
+    if (onChatPage(location.pathname)) {
+      navigate(`/chat/${conversationId}`);
+    } else {
+      chat.openDock(conversationId);
+    }
+  };
+
+  // Клик по системному оповещению браузера приходит событием — открываем диалог так же, как по всплывашке.
+  const openRef = useRef(openConversation);
+  openRef.current = openConversation;
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const conversationId = (event as CustomEvent<number>).detail;
+      if (typeof conversationId === 'number') {
+        openRef.current(conversationId);
+      }
+    };
+
+    window.addEventListener(CHAT_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(CHAT_OPEN_EVENT, onOpen);
+  }, []);
 
   if (!chat || chat.notifications.length === 0) {
     return null;
@@ -27,12 +56,7 @@ export function ChatNotifications() {
             className="chat-notification-body"
             onClick={() => {
               chat.dismissNotification(notification.id);
-              if (onChatPage(location.pathname)) {
-                navigate(`/chat/${notification.conversationId}`);
-              } else {
-                // Не уводим со страницы — открываем диалог в плавающем окне.
-                chat.openDock(notification.conversationId);
-              }
+              openConversation(notification.conversationId);
             }}
           >
             <ChatAvatar
