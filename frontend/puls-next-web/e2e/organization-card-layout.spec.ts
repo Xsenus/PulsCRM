@@ -190,5 +190,8 @@ test('organization card confirms leaving with unsaved changes', async ({ page })
   await page.getByRole('button', { name: 'Выйти без сохранения' }).click();
 
   await expect(page).toHaveURL(/\/organizations$/);
-  await expect(page.getByRole('heading', { name: 'Организации' })).toBeVisible();
+  // Точный заголовок страницы списка: при переходе React Router v7 (startTransition) еще миг показывает
+  // карточку, а ее «Паспорт организации» / «Задачи организации» совпали бы с нестрогим поиском.
+  await expect(page.getByRole('heading', { level: 1, name: 'Организации', exact: true })).toBeVisible();
+  await expect(page.locator('.organization-record-sidebar')).toHaveCount(0);
 });
