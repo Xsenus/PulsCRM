@@ -54,7 +54,7 @@ Install-WindowsFeature `
 - ASP.NET Core Hosting Bundle для `.NET 9`
 - IIS URL Rewrite Module 2.x
 - Git for Windows
-- Node.js 20 LTS
+- Node.js 20.19+ или 22.12+ (LTS) — минимальная версия для Vite 8
 - .NET 9 SDK
 - DevExpress license для учетной записи GitHub runner, если сервер сам собирает проект
 
@@ -262,8 +262,8 @@ DB-переменные можно не задавать, тогда workflow т
 `.github/workflows/deploy.yml` делает:
 
 1. checkout репозитория
-2. setup `.NET 9`
-3. setup Node.js 20
+2. добавление `C:\Program Files\dotnet` в `PATH`: используется .NET 9 SDK, уже установленный на сервере
+3. вывод `dotnet --info`, `node --version`, `npm --version`: Node.js тоже берётся установленный на сервере, workflow ничего не скачивает и не устанавливает (см. раздел 2)
 4. `dotnet restore`
 5. `dotnet test` backend solution
 6. `dotnet list package --vulnerable`
