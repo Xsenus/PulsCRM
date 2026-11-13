@@ -96,3 +96,35 @@ test('chat on a phone shows either the list or the thread', async ({ page }) => 
   await expect(page).toHaveURL(/\/chat$/);
   expect(await expectNoDocumentHorizontalOverflow(page)).toBe(true);
 });
+
+test('floating chat window lets you write without leaving the page', async ({ page }) => {
+  const sent = await mockChat(page);
+  await page.addInitScript(() => window.localStorage.removeItem('puls-chat-dock'));
+  await page.route(/\/api\/employees(\?.*)?$/, (route) => fulfillJson(route, { totalCount: 0, items: [] }));
+  await page.goto('/employees');
+
+  const fab = page.getByRole('button', { name: /Открыть чат/ });
+  await expect(fab).toBeVisible();
+  await expect(fab.locator('.chat-dock-fab-badge')).toHaveText('4');
+  await fab.click();
+
+  const dock = page.getByRole('region', { name: 'Окно чата' });
+  await expect(dock.locator('.chat-conversation-item')).toHaveCount(3);
+  await dock.locator('.chat-conversation-item', { hasText: 'Петрова' }).click();
+  await expect(dock.locator('.chat-message')).toHaveCount(4);
+
+  const textarea = dock.getByLabel('Текст сообщения');
+  await textarea.fill('Пишу из окна');
+  await textarea.press('Enter');
+  await expect(dock.locator('.chat-message.own', { hasText: 'Пишу из окна' })).toBeVisible();
+  expect(sent).toEqual([expect.objectContaining({ text: 'Пишу из окна' })]);
+  await expect(page).toHaveURL(/\/employees$/);
+
+  await dock.getByRole('button', { name: 'Свернуть чат' }).click();
+  await expect(dock).toBeHidden();
+  await page.reload();
+  await expect(page.getByRole('button', { name: /Открыть чат/ })).toBeVisible();
+
+  await page.goto('/chat');
+  await expect(page.getByRole('button', { name: /Открыть чат/ })).toBeHidden();
+});

@@ -159,7 +159,7 @@ export function ChatPage() {
   );
 }
 
-function ConversationListItem({ conversation, active, onClick }: { conversation: ChatConversationDto; active: boolean; onClick: () => void }) {
+export function ConversationListItem({ conversation, active, onClick }: { conversation: ChatConversationDto; active: boolean; onClick: () => void }) {
   const { currentUserId, onlineUserIds, typingByConversation } = useChat();
   const isGroup = isGroupConversation(conversation);
   const typing = typingByConversation[conversation.id] ?? [];
@@ -199,7 +199,13 @@ interface PendingUpload {
   previewUrl?: string;
 }
 
-function ConversationView({ conversation, onBack }: { conversation: ChatConversationDto; onBack: () => void }) {
+export function ConversationView({ conversation, onBack, compact = false, headerExtra }: {
+  conversation: ChatConversationDto;
+  onBack: () => void;
+  /** Компактный режим для плавающего окна: всегда есть «назад», меньше кнопок в заголовке. */
+  compact?: boolean;
+  headerExtra?: React.ReactNode;
+}) {
   const chat = useChat();
   const { currentUserId, status } = chat;
   const isGroup = isGroupConversation(conversation);
@@ -594,7 +600,7 @@ function ConversationView({ conversation, onBack }: { conversation: ChatConversa
 
   return (
     <div
-      className={`chat-view${dragOver ? ' chat-view-drag' : ''}`}
+      className={`chat-view${compact ? ' chat-view-compact' : ''}${dragOver ? ' chat-view-drag' : ''}`}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) {
           event.preventDefault();
@@ -623,7 +629,7 @@ function ConversationView({ conversation, onBack }: { conversation: ChatConversa
             icon={conversation.icon}
             group={isGroup}
             online={!!peer && chat.onlineUserIds.has(peer.userId)}
-            size={42}
+            size={compact ? 34 : 42}
           />
           <span className="chat-view-title-text">
             <span className="chat-view-name">{conversation.title}</span>
@@ -631,6 +637,7 @@ function ConversationView({ conversation, onBack }: { conversation: ChatConversa
           </span>
         </button>
         <div className="chat-view-actions">
+          {compact ? null : (
           <button
             type="button"
             className={`chat-icon-button${conversation.isPinned ? ' active' : ''}`}
@@ -640,6 +647,7 @@ function ConversationView({ conversation, onBack }: { conversation: ChatConversa
           >
             📌
           </button>
+          )}
           <button
             type="button"
             className={`chat-icon-button${conversation.isMuted ? ' active' : ''}`}
@@ -649,12 +657,15 @@ function ConversationView({ conversation, onBack }: { conversation: ChatConversa
           >
             {conversation.isMuted ? '🔕' : '🔔'}
           </button>
-          <button type="button" className="chat-icon-button" onClick={() => void togglePreference({ isArchived: true })} title="В архив" aria-label="В архив">
-            🗄
-          </button>
+          {compact ? null : (
+            <button type="button" className="chat-icon-button" onClick={() => void togglePreference({ isArchived: true })} title="В архив" aria-label="В архив">
+              🗄
+            </button>
+          )}
           <button type="button" className="chat-icon-button" onClick={() => setInfoOpen(true)} title="О чате" aria-label="О чате">
             ⓘ
           </button>
+          {headerExtra}
         </div>
       </header>
 

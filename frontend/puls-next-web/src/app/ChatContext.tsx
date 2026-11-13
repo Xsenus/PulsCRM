@@ -19,6 +19,25 @@ import { isSystemMessage } from './chatTypes';
 const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
 const TYPING_TTL_MS = 6000;
 const POLL_INTERVAL_MS = 30000;
+const DOCK_STATE_KEY = 'puls-chat-dock';
+
+export interface ChatDockState {
+  open: boolean;
+  conversationId: number | null;
+}
+
+function readDockState(): ChatDockState {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DOCK_STATE_KEY) ?? 'null');
+    if (parsed && typeof parsed.open === 'boolean') {
+      return { open: parsed.open, conversationId: typeof parsed.conversationId === 'number' ? parsed.conversationId : null };
+    }
+  } catch {
+    // Повреждённое или недоступное хранилище — начинаем со свернутого окна.
+  }
+
+  return { open: false, conversationId: null };
+}
 
 export const DEFAULT_CHAT_SETTINGS: ChatUserSettingsDto = {
   notificationsEnabled: true,
@@ -70,6 +89,10 @@ interface ChatContextValue {
   dismissNotification: (id: number) => void;
   sendTyping: (conversationId: number) => void;
   subscribe: (listener: (event: ChatEvent) => void) => () => void;
+  /** Плавающее окно чата: открыто ли и какой диалог в нем. */
+  dock: ChatDockState;
+  openDock: (conversationId?: number | null) => void;
+  minimizeDock: () => void;
 }
 
 const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -86,6 +109,7 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
   const [typing, setTyping] = useState<Record<number, Record<number, { displayName: string; until: number }>>>({});
   const [notifications, setNotifications] = useState<ChatNotification[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
+  const [dock, setDock] = useState<ChatDockState>(readDockState);
 
   const connectionRef = useRef<HubConnection | null>(null);
   const listenersRef = useRef(new Set<(event: ChatEvent) => void>());
@@ -453,6 +477,22 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     connection.invoke('Typing', conversationId).catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(DOCK_STATE_KEY, JSON.stringify(dock));
+    } catch {
+      // Запоминание окна — удобство, без него все работает.
+    }
+  }, [dock]);
+
+  const openDock = useCallback((conversationId?: number | null) => {
+    setDock((current) => ({ open: true, conversationId: conversationId === undefined ? current.conversationId : conversationId }));
+  }, []);
+
+  const minimizeDock = useCallback(() => {
+    setDock((current) => ({ ...current, open: false }));
+  }, []);
+
   const subscribe = useCallback((listener: (event: ChatEvent) => void) => {
     listenersRef.current.add(listener);
     return () => {
@@ -482,11 +522,15 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     saveSettings,
     dismissNotification,
     sendTyping,
-    subscribe
+    subscribe,
+    dock,
+    openDock,
+    minimizeDock
   }), [
     status, enabled, currentUserId, connectionState, conversations, conversationsLoaded, totalUnread, settings, onlineUserIds,
     typingByConversation, notifications, activeConversationId, refreshConversations, upsertConversation, removeConversation,
-    markConversationReadLocally, applyMessageLocally, saveSettings, dismissNotification, sendTyping, subscribe
+    markConversationReadLocally, applyMessageLocally, saveSettings, dismissNotification, sendTyping, subscribe,
+    dock, openDock, minimizeDock
   ]);
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;

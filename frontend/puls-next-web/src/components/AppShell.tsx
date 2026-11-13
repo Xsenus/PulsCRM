@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { getDatabaseInfo } from '../app/api';
 import { useAuth } from '../app/AuthContext';
 import { ChatProvider, useChat } from '../app/ChatContext';
+import { ChatDock } from './chat/ChatDock';
 import { ChatNotifications } from './chat/ChatNotifications';
 
 type MenuIconKey = 'dashboard' | 'chat' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
@@ -187,6 +188,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ChatProvider userId={user?.id ?? null}>
       <AppShellLayout>{children}</AppShellLayout>
+      <ChatDock />
       <ChatNotifications />
     </ChatProvider>
   );
