@@ -50,3 +50,29 @@ public sealed class MailingDbOptions
 
     public bool AutoCreateSchema { get; set; } = true;
 }
+
+public sealed class ChatOptions
+{
+    public const string SectionName = "Chat";
+
+    /// <summary>
+    /// Включает модуль чата. Для работы нужна строка подключения ConnectionStrings:ChatDb (PostgreSQL).
+    /// </summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Создавать и дополнять таблицы Chat* в ChatDb по XPO-моделям.
+    /// </summary>
+    public bool AutoCreateSchema { get; set; } = true;
+
+    /// <summary>
+    /// Каталог вложений чата внутри Storage:RootPath.
+    /// </summary>
+    public string StoragePath { get; set; } = "chat";
+
+    public long MaxAttachmentBytes { get; set; } = 25 * 1024 * 1024;
+    public int MaxAttachmentsPerMessage { get; set; } = 10;
+    public int MaxMessageLength { get; set; } = 8000;
+    public int MaxGroupMembers { get; set; } = 200;
+    public int PageSize { get; set; } = 50;
+}

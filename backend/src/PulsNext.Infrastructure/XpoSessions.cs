@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using PulsNext.Domain.Chat;
 using PulsNext.Domain.Legacy;
 using PulsNext.Domain.Mailing;
 
@@ -15,6 +17,11 @@ namespace PulsNext.Infrastructure;
 public sealed class LegacyUnitOfWork(IDataLayer dataLayer, params IDisposable[] disposeOnDisconnect) : UnitOfWork(dataLayer, disposeOnDisconnect);
 
 public sealed class MailingUnitOfWork(IDataLayer dataLayer, params IDisposable[] disposeOnDisconnect) : UnitOfWork(dataLayer, disposeOnDisconnect);
+
+/// <summary>
+/// Включен ли модуль чата в текущем запуске API.
+/// </summary>
+public sealed record ChatFeature(bool IsEnabled);
 
 public interface ICurrentUserAccessor
 {
@@ -99,6 +106,22 @@ public static class ServiceCollectionExtensions
                 .UseAutoCreationOption(autoCreateMailingSchema ? AutoCreateOption.DatabaseAndSchema : AutoCreateOption.SchemaAlreadyExists)
                 .UseEntityTypes(MailingPersistentTypes.All));
 
+        services.Configure<ChatOptions>(configuration.GetSection(ChatOptions.SectionName));
+        services.AddSingleton(new ChatFeature(IsChatEnabled(configuration, contentRootPath)));
+        if (IsChatEnabled(configuration, contentRootPath))
+        {
+            var chatConnectionString = GetConnectionString(configuration, contentRootPath, "ChatDb");
+            var autoCreateChatSchema = configuration.GetSection(ChatOptions.SectionName).GetValue(nameof(ChatOptions.AutoCreateSchema), true);
+            services.AddXpoCustomSession<ChatUnitOfWork>(true, options =>
+                options.UseConnectionString(chatConnectionString)
+                    .UseAutoCreationOption(autoCreateChatSchema ? AutoCreateOption.DatabaseAndSchema : AutoCreateOption.SchemaAlreadyExists)
+                    .UseEntityTypes(ChatPersistentTypes.All));
+            services.AddScoped<IChatUserDirectory>(provider => new LegacyChatUserDirectory(new Lazy<LegacyUnitOfWork>(provider.GetRequiredService<LegacyUnitOfWork>)));
+            services.AddSingleton<IChatFileStore, DiskChatFileStore>();
+            services.TryAddSingleton<IChatEventPublisher, NullChatEventPublisher>();
+            services.AddScoped<IChatService, ChatService>();
+        }
+
         services.AddDataProtection()
             .PersistKeysToFileSystem(GetKeysDirectory(configuration, contentRootPath));
 
@@ -145,6 +168,32 @@ public static class ServiceCollectionExtensions
 
         return configuration.GetConnectionString(name)
             ?? throw new InvalidOperationException($"ConnectionStrings:{name} is not configured.");
+    }
+
+    /// <summary>
+    /// Чат включен, только если Chat:Enabled=true и задана строка ChatDb:
+    /// без них API работает как раньше и не обращается к PostgreSQL.
+    /// </summary>
+    private static bool IsChatEnabled(IConfiguration configuration, string contentRootPath)
+    {
+        var enabled = GetProductionOverride(contentRootPath)?.GetSection(ChatOptions.SectionName).GetValue<bool?>(nameof(ChatOptions.Enabled))
+            ?? configuration.GetSection(ChatOptions.SectionName).GetValue<bool>(nameof(ChatOptions.Enabled));
+        if (!enabled)
+        {
+            return false;
+        }
+
+        var connectionString = GetProductionOverride(contentRootPath)?.GetConnectionString("ChatDb")
+            ?? configuration.GetConnectionString("ChatDb");
+        return !string.IsNullOrWhiteSpace(connectionString);
+    }
+
+    private static IConfiguration? GetProductionOverride(string contentRootPath)
+    {
+        var productionConfigPath = Path.Combine(contentRootPath, "appsettings.Production.json");
+        return File.Exists(productionConfigPath)
+            ? new ConfigurationBuilder().AddJsonFile(productionConfigPath, optional: false, reloadOnChange: false).Build()
+            : null;
     }
 
     private static DirectoryInfo GetKeysDirectory(IConfiguration configuration, string contentRootPath)
