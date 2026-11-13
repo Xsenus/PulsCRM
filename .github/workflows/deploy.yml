@@ -44,7 +44,8 @@ jobs:
         run: dotnet test backend/PulsNextMailing.sln --configuration Release --no-restore
 
       - name: Scan NuGet vulnerabilities
-        run: dotnet list backend/PulsNextMailing.sln package --vulnerable
+        shell: powershell
+        run: .\scripts\check-nuget-vulnerabilities.ps1 -SolutionPath backend/PulsNextMailing.sln -MinimumSeverity High
 
       - name: Install frontend dependencies
         working-directory: ${{ env.FRONTEND_PATH }}

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "parameters": "--vulnerable --include-transitive",
+  "sources": [
+    "https://api.nuget.org/v3/index.json"
+  ],
+  "projects": [
+    {
+      "path": "backend/src/PulsNext.Domain.Legacy/PulsNext.Domain.Legacy.csproj"
+    },
+    {
+      "path": "backend/src/PulsNext.Domain.Mailing/PulsNext.Domain.Mailing.csproj"
+    },
+    {
+      "path": "backend/src/PulsNext.Infrastructure/PulsNext.Infrastructure.csproj"
+    },
+    {
+      "path": "backend/src/PulsNext.Api/PulsNext.Api.csproj",
+      "frameworks": [
+        {
+          "framework": "net9.0",
+          "transitivePackages": [
+            {
+              "id": "Microsoft.OpenApi",
+              "resolvedVersion": "2.4.1",
+              "vulnerabilities": [
+                {
+                  "severity": "Moderate",
+                  "advisoryurl": "https://github.com/advisories/GHSA-v5pm-xwqc-g5wc"
+                }
+              ]
+            }
+          ],
+          "topLevelPackages": [
+            {
+              "id": "Example.Package",
+              "requestedVersion": "1.0.0",
+              "resolvedVersion": "1.0.0",
+              "vulnerabilities": [
+                {
+                  "severity": "Low",
+                  "advisoryurl": "https://github.com/advisories/GHSA-0000-0000-0000"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "backend/tests/PulsNext.Infrastructure.Tests/PulsNext.Infrastructure.Tests.csproj"
+    },
+    {
+      "path": "backend/src/PulsNext.Domain.Chat/PulsNext.Domain.Chat.csproj"
+    }
+  ]
+}
