@@ -13,14 +13,21 @@
 
 ### 1. База и пользователь в PostgreSQL
 
-PostgreSQL на том же сервере может быть закрыт снаружи — API подключается к нему по `localhost`. Выполнить под суперпользователем (`psql -U postgres`), пароль — свой длинный:
+PostgreSQL на том же сервере может быть закрыт снаружи — API подключается к нему по `localhost`. Готовый скрипт создает пользователя `pulschat` и базу `pulschat` (UTF8) и дает ему права на создание таблиц; его можно запускать повторно (тогда он только обновит пароль). Выполнить на сервере из каталога репозитория (или скопировав файл), под суперпользователем PostgreSQL:
 
-```sql
-CREATE ROLE pulschat LOGIN PASSWORD 'ЗАМЕНИТЕ_НА_ДЛИННЫЙ_ПАРОЛЬ';
-CREATE DATABASE pulschat OWNER pulschat ENCODING 'UTF8' TEMPLATE template0;
+```powershell
+psql -U postgres -f scripts\sql\create-chat-database.sql
 ```
 
-Владелец базы может создавать таблицы в схеме `public` — это нужно для первого запуска, когда XPO создает таблицы `Chat*`.
+`psql` спросит пароль для нового пользователя — задайте длинный, **без символа `;`** (он ломает строку подключения). Если `psql` нет в `PATH`, он обычно лежит в `C:\Program Files\PostgreSQL\<версия>\bin\psql.exe`.
+
+Проверить вход новым пользователем:
+
+```powershell
+psql -h localhost -U pulschat -d pulschat -c "select current_user"
+```
+
+Вручную то же самое (если удобнее): `CREATE ROLE pulschat LOGIN PASSWORD '…'; CREATE DATABASE pulschat OWNER pulschat ENCODING 'UTF8' TEMPLATE template0;`, затем в базе `pulschat` — `ALTER SCHEMA public OWNER TO pulschat;`.
 
 ### 2. Production-конфиг API
 
