@@ -2,13 +2,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { getDatabaseInfo } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { ChatProvider, useChat } from '../app/ChatContext';
+import { ChatNotifications } from './chat/ChatNotifications';
 
-type MenuIconKey = 'dashboard' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
+type MenuIconKey = 'dashboard' | 'chat' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
 
 const SIDEBAR_STATE_KEY = 'puls-next-sidebar-collapsed';
 
 const menu: Array<{ to?: string; label: string; icon: MenuIconKey; children?: Array<{ to: string; label: string }> }> = [
   { to: '/', label: 'Дашборд', icon: 'dashboard' },
+  { to: '/chat', label: 'Чат', icon: 'chat' },
   { label: 'Аналитика', icon: 'analytics', children: [{ to: '/analytics/parus-tornado', label: 'Парус Торнадо' }] },
   { to: '/employees', label: 'Сотрудники', icon: 'employees' },
   { to: '/organizations', label: 'Организации', icon: 'organizations' },
@@ -23,6 +26,15 @@ function MenuIcon({ icon }: { icon: MenuIconKey }) {
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" fill="currentColor" />
+        </svg>
+      );
+    case 'chat':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6A1 1 0 0 1 4 18.84Zm4 3.5v2h8V9Zm0-3v2h6V6Z"
+            fill="currentColor"
+          />
         </svg>
       );
     case 'analytics':
@@ -171,7 +183,18 @@ function getApplicationVersionNumber(version: string | null) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  return (
+    <ChatProvider userId={user?.id ?? null}>
+      <AppShellLayout>{children}</AppShellLayout>
+      <ChatNotifications />
+    </ChatProvider>
+  );
+}
+
+function AppShellLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
+  const chat = useChat();
   const location = useLocation();
   const { user, logout } = useAuth();
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
@@ -286,6 +309,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav className="menu">
           {menu.map((item) => {
+            if (item.icon === 'chat' && !chat.enabled) {
+              return null;
+            }
+
             if (item.children?.length) {
               const active = item.children.some((child) => location.pathname.startsWith(child.to));
 
@@ -324,6 +351,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <MenuIcon icon={item.icon} />
                 </span>
                 <span className="menu-link-label">{item.label}</span>
+                {item.icon === 'chat' && chat.totalUnread > 0 ? (
+                  <span className="menu-link-badge" aria-label={`Непрочитанных: ${chat.totalUnread}`}>{chat.totalUnread > 99 ? '99+' : chat.totalUnread}</span>
+                ) : null}
               </NavLink>
             );
           })}

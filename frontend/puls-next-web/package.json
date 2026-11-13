@@ -11,6 +11,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@microsoft/signalr": "^9.0.19",
     "axios": "^1.21.1",
     "dayjs": "1.11.13",
     "react": "18.2.0",
