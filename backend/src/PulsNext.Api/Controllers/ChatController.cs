@@ -191,7 +191,7 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Typing([FromRoute] int id, CancellationToken cancellationToken)
     {
-        await chatService.NotifyTypingAsync(id, cancellationToken);
+        await chatService.NotifyTypingAsync(id, null, cancellationToken);
         return NoContent();
     }
 
