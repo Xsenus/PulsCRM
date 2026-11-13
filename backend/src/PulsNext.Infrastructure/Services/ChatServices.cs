@@ -243,6 +243,10 @@ public sealed class ChatService(
 
         var hidden = GetHiddenDirectConversationIds(myParticipations.Select(x => x.Conversation!), me);
         var conversations = myParticipations.Select(x => x.Conversation!).Where(x => !hidden.Contains(x.Oid)).ToList();
+        foreach (var group in conversations.Where(x => x.Kind == ChatConversationKind.Group))
+        {
+            EnsureActiveGroupOwner(group);
+        }
         var result = BuildConversationDtos(conversations, me)
             .OrderByDescending(x => x.IsPinned)
             .ThenByDescending(x => x.LastMessageAtUtc)
@@ -255,6 +259,11 @@ public sealed class ChatService(
     {
         var me = CurrentUserId;
         var (conversation, _) = RequireMembership(conversationId, me);
+        if (conversation.Kind == ChatConversationKind.Group)
+        {
+            EnsureActiveGroupOwner(conversation);
+        }
+
         return Task.FromResult(BuildConversationDtos([conversation], me).Single());
     }
 
@@ -998,8 +1007,48 @@ public sealed class ChatService(
     {
         var (conversation, participant) = RequireMembership(conversationId, userId);
         ValidationHelper.Guard(conversation.Kind == ChatConversationKind.Group, "Действие доступно только в групповом чате.");
+        EnsureActiveGroupOwner(conversation);
         ValidationHelper.Guard(participant.Role is ChatParticipantRole.Admin or ChatParticipantRole.Owner, "Действие доступно только администраторам чата.");
         return (conversation, participant);
+    }
+
+    /// <summary>
+    /// В группе всегда должен быть работающий владелец. Если создатель уволен (или удален из legacy-БД),
+    /// владельцем становится старейший работающий администратор, а если их нет — старейший участник.
+    /// Уволенный владелец понижается до участника. Возвращает true, если владелец сменился.
+    /// </summary>
+    private bool EnsureActiveGroupOwner(ChatConversation conversation)
+    {
+        var active = GetParticipants(conversation.Oid).Where(x => x.LeftAtUtc == null).ToList();
+        if (active.Count == 0)
+        {
+            return false;
+        }
+
+        var users = userDirectory.GetUsers(active.Select(x => x.UserId));
+        var working = active.Where(x => users.GetValueOrDefault(x.UserId) is { IsInactive: false }).ToList();
+        if (working.Count == 0 || working.Any(x => x.Role == ChatParticipantRole.Owner))
+        {
+            return false;
+        }
+
+        foreach (var formerOwner in active.Where(x => x.Role == ChatParticipantRole.Owner))
+        {
+            formerOwner.Role = ChatParticipantRole.Member;
+        }
+
+        var heir = working
+            .OrderByDescending(x => x.Role)
+            .ThenBy(x => x.JoinedAtUtc)
+            .ThenBy(x => x.Oid)
+            .First();
+        heir.Role = ChatParticipantRole.Owner;
+
+        var now = DateTime.UtcNow;
+        AddSystemMessage(conversation, $"{users[heir.UserId].DisplayName} теперь владелец чата: прежний создатель больше не работает в компании", now);
+        conversation.UpdatedAtUtc = now;
+        unitOfWork.CommitChanges();
+        return true;
     }
 
     private ChatMessage RequireVisibleMessage(int messageId, int userId)
