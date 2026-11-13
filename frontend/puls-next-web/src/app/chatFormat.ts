@@ -143,6 +143,15 @@ export function sortConversations(items: ChatConversationDto[]) {
   });
 }
 
+/** Короткий текст сообщения для плашек и превью: текст или описание вложений. */
+export function describeMessageBody(message: ChatMessageDto) {
+  const body = message.text?.trim()
+    || (message.attachments.length === 1
+      ? (message.attachments[0].isImage ? '🖼 Фото' : `📎 ${message.attachments[0].fileName}`)
+      : message.attachments.length > 1 ? `📎 Файлы: ${message.attachments.length}` : '');
+  return body.replace(/\s+/g, ' ');
+}
+
 export function describeLastMessage(conversation: ChatConversationDto, currentUserId: number) {
   const message = conversation.lastMessage;
   if (!message) {
@@ -160,11 +169,7 @@ export function describeLastMessage(conversation: ChatConversationDto, currentUs
   const prefix = message.senderUserId === currentUserId
     ? 'Вы: '
     : conversation.kind === 'Group' || conversation.kind === 1 ? `${message.senderName.split(' ')[0]}: ` : '';
-  const body = message.text?.trim()
-    || (message.attachments.length === 1
-      ? (message.attachments[0].isImage ? '🖼 Фото' : `📎 ${message.attachments[0].fileName}`)
-      : message.attachments.length > 1 ? `📎 Файлы: ${message.attachments.length}` : '');
-  return `${prefix}${body.replace(/\s+/g, ' ')}`;
+  return `${prefix}${describeMessageBody(message)}`;
 }
 
 /** Статус прочтения своего сообщения: «доставлено» или «прочитано» хотя бы одним собеседником. */

@@ -582,6 +582,61 @@ textarea.chat-input {
   color: #a7f3d0;
 }
 
+.chat-pinned-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.chat-pinned-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-pinned-body:hover .chat-pinned-text strong {
+  text-decoration: underline;
+}
+
+.chat-pinned-icon {
+  flex: none;
+  font-size: 14px;
+}
+
+.chat-pinned-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border-left: 2px solid var(--brand);
+  padding-left: 8px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.chat-pinned-text strong {
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.chat-pinned-text span {
+  overflow: hidden;
+  color: var(--text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .chat-message-highlight .chat-bubble {
   animation: chat-highlight 1.6s ease;
 }

@@ -92,6 +92,10 @@ export interface ChatConversationDto {
   createdAtUtc: string;
   lastMessageAtUtc: string;
   lastMessage?: ChatMessageDto | null;
+  /** Закрепленное сообщение, общее для всех участников. */
+  pinnedMessage?: ChatMessageDto | null;
+  /** Может ли текущий сотрудник закреплять сообщения (в группе — администраторы). */
+  canPinMessages?: boolean;
   participants: ChatParticipantDto[];
 }
 

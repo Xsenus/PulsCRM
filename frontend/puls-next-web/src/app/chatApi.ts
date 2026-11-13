@@ -60,6 +60,10 @@ export const leaveChat = (id: number) => call(() => api.post<void>(`/api/chat/co
 export const updateChatPreferences = (id: number, request: ChatConversationPreferencesRequest) =>
   call(() => api.put<ChatConversationDto>(`/api/chat/conversations/${id}/preferences`, request));
 
+/** Закрепляет сообщение над лентой диалога; null — открепляет. */
+export const pinChatMessage = (id: number, messageId: number | null) =>
+  call(() => api.put<ChatConversationDto>(`/api/chat/conversations/${id}/pinned-message`, { messageId }));
+
 export const getChatMessages = (id: number, before?: number, take = 50) =>
   call(() => api.get<ChatMessagePageDto>(`/api/chat/conversations/${id}/messages`, { params: { before, take } }));
 

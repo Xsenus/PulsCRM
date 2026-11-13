@@ -51,6 +51,7 @@ public interface IChatService
     Task<ChatConversationDto> SetMemberRoleAsync(int conversationId, int userId, ChatParticipantRole role, CancellationToken cancellationToken);
     Task LeaveAsync(int conversationId, CancellationToken cancellationToken);
     Task<ChatConversationDto> UpdatePreferencesAsync(int conversationId, ChatConversationPreferencesRequest request, CancellationToken cancellationToken);
+    Task<ChatConversationDto> PinMessageAsync(int conversationId, int? messageId, CancellationToken cancellationToken);
     Task<ChatMessagePageDto> GetMessagesAsync(int conversationId, int? beforeMessageId, int take, CancellationToken cancellationToken);
     Task<ChatMessageDto> SendMessageAsync(int conversationId, ChatSendMessageRequest request, CancellationToken cancellationToken);
     Task<ChatMessageDto> EditMessageAsync(int messageId, string? text, CancellationToken cancellationToken);
@@ -506,6 +507,38 @@ public sealed class ChatService(
         }
     }
 
+    public async Task<ChatConversationDto> PinMessageAsync(int conversationId, int? messageId, CancellationToken cancellationToken)
+    {
+        var me = CurrentUserId;
+        var (conversation, mine) = RequireMembership(conversationId, me);
+        if (conversation.Kind == ChatConversationKind.Group)
+        {
+            EnsureActiveGroupOwner(conversation);
+            ValidationHelper.Guard(mine.Role is ChatParticipantRole.Admin or ChatParticipantRole.Owner, "Закреплять сообщения в групповом чате могут только администраторы.");
+        }
+
+        if (messageId is > 0)
+        {
+            var message = unitOfWork.GetObjectByKey<ChatMessage>(messageId.Value);
+            ValidationHelper.Guard(
+                message is not null && message.Conversation?.Oid == conversation.Oid && message.DeletedAtUtc is null && message.Kind == ChatMessageKind.Text,
+                "Сообщение не найдено.");
+            conversation.PinnedMessageId = message!.Oid;
+            conversation.PinnedByUserId = me;
+            conversation.PinnedAtUtc = DateTime.UtcNow;
+        }
+        else
+        {
+            conversation.PinnedMessageId = 0;
+            conversation.PinnedByUserId = 0;
+            conversation.PinnedAtUtc = null;
+        }
+
+        unitOfWork.CommitChanges();
+        await PublishConversationUpdatedAsync(conversation, cancellationToken);
+        return BuildConversationDtos([conversation], me).Single();
+    }
+
     public Task<ChatConversationDto> UpdatePreferencesAsync(int conversationId, ChatConversationPreferencesRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -690,7 +723,19 @@ public sealed class ChatService(
                 reaction.Delete();
             }
 
+            var wasPinned = message.Conversation!.PinnedMessageId == message.Oid;
+            if (wasPinned)
+            {
+                message.Conversation.PinnedMessageId = 0;
+                message.Conversation.PinnedByUserId = 0;
+                message.Conversation.PinnedAtUtc = null;
+            }
+
             unitOfWork.CommitChanges();
+            if (wasPinned)
+            {
+                await PublishConversationUpdatedAsync(message.Conversation, cancellationToken);
+            }
         }
 
         var dto = BuildMessageDtos([message], me).Single();
@@ -1196,7 +1241,11 @@ public sealed class ChatService(
             .ToList();
         var users = userDirectory.GetUsers(participants.Select(x => x.UserId));
 
-        var lastMessageIds = conversations.Select(x => x.LastMessageId).Where(x => x > 0).ToArray();
+        var lastMessageIds = conversations
+            .SelectMany(x => new[] { x.LastMessageId, x.PinnedMessageId })
+            .Where(x => x > 0)
+            .Distinct()
+            .ToArray();
         var lastMessages = lastMessageIds.Length == 0
             ? new Dictionary<int, ChatMessageDto>()
             : BuildMessageDtos(new XPQuery<ChatMessage>(unitOfWork).Where(x => lastMessageIds.Contains(x.Oid)).ToList(), me)
@@ -1234,6 +1283,11 @@ public sealed class ChatService(
                 CreatedAtUtc = ForceUtc(conversation.CreatedAtUtc),
                 LastMessageAtUtc = ForceUtc(conversation.LastMessageAtUtc),
                 LastMessage = lastMessages.GetValueOrDefault(conversation.LastMessageId),
+                PinnedMessage = conversation.PinnedMessageId > 0 && lastMessages.GetValueOrDefault(conversation.PinnedMessageId) is { IsDeleted: false } pinned
+                    ? pinned
+                    : null,
+                CanPinMessages = conversation.Kind == ChatConversationKind.Direct
+                    || mine.Role is ChatParticipantRole.Admin or ChatParticipantRole.Owner,
                 Participants = active
                     .OrderByDescending(x => x.Role)
                     .ThenBy(x => users.GetValueOrDefault(x.UserId)?.DisplayName, StringComparer.CurrentCultureIgnoreCase)

@@ -7,6 +7,7 @@ import {
   editChatMessage,
   getChatMessages,
   markChatRead,
+  pinChatMessage,
   sendChatMessage,
   toggleChatReaction,
   updateChatPreferences,
@@ -16,6 +17,7 @@ import {
   buildTimeline,
   createClientMessageId,
   describeLastMessage,
+  describeMessageBody,
   formatChatTime,
   formatConversationTime,
   formatFileSize,
@@ -38,6 +40,9 @@ import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
 import '../chat.css';
 
 const PAGE_SIZE = 50;
+/** Переход к старому сообщению догружает историю крупными страницами, но не бесконечно. */
+const JUMP_PAGE_SIZE = 200;
+const MAX_JUMP_PAGES = 25;
 const NEAR_BOTTOM_PX = 120;
 
 export function ChatPage() {
@@ -241,6 +246,8 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const scrollToBottomRef = useRef<'instant' | 'smooth' | null>(null);
   const initialScrollDoneRef = useRef(false);
   const lastMarkedRef = useRef(0);
+  /** Сообщение, к которому нужно прокрутить ленту после догрузки истории. */
+  const pendingJumpRef = useRef<number | null>(null);
   /** Черновик, отложенный на время редактирования своего сообщения. */
   const stashedDraftRef = useRef('');
   const latestDraftRef = useRef({ text, editing: false });
@@ -348,6 +355,17 @@ export function ConversationView({ conversation, onBack, compact = false, header
       return;
     }
 
+    if (pendingJumpRef.current) {
+      const messageId = pendingJumpRef.current;
+      pendingJumpRef.current = null;
+      preserveScrollRef.current = null;
+      if (!highlightMessage(messageId)) {
+        showToast('Сообщение не найдено — возможно, оно удалено.', 'info');
+      }
+
+      return;
+    }
+
     if (preserveScrollRef.current) {
       const { height, top } = preserveScrollRef.current;
       element.scrollTop = element.scrollHeight - height + top;
@@ -436,14 +454,62 @@ export function ConversationView({ conversation, onBack, compact = false, header
     setMessages((current) => [...current]);
   };
 
-  const scrollToMessage = (messageId: number) => {
+  /** Прокручивает к сообщению и подсвечивает его; false — сообщения нет в загруженной ленте. */
+  function highlightMessage(messageId: number) {
     const target = scrollRef.current?.querySelector(`[data-message-id="${messageId}"]`);
-    if (target) {
-      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      target.classList.add('chat-message-highlight');
-      window.setTimeout(() => target.classList.remove('chat-message-highlight'), 1600);
-    } else {
-      showToast('Исходное сообщение выше — прокрутите ленту, чтобы его загрузить.', 'info');
+    if (!target) {
+      return false;
+    }
+
+    target.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    target.classList.add('chat-message-highlight');
+    window.setTimeout(() => target.classList.remove('chat-message-highlight'), 1600);
+    return true;
+  }
+
+  /** Переход к сообщению (ответ, закреп): если оно выше загруженного, догружаем историю. */
+  const scrollToMessage = async (messageId: number) => {
+    if (highlightMessage(messageId) || messages.length === 0) {
+      return;
+    }
+
+    if (!hasMoreBefore || messages[0].id < messageId) {
+      showToast('Сообщение не найдено — возможно, оно удалено.', 'info');
+      return;
+    }
+
+    setLoadingOlder(true);
+    try {
+      let oldest = messages[0].id;
+      let more: boolean = hasMoreBefore;
+      let loaded: ChatMessageDto[] = [];
+      for (let attempt = 0; attempt < MAX_JUMP_PAGES && more && oldest > messageId; attempt += 1) {
+        const page = await getChatMessages(conversation.id, oldest, JUMP_PAGE_SIZE);
+        if (page.items.length === 0) {
+          more = false;
+          break;
+        }
+
+        loaded = [...page.items, ...loaded];
+        more = page.hasMoreBefore;
+        oldest = page.items[0].id;
+      }
+
+      pendingJumpRef.current = messageId;
+      setMessages((current) => mergeMessages(loaded, current));
+      setHasMoreBefore(more);
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить сообщения.'), 'error');
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
+
+  const changePinnedMessage = async (messageId: number | null) => {
+    try {
+      chat.upsertConversation(await pinChatMessage(conversation.id, messageId));
+    } catch (error) {
+      showToast(getApiErrorMessage(error, messageId ? 'Не удалось закрепить сообщение.' : 'Не удалось открепить сообщение.'), 'error');
     }
   };
 
@@ -710,6 +776,28 @@ export function ConversationView({ conversation, onBack, compact = false, header
         </div>
       </header>
 
+      {conversation.pinnedMessage ? (
+        <div className="chat-pinned-bar">
+          <button
+            type="button"
+            className="chat-pinned-body"
+            onClick={() => void scrollToMessage(conversation.pinnedMessage!.id)}
+            title="Перейти к закрепленному сообщению"
+          >
+            <span className="chat-pinned-icon" aria-hidden="true">📌</span>
+            <span className="chat-pinned-text">
+              <strong>Закрепленное сообщение</strong>
+              <span>{isGroup ? `${conversation.pinnedMessage.senderName.split(' ')[0]}: ` : ''}{describeMessageBody(conversation.pinnedMessage)}</span>
+            </span>
+          </button>
+          {conversation.canPinMessages ? (
+            <button type="button" className="chat-icon-button" onClick={() => void changePinnedMessage(null)} title="Открепить сообщение" aria-label="Открепить сообщение">
+              ×
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div
         className="chat-messages"
         ref={scrollRef}
@@ -760,7 +848,11 @@ export function ConversationView({ conversation, onBack, compact = false, header
                   onEdit={() => startEdit(message)}
                   onDelete={() => void handleDelete(message)}
                   onReact={(emoji) => void handleReaction(message, emoji)}
-                  onReplyClick={(id) => scrollToMessage(id)}
+                  onReplyClick={(id) => void scrollToMessage(id)}
+                  pinState={conversation.canPinMessages && !isSystemMessage(message) && !message.isDeleted
+                    ? (conversation.pinnedMessage?.id === message.id ? 'pinned' : 'unpinned')
+                    : null}
+                  onTogglePin={() => void changePinnedMessage(conversation.pinnedMessage?.id === message.id ? null : message.id)}
                 />
               )}
             </React.Fragment>
@@ -935,7 +1027,9 @@ function MessageBubble({
   onEdit,
   onDelete,
   onReact,
-  onReplyClick
+  onReplyClick,
+  pinState = null,
+  onTogglePin
 }: {
   message: ChatMessageDto;
   own: boolean;
@@ -948,6 +1042,9 @@ function MessageBubble({
   onDelete: () => void;
   onReact: (emoji: string) => void;
   onReplyClick: (messageId: number) => void;
+  /** null — закреплять нельзя. */
+  pinState?: 'pinned' | 'unpinned' | null;
+  onTogglePin?: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -1069,6 +1166,11 @@ function MessageBubble({
             <div className="chat-message-menu" role="menu">
               {message.text ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); void copy(); }}>Копировать текст</button> : null}
               {own ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onEdit(); }}>Изменить</button> : null}
+              {pinState ? (
+                <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onTogglePin?.(); }}>
+                  {pinState === 'pinned' ? 'Открепить' : 'Закрепить'}
+                </button>
+              ) : null}
               {own || canModerate ? (
                 <button type="button" role="menuitem" className="chat-danger-text" onClick={() => { setMoreOpen(false); onDelete(); }}>Удалить</button>
               ) : null}
