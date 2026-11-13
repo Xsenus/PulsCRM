@@ -270,6 +270,19 @@ public sealed class ChatConversationPreferencesRequest
     public bool? IsArchived { get; set; }
 }
 
+/// <summary>
+/// Найденное сообщение вместе с диалогом, в котором оно лежит.
+/// </summary>
+public sealed class ChatSearchResultDto
+{
+    public int ConversationId { get; set; }
+    public string ConversationTitle { get; set; } = string.Empty;
+    public ChatConversationKind ConversationKind { get; set; }
+    public string? ConversationIcon { get; set; }
+    public int? PeerUserId { get; set; }
+    public ChatMessageDto Message { get; set; } = new();
+}
+
 public sealed class ChatPinMessageRequest
 {
     /// <summary>

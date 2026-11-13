@@ -384,6 +384,32 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SearchMessages_FindsOnlyOwnConversationsCaseInsensitive()
+    {
+        As(Alice);
+        var withBob = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var withCarol = await _service.OpenDirectAsync(Carol, CancellationToken.None);
+        await _service.SendMessageAsync(withBob.Id, new ChatSendMessageRequest { Text = "Пришлите ОТЧЕТ по лицензиям" }, CancellationToken.None);
+        await _service.SendMessageAsync(withCarol.Id, new ChatSendMessageRequest { Text = "Отчёт готов" }, CancellationToken.None);
+        var deleted = await _service.SendMessageAsync(withCarol.Id, new ChatSendMessageRequest { Text = "Отчет черновой" }, CancellationToken.None);
+        await _service.DeleteMessageAsync(deleted.Id, CancellationToken.None);
+        await _service.SendMessageAsync(withCarol.Id, new ChatSendMessageRequest { Text = "Без совпадений" }, CancellationToken.None);
+
+        var all = await _service.SearchMessagesAsync("отчет", null, 0, CancellationToken.None);
+        Assert.Equal(["Отчёт готов", "Пришлите ОТЧЕТ по лицензиям"], all.Select(x => x.Message.Text));
+        Assert.Equal(2, (await _service.SearchMessagesAsync("ОТЧЁТ", null, 0, CancellationToken.None)).Count);
+        Assert.Equal(["Вера", "Борис"], all.Select(x => x.ConversationTitle));
+
+        var inOne = await _service.SearchMessagesAsync("ОТЧЕТ", withBob.Id, 0, CancellationToken.None);
+        Assert.Equal(withBob.Id, Assert.Single(inOne).ConversationId);
+
+        As(Outsider);
+        Assert.Empty(await _service.SearchMessagesAsync("отчет", null, 0, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<Exception>(() => _service.SearchMessagesAsync("отчет", withBob.Id, 0, CancellationToken.None));
+        await Assert.ThrowsAsync<ValidationException>(() => _service.SearchMessagesAsync(" о ", null, 0, CancellationToken.None));
+    }
+
+    [Fact]
     public async Task SendMessage_WithSameClientMessageId_DoesNotDuplicate()
     {
         As(Alice);

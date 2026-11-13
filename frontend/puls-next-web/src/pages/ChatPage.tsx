@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useChat } from '../app/ChatContext';
 import {
   deleteChatMessage,
@@ -36,6 +36,7 @@ import { ChatSettingsDialog, ConversationInfoDialog, NewChatDialog } from '../co
 import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
 import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
 import { prepareChatImageUpload } from '../app/chatImageThumbnail';
+import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
 import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
 import '../chat.css';
 
@@ -50,6 +51,10 @@ export function ChatPage() {
   const navigate = useNavigate();
   const chat = useChat();
   const [filter, setFilter] = useState('');
+  const messageSearch = useChatMessageSearch(filter);
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const jumpMessageId = Number(searchParams.get('message')) || null;
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -101,7 +106,8 @@ export function ChatPage() {
           <input
             className="chat-input chat-search"
             type="search"
-            placeholder="Поиск по чатам"
+            placeholder="Поиск по чатам и сообщениям"
+            aria-label="Поиск по чатам и сообщениям"
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
           />
@@ -127,9 +133,10 @@ export function ChatPage() {
               <button type="button" className="primary-button button-inline" onClick={() => setNewChatOpen(true)}>Начать чат</button>
             </div>
           ) : null}
-          {chat.conversationsLoaded && chat.conversations.length > 0 && filtered.length === 0 ? (
+          {chat.conversationsLoaded && chat.conversations.length > 0 && filtered.length === 0 && !messageSearch.enabled ? (
             <div className="chat-muted chat-list-hint">Ничего не найдено</div>
           ) : null}
+          {messageSearch.enabled && filtered.length > 0 ? <div className="chat-list-section">Чаты</div> : null}
           {filtered.map((conversation) => (
             <ConversationListItem
               key={conversation.id}
@@ -138,12 +145,27 @@ export function ChatPage() {
               onClick={() => navigate(`/chat/${conversation.id}`)}
             />
           ))}
+          {messageSearch.enabled ? (
+            <>
+              <div className="chat-list-section">Сообщения</div>
+              <ChatSearchResults
+                search={messageSearch}
+                showConversation
+                onSelect={(result) => navigate(`/chat/${result.conversationId}?message=${result.message.id}`)}
+              />
+            </>
+          ) : null}
         </div>
       </aside>
 
       <section className="chat-main">
         {active ? (
-          <ConversationView key={active.id} conversation={active} onBack={() => navigate('/chat')} />
+          <ConversationView
+            key={active.id}
+            conversation={active}
+            onBack={() => navigate('/chat')}
+            jumpTo={jumpMessageId ? { messageId: jumpMessageId, requestKey: location.key } : null}
+          />
         ) : (
           <div className="chat-empty">
             <div className="chat-empty-icon">💬</div>
@@ -211,9 +233,11 @@ interface PendingUpload {
   previewUrl?: string;
 }
 
-export function ConversationView({ conversation, onBack, compact = false, headerExtra }: {
+export function ConversationView({ conversation, onBack, compact = false, headerExtra, jumpTo = null }: {
   conversation: ChatConversationDto;
   onBack: () => void;
+  /** Открыть диалог на сообщении (из поиска); requestKey различает повторные переходы к одному сообщению. */
+  jumpTo?: { messageId: number; requestKey: string } | null;
   /** Компактный режим для плавающего окна: всегда есть «назад», меньше кнопок в заголовке. */
   compact?: boolean;
   headerExtra?: React.ReactNode;
@@ -236,6 +260,9 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const [infoOpen, setInfoOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [newBelow, setNewBelow] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const conversationSearch = useChatMessageSearch(searchOpen ? searchQuery : '', conversation.id);
   const [firstUnreadId] = useState(() => (conversation.unreadCount > 0 ? conversation.myLastReadMessageId : null));
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -505,6 +532,9 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   };
 
+  const scrollToMessageRef = useRef(scrollToMessage);
+  scrollToMessageRef.current = scrollToMessage;
+
   const changePinnedMessage = async (messageId: number | null) => {
     try {
       chat.upsertConversation(await pinChatMessage(conversation.id, messageId));
@@ -703,6 +733,22 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   };
 
+  const handledJumpRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!jumpTo || loading || messages.length === 0) {
+      return;
+    }
+
+    const key = `${jumpTo.messageId}:${jumpTo.requestKey}`;
+    if (handledJumpRef.current === key) {
+      return;
+    }
+
+    handledJumpRef.current = key;
+    // Даем первой прокрутке (к низу ленты) отработать, затем переходим к сообщению.
+    window.setTimeout(() => void scrollToMessageRef.current(jumpTo.messageId), 0);
+  }, [jumpTo, loading, messages.length]);
+
   const timeline = useMemo(() => buildTimeline(messages), [messages]);
 
   return (
@@ -769,12 +815,52 @@ export function ConversationView({ conversation, onBack, compact = false, header
               🗄
             </button>
           )}
+          <button
+            type="button"
+            className={`chat-icon-button${searchOpen ? ' active' : ''}`}
+            onClick={() => setSearchOpen((value) => !value)}
+            title="Поиск в диалоге"
+            aria-label="Поиск в диалоге"
+            aria-pressed={searchOpen}
+          >
+            🔍
+          </button>
           <button type="button" className="chat-icon-button" onClick={() => setInfoOpen(true)} title="О чате" aria-label="О чате">
             ⓘ
           </button>
           {headerExtra}
         </div>
       </header>
+
+      {searchOpen ? (
+        <div className="chat-conversation-search">
+          <div className="chat-conversation-search-row">
+            <input
+              className="chat-input"
+              type="search"
+              autoFocus
+              placeholder="Найти в этом диалоге"
+              aria-label="Найти в этом диалоге"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setSearchOpen(false);
+                  setSearchQuery('');
+                }
+              }}
+            />
+            <button type="button" className="chat-icon-button" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} aria-label="Закрыть поиск">
+              ×
+            </button>
+          </div>
+          <ChatSearchResults
+            search={conversationSearch}
+            showConversation={false}
+            onSelect={(result) => void scrollToMessage(result.message.id)}
+          />
+        </div>
+      ) : null}
 
       {conversation.pinnedMessage ? (
         <div className="chat-pinned-bar">

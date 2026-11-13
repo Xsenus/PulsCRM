@@ -193,3 +193,12 @@ export function roleRank(role: ChatParticipantRole) {
       return 0;
   }
 }
+
+export interface ChatSearchResultDto {
+  conversationId: number;
+  conversationTitle: string;
+  conversationKind: ChatConversationKind;
+  conversationIcon?: string | null;
+  peerUserId?: number | null;
+  message: ChatMessageDto;
+}

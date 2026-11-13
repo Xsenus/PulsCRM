@@ -52,6 +52,7 @@ public interface IChatService
     Task LeaveAsync(int conversationId, CancellationToken cancellationToken);
     Task<ChatConversationDto> UpdatePreferencesAsync(int conversationId, ChatConversationPreferencesRequest request, CancellationToken cancellationToken);
     Task<ChatConversationDto> PinMessageAsync(int conversationId, int? messageId, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ChatSearchResultDto>> SearchMessagesAsync(string? query, int? conversationId, int take, CancellationToken cancellationToken);
     Task<ChatMessagePageDto> GetMessagesAsync(int conversationId, int? beforeMessageId, int take, CancellationToken cancellationToken);
     Task<ChatMessageDto> SendMessageAsync(int conversationId, ChatSendMessageRequest request, CancellationToken cancellationToken);
     Task<ChatMessageDto> EditMessageAsync(int messageId, string? text, CancellationToken cancellationToken);
@@ -213,6 +214,8 @@ public sealed class ChatService(
     /// Предел для уменьшенной копии: она нужна, чтобы лента не качала многомегабайтные оригиналы.
     /// </summary>
     public const int MaxThumbnailBytes = 512 * 1024;
+    private const int MinSearchLength = 2;
+    private const int MaxSearchLength = 200;
     private const int MaxImageSide = 50_000;
 
     private ChatOptions Options => chatOptions.Value;
@@ -260,6 +263,76 @@ public sealed class ChatService(
             .ToArray();
 
         return Task.FromResult<IReadOnlyCollection<ChatConversationDto>>(result);
+    }
+
+    public Task<IReadOnlyCollection<ChatSearchResultDto>> SearchMessagesAsync(string? query, int? conversationId, int take, CancellationToken cancellationToken)
+    {
+        var me = CurrentUserId;
+        var term = TextHelper.NullIfWhiteSpace(query)?.Trim();
+        ValidationHelper.Guard(term is { Length: >= MinSearchLength }, $"Введите не меньше {MinSearchLength} символов.");
+        ValidationHelper.Guard(term!.Length <= MaxSearchLength, "Слишком длинный запрос.");
+        var size = Math.Clamp(take <= 0 ? 50 : take, 1, 100);
+
+        List<ChatConversation> conversations;
+        if (conversationId is > 0)
+        {
+            conversations = [RequireMembership(conversationId.Value, me).Conversation];
+        }
+        else
+        {
+            // Те же диалоги, что в списке (включая архив), без скрытых личных диалогов с уволенными.
+            var all = new XPQuery<ChatParticipant>(unitOfWork)
+                .Where(x => x.UserId == me && x.LeftAtUtc == null && x.Conversation != null && !x.Conversation.IsRemoved)
+                .ToList()
+                .Select(x => x.Conversation!)
+                .ToList();
+            var hidden = GetHiddenDirectConversationIds(all, me);
+            conversations = all.Where(x => !hidden.Contains(x.Oid)).ToList();
+        }
+
+        if (conversations.Count == 0)
+        {
+            return Task.FromResult<IReadOnlyCollection<ChatSearchResultDto>>(Array.Empty<ChatSearchResultDto>());
+        }
+
+        var ids = conversations.Select(x => x.Oid).ToArray();
+        // «ё» и «е» не различаем: сотрудники пишут по-разному.
+        var lowered = term.ToLowerInvariant().Replace('ё', 'е');
+        var found = new XPQuery<ChatMessage>(unitOfWork)
+            .Where(x => x.Conversation != null
+                && ids.Contains(x.Conversation.Oid)
+                && x.Kind == ChatMessageKind.Text
+                && x.DeletedAtUtc == null
+                && x.Text != null
+                && x.Text.ToLower().Replace("ё", "е").Contains(lowered))
+            .OrderByDescending(x => x.Oid)
+            .Take(size)
+            .ToList();
+        if (found.Count == 0)
+        {
+            return Task.FromResult<IReadOnlyCollection<ChatSearchResultDto>>(Array.Empty<ChatSearchResultDto>());
+        }
+
+        var matchedConversations = found.Select(x => x.Conversation!).DistinctBy(x => x.Oid).ToList();
+        var conversationDtos = BuildConversationDtos(matchedConversations, me).ToDictionary(x => x.Id);
+        var results = BuildMessageDtos(found, me)
+            .OrderByDescending(x => x.Id)
+            .Select(message =>
+            {
+                var conversation = conversationDtos[message.ConversationId];
+                return new ChatSearchResultDto
+                {
+                    ConversationId = conversation.Id,
+                    ConversationTitle = conversation.Title,
+                    ConversationKind = conversation.Kind,
+                    ConversationIcon = conversation.Icon,
+                    PeerUserId = conversation.PeerUserId,
+                    Message = message
+                };
+            })
+            .ToArray();
+
+        return Task.FromResult<IReadOnlyCollection<ChatSearchResultDto>>(results);
     }
 
     public Task<ChatConversationDto> GetConversationAsync(int conversationId, CancellationToken cancellationToken)

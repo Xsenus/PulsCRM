@@ -9,6 +9,7 @@ import type {
   ChatCreateGroupRequest,
   ChatMessageDto,
   ChatMessagePageDto,
+  ChatSearchResultDto,
   ChatSendMessageRequest,
   ChatStatusDto,
   ChatUnreadSummaryDto,
@@ -59,6 +60,10 @@ export const leaveChat = (id: number) => call(() => api.post<void>(`/api/chat/co
 
 export const updateChatPreferences = (id: number, request: ChatConversationPreferencesRequest) =>
   call(() => api.put<ChatConversationDto>(`/api/chat/conversations/${id}/preferences`, request));
+
+/** Поиск по тексту сообщений: во всех диалогах или в одном. */
+export const searchChatMessages = (q: string, conversationId?: number, take = 50) =>
+  call(() => api.get<ChatSearchResultDto[]>('/api/chat/search', { params: { q, conversationId, take } }));
 
 /** Закрепляет сообщение над лентой диалога; null — открепляет. */
 export const pinChatMessage = (id: number, messageId: number | null) =>
