@@ -83,6 +83,12 @@ public sealed class ChatConversationDto
     public bool IsPinned { get; set; }
     public bool IsArchived { get; set; }
     public int UnreadCount { get; set; }
+
+    /// <summary>
+    /// Непрочитанные сообщения, где упомянут текущий сотрудник: считаются и в диалогах «без звука».
+    /// </summary>
+    public int UnreadMentionCount { get; set; }
+
     public int MyLastReadMessageId { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime LastMessageAtUtc { get; set; }
@@ -168,6 +174,11 @@ public sealed class ChatMessageDto
     /// Автор оригинала, если сообщение переслано.
     /// </summary>
     public ChatForwardedFromDto? ForwardedFrom { get; set; }
+
+    /// <summary>
+    /// Сотрудники, упомянутые через @.
+    /// </summary>
+    public IReadOnlyCollection<int> MentionedUserIds { get; set; } = Array.Empty<int>();
 
     public IReadOnlyCollection<ChatAttachmentDto> Attachments { get; set; } = Array.Empty<ChatAttachmentDto>();
     public IReadOnlyCollection<ChatReactionDto> Reactions { get; set; } = Array.Empty<ChatReactionDto>();
@@ -316,6 +327,12 @@ public sealed class ChatSendMessageRequest
     public string? Text { get; set; }
     public int? ReplyToMessageId { get; set; }
     public IReadOnlyCollection<int> AttachmentIds { get; set; } = Array.Empty<int>();
+
+    /// <summary>
+    /// Упомянутые сотрудники; учитываются только участники чата, чье «@Имя» есть в тексте.
+    /// </summary>
+    public IReadOnlyCollection<int> MentionedUserIds { get; set; } = Array.Empty<int>();
+
     public string? ClientMessageId { get; set; }
 }
 

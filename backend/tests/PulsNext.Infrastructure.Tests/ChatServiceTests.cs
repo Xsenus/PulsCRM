@@ -468,6 +468,45 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Mentions_KeepOnlyParticipantsNamedInTextAndCountInMutedChats()
+    {
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob, Carol] }, CancellationToken.None);
+
+        As(Bob);
+        await _service.UpdatePreferencesAsync(group.Id, new ChatConversationPreferencesRequest { IsMuted = true }, CancellationToken.None);
+
+        As(Alice);
+        var message = await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest
+        {
+            Text = "@борис посмотри, пожалуйста",
+            // Вера не названа в тексте, посторонний не в чате, себя упомянуть нельзя.
+            MentionedUserIds = [Bob, Carol, Outsider, Alice]
+        }, CancellationToken.None);
+        Assert.Equal([Bob], message.MentionedUserIds);
+        await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "Без упоминаний" }, CancellationToken.None);
+
+        As(Bob);
+        var forBob = await _service.GetConversationAsync(group.Id, CancellationToken.None);
+        Assert.Equal(1, forBob.UnreadMentionCount);
+        Assert.True(forBob.UnreadCount >= 2);
+        // Диалог без звука: в общем счетчике только упоминание.
+        Assert.Equal(1, (await _service.GetUnreadSummaryAsync(CancellationToken.None)).TotalUnread);
+
+        As(Carol);
+        Assert.Equal(0, (await _service.GetConversationAsync(group.Id, CancellationToken.None)).UnreadMentionCount);
+
+        // Убрали имя при правке — упоминание снимается.
+        As(Alice);
+        var edited = await _service.EditMessageAsync(message.Id, "Посмотрите, пожалуйста", CancellationToken.None);
+        Assert.Empty(edited.MentionedUserIds);
+
+        As(Bob);
+        Assert.Equal(0, (await _service.GetConversationAsync(group.Id, CancellationToken.None)).UnreadMentionCount);
+        Assert.Equal(0, (await _service.GetUnreadSummaryAsync(CancellationToken.None)).TotalUnread);
+    }
+
+    [Fact]
     public async Task SendMessage_WithSameClientMessageId_DoesNotDuplicate()
     {
         As(Alice);

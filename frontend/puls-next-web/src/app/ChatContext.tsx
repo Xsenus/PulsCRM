@@ -225,6 +225,7 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
       ? {
           ...item,
           unreadCount: 0,
+          unreadMentionCount: 0,
           myLastReadMessageId: Math.max(item.myLastReadMessageId, messageId),
           participants: item.participants.map((participant) => participant.userId === currentUserId
             ? { ...participant, lastReadMessageId: Math.max(participant.lastReadMessageId, messageId) }
@@ -249,7 +250,9 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
 
   const notify = useCallback((message: ChatMessageDto, conversation: ChatConversationDto) => {
     const current = settingsRef.current;
-    if (conversation.isMuted) {
+    // Упоминание пробивается через «без звука» диалога; общие настройки звука и оповещений соблюдаются.
+    const mentionsMe = !!message.mentionedUserIds?.includes(currentUserId);
+    if (conversation.isMuted && !mentionsMe) {
       return;
     }
 
@@ -264,7 +267,7 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     const isGroup = conversation.kind === 'Group' || conversation.kind === 1;
     const preview = current.showMessagePreview
       ? describeLastMessage({ ...conversation, lastMessage: message }, currentUserId).replace(/^[^:]+: /, '')
-      : 'Новое сообщение';
+      : mentionsMe ? 'Вас упомянули' : 'Новое сообщение';
     const notification: ChatNotification = {
       id: nextNotificationId++,
       conversationId: conversation.id,
@@ -279,7 +282,7 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     // Вкладка в фоне — дополнительно системное оповещение (если пользователь включил и браузер разрешил).
     if (current.desktopNotificationsEnabled && document.visibilityState === 'hidden') {
       showDesktopNotification({
-        title: isGroup ? `${conversation.title} — ${message.senderName}` : message.senderName,
+        title: `${mentionsMe ? '@ ' : ''}${isGroup ? `${conversation.title} — ${message.senderName}` : message.senderName}`,
         body: preview,
         conversationId: conversation.id
       });
@@ -311,6 +314,9 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
       lastMessage: message,
       lastMessageAtUtc: message.createdAtUtc,
       unreadCount: fromOther && !isVisibleHere ? conversation.unreadCount + (conversationsRef.current.some((item) => item.id === conversation!.id) ? 1 : 0) : conversation.unreadCount,
+      unreadMentionCount: fromOther && !isVisibleHere && message.mentionedUserIds?.includes(currentUserId) && conversationsRef.current.some((item) => item.id === conversation!.id)
+        ? (conversation.unreadMentionCount ?? 0) + 1
+        : conversation.unreadMentionCount,
       myLastReadMessageId: message.senderUserId === currentUserId ? message.id : conversation.myLastReadMessageId
     };
     upsertConversation(updated);
@@ -517,7 +523,7 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
   }, []);
 
   const totalUnread = useMemo(
-    () => conversations.filter((item) => !item.isMuted).reduce((sum, item) => sum + item.unreadCount, 0),
+    () => conversations.reduce((sum, item) => sum + (item.isMuted ? item.unreadMentionCount ?? 0 : item.unreadCount), 0),
     [conversations]
   );
 
