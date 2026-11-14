@@ -12,8 +12,15 @@ export const CHAT_THUMBNAIL_MIN_SOURCE_BYTES = 150 * 1024;
 /** Сервер не примет копию больше этого размера. */
 export const CHAT_THUMBNAIL_MAX_BYTES = 512 * 1024;
 
+/** Размытое превью: крошечная картинка, которая приходит вместе с сообщением. */
+export const CHAT_PREVIEW_MAX_SIDE = 24;
+/** Сервер не примет превью длиннее этого (символов data:URL). */
+export const CHAT_PREVIEW_MAX_LENGTH = 2500;
+
 export interface ChatImageUploadExtras {
   thumbnail?: Blob;
+  /** data:URL крошечного превью. */
+  preview?: string;
   width?: number;
   height?: number;
 }
@@ -63,6 +70,33 @@ async function decodeImage(file: File): Promise<DecodedImage> {
   }
 }
 
+/** Крошечное превью (до 24 px) как data:URL; undefined — не получилось или слишком длинное. */
+function createPreviewDataUrl(source: CanvasImageSource, width: number, height: number): string | undefined {
+  try {
+    const size = getThumbnailSize(width, height, CHAT_PREVIEW_MAX_SIDE);
+    const canvas = document.createElement('canvas');
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return undefined;
+    }
+
+    context.drawImage(source, 0, 0, size.width, size.height);
+    let url = canvas.toDataURL('image/webp', 0.6);
+    if (!url.startsWith('data:image/webp')) {
+      context.globalCompositeOperation = 'destination-over';
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, size.width, size.height);
+      url = canvas.toDataURL('image/jpeg', 0.6);
+    }
+
+    return url.length <= CHAT_PREVIEW_MAX_LENGTH && /^data:image\/(webp|jpeg);base64,/.test(url) ? url : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) {
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
 }
@@ -84,8 +118,9 @@ export async function prepareChatImageUpload(file: File): Promise<ChatImageUploa
       return {};
     }
 
+    const preview = createPreviewDataUrl(decoded.source, width, height);
     if (!shouldCreateThumbnail(file, width, height)) {
-      return { width, height };
+      return { width, height, preview };
     }
 
     const size = getThumbnailSize(width, height);
@@ -94,7 +129,7 @@ export async function prepareChatImageUpload(file: File): Promise<ChatImageUploa
     canvas.height = size.height;
     const context = canvas.getContext('2d');
     if (!context) {
-      return { width, height };
+      return { width, height, preview };
     }
 
     context.imageSmoothingQuality = 'high';
@@ -109,10 +144,10 @@ export async function prepareChatImageUpload(file: File): Promise<ChatImageUploa
     }
 
     if (!thumbnail || thumbnail.size >= file.size || thumbnail.size > CHAT_THUMBNAIL_MAX_BYTES) {
-      return { width, height };
+      return { width, height, preview };
     }
 
-    return { thumbnail, width, height };
+    return { thumbnail, width, height, preview };
   } catch {
     return {};
   } finally {

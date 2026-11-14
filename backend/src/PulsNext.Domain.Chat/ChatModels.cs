@@ -353,6 +353,8 @@ public class ChatParticipant(Session session) : XPObject(session)
 /// Сообщение в диалоге.
 /// </summary>
 [Persistent("ChatMessage")]
+// Лента читается страницами «сообщения диалога с Oid меньше N по убыванию» — составной индекс под этот запрос.
+[Indices("Conversation;Oid")]
 public class ChatMessage(Session session) : XPObject(session)
 {
     private ChatConversation? _conversation;
@@ -509,6 +511,7 @@ public class ChatAttachment(Session session) : XPObject(session)
     private long _thumbnailLength;
     private int _imageWidth;
     private int _imageHeight;
+    private string? _previewDataUrl;
 
     public ChatAttachment() : this(Session.DefaultSession) { }
 
@@ -663,6 +666,17 @@ public class ChatAttachment(Session session) : XPObject(session)
     {
         get => _imageHeight;
         set => SetPropertyValue(nameof(ImageHeight), ref _imageHeight, value);
+    }
+
+    /// <summary>
+    /// Крошечное размытое превью изображения (data:URL до ~2,5 КБ): приходит вместе с сообщением,
+    /// чтобы фото было видно сразу, пока грузится картинка.
+    /// </summary>
+    [Size(ChatAttachmentLimits.MaxPreviewDataUrlLength)]
+    public string? PreviewDataUrl
+    {
+        get => _previewDataUrl;
+        set => SetPropertyValue(nameof(PreviewDataUrl), ref _previewDataUrl, value);
     }
 }
 
@@ -848,4 +862,12 @@ public class ChatUserSettings(Session session) : XPObject(session)
         get => _updatedAtUtc;
         set => SetPropertyValue(nameof(UpdatedAtUtc), ref _updatedAtUtc, value);
     }
+}
+
+public static class ChatAttachmentLimits
+{
+    /// <summary>
+    /// Максимальная длина data:URL размытого превью.
+    /// </summary>
+    public const int MaxPreviewDataUrlLength = 2500;
 }

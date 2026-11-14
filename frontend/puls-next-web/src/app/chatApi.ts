@@ -119,6 +119,10 @@ export function uploadChatAttachment(
     formData.append('thumbnail', extras.thumbnail, extras.thumbnail.type === 'image/webp' ? 'thumbnail.webp' : 'thumbnail.jpg');
   }
 
+  if (extras.preview) {
+    formData.append('preview', extras.preview);
+  }
+
   if (extras.width && extras.height) {
     formData.append('width', String(extras.width));
     formData.append('height', String(extras.height));

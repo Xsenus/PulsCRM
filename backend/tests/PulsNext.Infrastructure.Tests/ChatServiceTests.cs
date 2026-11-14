@@ -290,6 +290,32 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadAttachment_KeepsOnlyValidTinyPreviews()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var jpeg = "data:image/jpeg;base64," + Convert.ToBase64String([0xFF, 0xD8, 0xFF, 0xE0, 0, 16]);
+        var webp = "data:image/webp;base64," + Convert.ToBase64String("RIFF\0\0\0\0WEBPVP8 "u8.ToArray());
+
+        async Task<ChatAttachmentDto> Upload(string? preview, string fileName = "photo.jpg")
+            => await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+            {
+                Content = new MemoryStream(new byte[64]),
+                FileName = fileName,
+                PreviewDataUrl = preview
+            }, CancellationToken.None);
+
+        Assert.Equal(jpeg, (await Upload(jpeg)).PreviewDataUrl);
+        Assert.Equal(webp, (await Upload(webp)).PreviewDataUrl);
+        // Заявлен JPEG, внутри не JPEG; чужой тип; битый base64; слишком длинный; не изображение.
+        Assert.Null((await Upload("data:image/jpeg;base64," + Convert.ToBase64String("<svg/>"u8.ToArray()))).PreviewDataUrl);
+        Assert.Null((await Upload("data:image/svg+xml;base64,PHN2Zy8+")).PreviewDataUrl);
+        Assert.Null((await Upload("data:image/jpeg;base64,@@@")).PreviewDataUrl);
+        Assert.Null((await Upload("data:image/jpeg;base64," + new string('A', 3000))).PreviewDataUrl);
+        Assert.Null((await Upload(jpeg, "doc.pdf")).PreviewDataUrl);
+    }
+
+    [Fact]
     public async Task UploadAttachment_IgnoresInvalidThumbnails()
     {
         As(Alice);

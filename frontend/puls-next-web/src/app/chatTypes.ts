@@ -40,6 +40,8 @@ export interface ChatAttachmentDto {
   isImage: boolean;
   /** Есть уменьшенная копия для ленты (`?thumbnail=true`). */
   hasThumbnail?: boolean;
+  /** Крошечное размытое превью (data:URL, ~1 КБ), показывается до загрузки картинки. */
+  previewDataUrl?: string | null;
   /** Размеры оригинала изображения в пикселях, если известны. */
   width?: number | null;
   height?: number | null;

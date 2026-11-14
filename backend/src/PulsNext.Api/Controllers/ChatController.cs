@@ -281,6 +281,7 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
             FileName = request.File.FileName,
             ContentType = request.File.ContentType,
             Thumbnail = thumbnail,
+            PreviewDataUrl = request.Preview,
             Width = request.Width,
             Height = request.Height
         }, cancellationToken));
