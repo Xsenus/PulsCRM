@@ -378,3 +378,33 @@ test('a message can be forwarded to another chat', async ({ page }) => {
   await expect(dialog).toHaveCount(0);
   expect(forwards).toEqual([{ conversationIds: [11] }]);
 });
+
+test('typing @ in a group suggests participants and sends the mention', async ({ page }) => {
+  await mockChat(page);
+  const sent: Array<{ text: string; mentionedUserIds?: number[] }> = [];
+  await page.route(/\/api\/chat\/conversations\/11\/messages(\?.*)?$/, async (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      sent.push(body);
+      await fulfillJson(route, { id: 300, conversationId: 11, kind: 0, senderUserId: currentUser.id, senderName: currentUser.fullName, text: body.text, mentionedUserIds: body.mentionedUserIds, createdAtUtc: new Date().toISOString(), isDeleted: false, attachments: [], reactions: [] });
+      return;
+    }
+
+    await fulfillJson(route, { items: [], hasMoreBefore: false });
+  });
+
+  await page.goto('/chat/11');
+  const textarea = page.getByLabel('Текст сообщения');
+  await textarea.pressSequentially('Коллеги, @ива');
+  const popup = page.getByRole('listbox', { name: 'Упомянуть участника' });
+  await expect(popup.getByRole('option')).toHaveCount(1);
+  await expect(popup.getByRole('option')).toContainText('Иванов Олег');
+  await textarea.press('Enter');
+  await expect(textarea).toHaveValue('Коллеги, @Иванов Олег ');
+  await textarea.pressSequentially('планерка переносится');
+  await textarea.press('Enter');
+
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ text: 'Коллеги, @Иванов Олег планерка переносится', mentionedUserIds: [3] });
+  await expect(page.locator('.chat-message.own .chat-mention')).toHaveText('@Иванов Олег');
+});

@@ -356,6 +356,7 @@ public class ChatMessage(Session session) : XPObject(session)
     private DateTime? _deletedAtUtc;
     private int _forwardedFromUserId;
     private string? _forwardedFromName;
+    private string? _mentionedUserIds;
 
     public ChatMessage() : this(Session.DefaultSession) { }
 
@@ -424,6 +425,16 @@ public class ChatMessage(Session session) : XPObject(session)
     {
         get => _forwardedFromName;
         set => SetPropertyValue(nameof(ForwardedFromName), ref _forwardedFromName, value);
+    }
+
+    /// <summary>
+    /// Упомянутые через @ сотрудники в виде ",1,5,": разделители по краям позволяют искать «,id,» без ложных совпадений.
+    /// </summary>
+    [Size(1024)]
+    public string? MentionedUserIds
+    {
+        get => _mentionedUserIds;
+        set => SetPropertyValue(nameof(MentionedUserIds), ref _mentionedUserIds, value);
     }
 
     /// <summary>

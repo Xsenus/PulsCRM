@@ -448,6 +448,47 @@ describe('ChatPage', () => {
     expect(document.querySelector('[aria-label="Куда переслать"]')).toBeNull();
   });
 
+  it('suggests participants after @ in a group, inserts the name and sends the mention', async () => {
+    const group = conversation({
+      kind: 1,
+      title: 'Отдел продаж',
+      peerUserId: null,
+      participants: [
+        { userId: ME, displayName: 'Алиса', role: 2, isInactive: false, lastReadMessageId: 1 },
+        { userId: PEER, displayName: 'Борис Петров', login: 'bpetrov', role: 0, isInactive: false, lastReadMessageId: 3 },
+        { userId: 3, displayName: 'Вера Соколова', login: 'vera', role: 0, isInactive: false, lastReadMessageId: 3 }
+      ]
+    });
+    chatState.value = createChat({ conversations: [group] });
+    apiMocks.getChatMessages.mockResolvedValue({ items: [message(1, { text: 'Привет, @Алиса и @Вера Соколова', mentionedUserIds: [ME, 3] })], hasMoreBefore: false });
+    render('/chat/10');
+    await flush();
+
+    const mentions = Array.from(container!.querySelectorAll('.chat-mention'));
+    expect(mentions.map((item) => [item.textContent, item.classList.contains('me')])).toEqual([['@Алиса', true], ['@Вера Соколова', false]]);
+    expect(container!.querySelector('.chat-message')?.classList.contains('mentions-me')).toBe(true);
+
+    const textarea = setTextarea('Смотри, @бор');
+    textarea.setSelectionRange(12, 12);
+    act(() => textarea.dispatchEvent(new Event('input', { bubbles: true })));
+    const options = Array.from(container!.querySelectorAll('.chat-mention-option'));
+    expect(options).toHaveLength(1);
+    expect(options[0].textContent).toContain('Борис Петров');
+
+    pressKey(textarea, 'Enter');
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(textarea.value).toBe('Смотри, @Борис Петров ');
+    expect(apiMocks.sendChatMessage).not.toHaveBeenCalled();
+    expect(container!.querySelector('.chat-mention-popup')).toBeNull();
+
+    setTextarea('Смотри, @Борис Петров, отчет готов');
+    pressKey(textarea, 'Enter');
+    await flush();
+    expect(apiMocks.sendChatMessage).toHaveBeenCalledWith(10, expect.objectContaining({ mentionedUserIds: [PEER] }));
+  });
+
   it('toggles a quick reaction', async () => {
     render('/chat/10');
     await flush();

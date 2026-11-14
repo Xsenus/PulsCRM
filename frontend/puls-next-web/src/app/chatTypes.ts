@@ -74,6 +74,8 @@ export interface ChatMessageDto {
   replyTo?: ChatReplyPreviewDto | null;
   /** Автор оригинала, если сообщение переслано. */
   forwardedFrom?: { userId: number; name: string } | null;
+  /** Упомянутые через @ сотрудники. */
+  mentionedUserIds?: number[];
   attachments: ChatAttachmentDto[];
   reactions: ChatReactionDto[];
 }
@@ -90,6 +92,8 @@ export interface ChatConversationDto {
   isPinned: boolean;
   isArchived: boolean;
   unreadCount: number;
+  /** Непрочитанные упоминания меня — считаются и в диалогах «без звука». */
+  unreadMentionCount?: number;
   myLastReadMessageId: number;
   createdAtUtc: string;
   lastMessageAtUtc: string;
@@ -152,6 +156,7 @@ export interface ChatSendMessageRequest {
   text?: string;
   replyToMessageId?: number | null;
   attachmentIds?: number[];
+  mentionedUserIds?: number[];
   clientMessageId?: string;
 }
 

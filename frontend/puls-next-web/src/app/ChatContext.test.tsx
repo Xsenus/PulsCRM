@@ -199,6 +199,25 @@ describe('ChatProvider', () => {
     expect(latest!.totalUnread).toBe(0);
   });
 
+  it('a mention of me breaks through a muted conversation and counts as unread', async () => {
+    await mount();
+    emit('messageCreated', { ...message(6, 20), mentionedUserIds: [1] });
+    emit('messageCreated', { ...message(7, 20), mentionedUserIds: [3] });
+    await flush();
+
+    const muted = latest!.conversations.find((item) => item.id === 20)!;
+    expect(muted.unreadCount).toBe(2);
+    expect(muted.unreadMentionCount).toBe(1);
+    expect(latest!.totalUnread).toBe(1);
+    expect(soundMock.playChatSound).toHaveBeenCalledTimes(1);
+    expect(latest!.notifications).toHaveLength(1);
+    expect(latest!.notifications[0].conversationId).toBe(20);
+
+    act(() => latest!.markConversationReadLocally(20, 7));
+    expect(latest!.conversations.find((item) => item.id === 20)!.unreadMentionCount).toBe(0);
+    expect(latest!.totalUnread).toBe(0);
+  });
+
   it('respects disabled sound and hidden preview', async () => {
     apiMocks.getChatSettings.mockResolvedValue({ notificationsEnabled: true, soundEnabled: false, soundName: 'chime', soundVolume: 70, showMessagePreview: false });
     await mount();

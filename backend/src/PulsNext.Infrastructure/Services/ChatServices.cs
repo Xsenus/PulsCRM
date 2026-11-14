@@ -217,6 +217,7 @@ public sealed class ChatService(
     public const int MaxThumbnailBytes = 512 * 1024;
     private const int MinSearchLength = 2;
     private const int MaxForwardTargets = 10;
+    private const int MaxMentions = 50;
     private const int MaxSearchLength = 200;
     private const int MaxImageSide = 50_000;
 
@@ -711,6 +712,7 @@ public sealed class ChatService(
             Text = text,
             ReplyToMessageId = replyToId,
             ClientMessageId = clientMessageId,
+            MentionedUserIds = FormatMentions(ResolveMentions(conversation, me, text, request.MentionedUserIds)),
             CreatedAtUtc = now
         };
 
@@ -886,6 +888,8 @@ public sealed class ChatService(
         {
             message.Text = normalized;
             message.EditedAtUtc = DateTime.UtcNow;
+            // Упоминание, чье «@Имя» убрали из текста, снимается; новые при правке не добавляются.
+            message.MentionedUserIds = FormatMentions(ResolveMentions(message.Conversation!, me, normalized, ParseMentions(message.MentionedUserIds)));
             unitOfWork.CommitChanges();
         }
 
@@ -1011,9 +1015,10 @@ public sealed class ChatService(
             .ToList();
 
         var hidden = GetHiddenDirectConversationIds(participations.Select(x => x.Conversation!), me);
+        // В диалогах «без звука» считаются только упоминания текущего сотрудника.
         var counts = participations
-            .Where(x => !x.IsMuted && !hidden.Contains(x.Conversation!.Oid))
-            .Select(x => CountUnread(x.Conversation!, x, me))
+            .Where(x => !hidden.Contains(x.Conversation!.Oid))
+            .Select(x => x.IsMuted ? CountUnreadMentions(x.Conversation!, x, me) : CountUnread(x.Conversation!, x, me))
             .ToArray();
         return Task.FromResult(new ChatUnreadSummaryDto
         {
@@ -1414,6 +1419,52 @@ public sealed class ChatService(
     private string GetDisplayName(int userId)
         => userDirectory.GetUsers([userId]).GetValueOrDefault(userId)?.DisplayName ?? $"Сотрудник #{userId}";
 
+    private int CountUnreadMentions(ChatConversation conversation, ChatParticipant participant, int me)
+    {
+        var lastRead = participant.LastReadMessageId;
+        if (conversation.LastMessageId <= lastRead)
+        {
+            return 0;
+        }
+
+        var token = $",{me},";
+        return new XPQuery<ChatMessage>(unitOfWork)
+            .Count(x => x.Conversation == conversation
+                && x.Oid > lastRead
+                && x.SenderUserId != me
+                && x.Kind == ChatMessageKind.Text
+                && x.DeletedAtUtc == null
+                && x.MentionedUserIds != null
+                && x.MentionedUserIds.Contains(token));
+    }
+
+    /// <summary>
+    /// Оставляет из запрошенных упоминаний только действующих участников чата (не автора), чье «@Имя» есть в тексте.
+    /// </summary>
+    private int[] ResolveMentions(ChatConversation conversation, int me, string? text, IEnumerable<int>? requested)
+    {
+        var ids = (requested ?? Array.Empty<int>()).Where(x => x > 0 && x != me).Distinct().Take(MaxMentions).ToArray();
+        if (ids.Length == 0 || string.IsNullOrEmpty(text))
+        {
+            return Array.Empty<int>();
+        }
+
+        var activeParticipants = GetParticipants(conversation.Oid).Where(x => x.LeftAtUtc == null).Select(x => x.UserId).ToHashSet();
+        var users = userDirectory.GetUsers(ids.Where(activeParticipants.Contains));
+        return ids
+            .Where(id => users.GetValueOrDefault(id) is { IsInactive: false } user
+                && text.Contains($"@{user.DisplayName}", StringComparison.CurrentCultureIgnoreCase))
+            .ToArray();
+    }
+
+    private static string? FormatMentions(IReadOnlyCollection<int> ids)
+        => ids.Count == 0 ? null : $",{string.Join(',', ids)},";
+
+    private static int[] ParseMentions(string? value)
+        => string.IsNullOrEmpty(value)
+            ? Array.Empty<int>()
+            : value.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => int.TryParse(x, out var id) ? id : 0).Where(x => x > 0).ToArray();
+
     private int CountUnread(ChatConversation conversation, ChatParticipant participant, int me)
     {
         var lastRead = participant.LastReadMessageId;
@@ -1482,6 +1533,7 @@ public sealed class ChatService(
                 IsArchived = mine.IsArchived,
                 MyLastReadMessageId = mine.LastReadMessageId,
                 UnreadCount = CountUnread(conversation, mine, me),
+                UnreadMentionCount = CountUnreadMentions(conversation, mine, me),
                 CreatedAtUtc = ForceUtc(conversation.CreatedAtUtc),
                 LastMessageAtUtc = ForceUtc(conversation.LastMessageAtUtc),
                 LastMessage = lastMessages.GetValueOrDefault(conversation.LastMessageId),
@@ -1576,6 +1628,7 @@ public sealed class ChatService(
                 EditedAtUtc = ForceUtc(message.EditedAtUtc),
                 IsDeleted = isDeleted,
                 ReplyTo = isDeleted ? null : reply,
+                MentionedUserIds = isDeleted ? Array.Empty<int>() : ParseMentions(message.MentionedUserIds),
                 ForwardedFrom = isDeleted || message.ForwardedFromUserId <= 0
                     ? null
                     : new ChatForwardedFromDto { UserId = message.ForwardedFromUserId, Name = message.ForwardedFromName ?? NameOf(message.ForwardedFromUserId) },

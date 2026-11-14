@@ -38,6 +38,7 @@ import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/ch
 import { prepareChatImageUpload } from '../app/chatImageThumbnail';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
 import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
+import { collectMentionedUserIds, findMentionQuery, getMentionCandidates, insertMention, splitMentions } from '../app/chatMentions';
 import '../chat.css';
 
 const PAGE_SIZE = 50;
@@ -215,6 +216,9 @@ export function ConversationListItem({ conversation, active, onClick }: { conver
                 ? <><span className="chat-conversation-draft">Черновик:</span> {draft.replace(/\s+/g, ' ').trim()}</>
                 : describeLastMessage(conversation, currentUserId)}
           </span>
+          {(conversation.unreadMentionCount ?? 0) > 0 ? (
+            <span className="chat-mention-badge" title="Вас упомянули" aria-label="Вас упомянули">@</span>
+          ) : null}
           {conversation.unreadCount > 0 ? (
             <span className={`chat-unread-badge${conversation.isMuted ? ' muted' : ''}`}>{conversation.unreadCount > 99 ? '99+' : conversation.unreadCount}</span>
           ) : null}
@@ -262,6 +266,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const [newBelow, setNewBelow] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [forwarding, setForwarding] = useState<ChatMessageDto | null>(null);
+  const [mention, setMention] = useState<{ start: number; query: string; index: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const conversationSearch = useChatMessageSearch(searchOpen ? searchQuery : '', conversation.id);
   const [firstUnreadId] = useState(() => (conversation.unreadCount > 0 ? conversation.myLastReadMessageId : null));
@@ -627,6 +632,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
           text: trimmed || undefined,
           replyToMessageId: replyTo?.id,
           attachmentIds: readyAttachments,
+          mentionedUserIds: isGroup ? collectMentionedUserIds(trimmed, conversation.participants, currentUserId) : undefined,
           clientMessageId: createClientMessageId()
         });
         scrollToBottomRef.current = 'smooth';
@@ -644,6 +650,43 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   };
 
+  const mentionCandidates = useMemo(
+    () => (mention && isGroup ? getMentionCandidates(conversation.participants, mention.query, currentUserId) : []),
+    [conversation.participants, currentUserId, isGroup, mention]
+  );
+
+  /** Обновляет подсказку «@» по тексту и положению курсора. */
+  const refreshMention = (value: string, caret: number | null) => {
+    if (!isGroup || caret === null) {
+      setMention(null);
+      return;
+    }
+
+    const found = findMentionQuery(value, caret);
+    setMention((current) => (found ? { ...found, index: current && current.start === found.start ? current.index : 0 } : null));
+  };
+
+  const chooseMention = (participant: { displayName: string }) => {
+    const element = textareaRef.current;
+    if (!mention || !element) {
+      return;
+    }
+
+    const caret = element.selectionStart ?? text.length;
+    const next = insertMention(text, mention.start, caret, participant.displayName);
+    setText(next.text);
+    setMention(null);
+    window.setTimeout(() => {
+      element.focus();
+      element.setSelectionRange(next.caret, next.caret);
+    }, 0);
+  };
+
+  const participantNames = useMemo(
+    () => new Map(conversation.participants.map((participant) => [participant.userId, participant.displayName])),
+    [conversation.participants]
+  );
+
   const startEdit = (message: ChatMessageDto) => {
     setReplyTo(null);
     if (!editing) {
@@ -660,6 +703,27 @@ export function ConversationView({ conversation, onBack, compact = false, header
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mention && mentionCandidates.length > 0) {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const step = event.key === 'ArrowDown' ? 1 : -1;
+        setMention({ ...mention, index: (mention.index + step + mentionCandidates.length) % mentionCandidates.length });
+        return;
+      }
+
+      if ((event.key === 'Enter' && !event.shiftKey) || event.key === 'Tab') {
+        event.preventDefault();
+        chooseMention(mentionCandidates[mention.index] ?? mentionCandidates[0]);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMention(null);
+        return;
+      }
+    }
+
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void submit();
@@ -941,6 +1005,9 @@ export function ConversationView({ conversation, onBack, compact = false, header
                     : null}
                   onTogglePin={() => void changePinnedMessage(conversation.pinnedMessage?.id === message.id ? null : message.id)}
                   onForward={() => setForwarding(message)}
+                  mentioned={(message.mentionedUserIds ?? []).map((userId) => ({ userId, name: participantNames.get(userId) ?? '' })).filter((item) => item.name)}
+                  mentionsMe={!!message.mentionedUserIds?.includes(currentUserId)}
+                  currentUserId={currentUserId}
                 />
               )}
             </React.Fragment>
@@ -1001,6 +1068,25 @@ export function ConversationView({ conversation, onBack, compact = false, header
           <div className="chat-muted chat-composer-disabled">Сотрудник уволен — отправить сообщение нельзя.</div>
         ) : (
           <div className="chat-composer-row">
+            {mention && mentionCandidates.length > 0 ? (
+              <div className="chat-mention-popup" role="listbox" aria-label="Упомянуть участника">
+                {mentionCandidates.map((participant, index) => (
+                  <button
+                    key={participant.userId}
+                    type="button"
+                    role="option"
+                    aria-selected={index === mention.index}
+                    className={`chat-mention-option${index === mention.index ? ' active' : ''}`}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => chooseMention(participant)}
+                  >
+                    <ChatAvatar name={participant.displayName} seed={participant.userId} size={28} online={chat.onlineUserIds.has(participant.userId)} />
+                    <span>{participant.displayName}</span>
+                    {participant.login ? <span className="chat-muted">@{participant.login}</span> : null}
+                  </button>
+                ))}
+              </div>
+            ) : null}
             <button
               type="button"
               className="chat-icon-button"
@@ -1033,11 +1119,16 @@ export function ConversationView({ conversation, onBack, compact = false, header
               maxLength={status?.maxMessageLength || undefined}
               onChange={(event) => {
                 setText(event.target.value);
+                refreshMention(event.target.value, event.target.selectionStart);
                 if (event.target.value) {
                   chat.sendTyping(conversation.id);
                 }
               }}
               onKeyDown={handleKeyDown}
+              onClick={(event) => refreshMention(event.currentTarget.value, event.currentTarget.selectionStart)}
+              onBlur={() => window.setTimeout(() => setMention(null), 150)}
+              aria-autocomplete={isGroup ? 'list' : undefined}
+              aria-expanded={isGroup ? mentionCandidates.length > 0 : undefined}
               onPaste={(event) => {
                 const files = Array.from(event.clipboardData.files);
                 if (files.length > 0 && !editing) {
@@ -1119,7 +1210,10 @@ function MessageBubble({
   onReplyClick,
   pinState = null,
   onTogglePin,
-  onForward
+  onForward,
+  mentioned = [],
+  mentionsMe = false,
+  currentUserId = 0
 }: {
   message: ChatMessageDto;
   own: boolean;
@@ -1136,6 +1230,9 @@ function MessageBubble({
   pinState?: 'pinned' | 'unpinned' | null;
   onTogglePin?: () => void;
   onForward?: () => void;
+  mentioned?: Array<{ userId: number; name: string }>;
+  mentionsMe?: boolean;
+  currentUserId?: number;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -1158,7 +1255,7 @@ function MessageBubble({
 
   return (
     <div
-      className={`chat-message${own ? ' own' : ''}${isGroupEnd ? ' group-end' : ''}${showAuthor ? ' with-author' : ''}`}
+      className={`chat-message${own ? ' own' : ''}${isGroupEnd ? ' group-end' : ''}${showAuthor ? ' with-author' : ''}${mentionsMe ? ' mentions-me' : ''}`}
       data-message-id={message.id}
       onMouseLeave={() => { setPickerOpen(false); setMoreOpen(false); }}
     >
@@ -1189,7 +1286,13 @@ function MessageBubble({
               <div className="chat-bubble-text">
                 {textParts.map((part, index) => {
                   if (part.type !== 'link') {
-                    return <React.Fragment key={index}>{part.value}</React.Fragment>;
+                    return (
+                      <React.Fragment key={index}>
+                        {splitMentions(part.value, mentioned).map((piece, pieceIndex) => (piece.type === 'mention'
+                          ? <span key={pieceIndex} className={`chat-mention${piece.userId === currentUserId ? ' me' : ''}`}>{piece.value}</span>
+                          : <React.Fragment key={pieceIndex}>{piece.value}</React.Fragment>))}
+                      </React.Fragment>
+                    );
                   }
 
                   // Ссылки на объекты этой CRM открываются внутри приложения, остальные — в новой вкладке.
