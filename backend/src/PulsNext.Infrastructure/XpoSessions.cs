@@ -122,6 +122,8 @@ public static class ServiceCollectionExtensions
             services.AddScoped<IChatService, ChatService>();
             services.AddScoped<IChatAttachmentCleaner, ChatAttachmentCleaner>();
             services.AddHostedService<ChatAttachmentCleanupHostedService>();
+            services.AddScoped<IChatDatabaseEncodingReader, PostgresChatDatabaseEncodingReader>();
+            services.AddHostedService<ChatDatabaseEncodingCheckHostedService>();
         }
 
         services.AddDataProtection()
