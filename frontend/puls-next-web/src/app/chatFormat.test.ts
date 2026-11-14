@@ -117,6 +117,10 @@ describe('chatFormat', () => {
     ];
     expect(getReadStatus(message(5), participants, 1)).toBe('sent');
     expect(getReadStatus(message(4), participants, 1)).toBe('read');
+    const delivered = participants.map((item) => item.userId === 1 ? item : { ...item, lastDeliveredMessageId: 5 });
+    expect(getReadStatus(message(5), delivered, 1)).toBe('delivered');
+    expect(getReadStatus(message(6), delivered, 1)).toBe('sent');
+    expect(getReadStatus(message(4), delivered, 1)).toBe('read');
   });
 
   it('finds links without trailing punctuation and only http(s)', () => {

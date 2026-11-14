@@ -173,13 +173,19 @@ export function describeLastMessage(conversation: ChatConversationDto, currentUs
 }
 
 /** Статус прочтения своего сообщения: «доставлено» или «прочитано» хотя бы одним собеседником. */
-export function getReadStatus(message: ChatMessageDto, participants: ChatParticipantDto[], currentUserId: number) {
+export type ChatReadStatus = 'sent' | 'delivered' | 'read';
+
+/**
+ * Статус своего сообщения: отправлено (одна серая галочка), доставлено в браузер собеседника
+ * (две серые) или прочитано (две синие). В группе — хотя бы одним участником.
+ */
+export function getReadStatus(message: ChatMessageDto, participants: ChatParticipantDto[], currentUserId: number): ChatReadStatus {
   const others = participants.filter((participant) => participant.userId !== currentUserId);
-  if (others.length === 0) {
-    return 'sent' as const;
+  if (others.some((participant) => participant.lastReadMessageId >= message.id)) {
+    return 'read';
   }
 
-  return others.some((participant) => participant.lastReadMessageId >= message.id) ? 'read' as const : 'sent' as const;
+  return others.some((participant) => (participant.lastDeliveredMessageId ?? 0) >= message.id) ? 'delivered' : 'sent';
 }
 
 export type TextPart = { type: 'text'; value: string } | { type: 'link'; value: string; href: string };

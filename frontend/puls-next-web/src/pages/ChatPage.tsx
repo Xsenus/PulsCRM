@@ -23,6 +23,7 @@ import {
   formatFileSize,
   getReadStatus,
   isEmojiOnly,
+  type ChatReadStatus,
   mergeMessages,
   splitTextWithLinks
 } from '../app/chatFormat';
@@ -37,7 +38,9 @@ import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
 import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
 import { prepareChatImageUpload } from '../app/chatImageThumbnail';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
+import { ChatTicks } from '../components/chat/ChatTicks';
 import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
+import { loadChatScrollPosition, saveChatScrollPosition, type ChatScrollPosition } from '../app/chatScrollMemory';
 import { collectMentionedUserIds, findMentionQuery, getMentionCandidates, insertMention, splitMentions } from '../app/chatMentions';
 import '../chat.css';
 
@@ -204,6 +207,9 @@ export function ConversationListItem({ conversation, active, onClick }: { conver
       <span className="chat-conversation-body">
         <span className="chat-conversation-top">
           <span className="chat-conversation-title">{conversation.title}</span>
+          {conversation.lastMessage && !conversation.lastMessage.isDeleted && conversation.lastMessage.senderUserId === currentUserId && !isSystemMessage(conversation.lastMessage) ? (
+            <ChatTicks status={getReadStatus(conversation.lastMessage, conversation.participants, currentUserId)} className="in-list" />
+          ) : null}
           {conversation.isMuted ? <span className="chat-conversation-flag" title="Без звука">🔕</span> : null}
           {conversation.isPinned ? <span className="chat-conversation-flag" title="Закреплен">📌</span> : null}
           <span className="chat-conversation-time">{conversation.lastMessage ? formatConversationTime(conversation.lastMessageAtUtc) : ''}</span>
@@ -264,12 +270,15 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const [infoOpen, setInfoOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [newBelow, setNewBelow] = useState(0);
+  const [atBottom, setAtBottom] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [forwarding, setForwarding] = useState<ChatMessageDto | null>(null);
   const [mention, setMention] = useState<{ start: number; query: string; index: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const conversationSearch = useChatMessageSearch(searchOpen ? searchQuery : '', conversation.id);
   const [firstUnreadId] = useState(() => (conversation.unreadCount > 0 ? conversation.myLastReadMessageId : null));
+  // Новые сообщения важнее запомненного места: с ними диалог открывается на «Новые сообщения».
+  const [savedPosition] = useState<ChatScrollPosition | null>(() => (conversation.unreadCount > 0 ? null : loadChatScrollPosition(currentUserId, conversation.id)));
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -281,6 +290,11 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const lastMarkedRef = useRef(0);
   /** Сообщение, к которому нужно прокрутить ленту после догрузки истории. */
   const pendingJumpRef = useRef<number | null>(null);
+  const messagesRef = useRef<ChatMessageDto[]>([]);
+  /** Верхнее видимое сообщение: по нему держим ленту, когда выше догружаются картинки. */
+  const anchorRef = useRef<ChatScrollPosition | null>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const savePositionTimerRef = useRef<number | null>(null);
   /** Черновик, отложенный на время редактирования своего сообщения. */
   const stashedDraftRef = useRef('');
   const latestDraftRef = useRef({ text, editing: false });
@@ -302,6 +316,9 @@ export function ConversationView({ conversation, onBack, compact = false, header
   }, [conversation.id, currentUserId]);
 
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : 0;
+  messagesRef.current = messages;
+  const lastMessageIdRef = useRef(lastMessageId);
+  lastMessageIdRef.current = lastMessageId;
   const peer = !isGroup ? conversation.participants.find((item) => item.userId !== currentUserId) : undefined;
   const typing = (chat.typingByConversation[conversation.id] ?? []).filter((item) => item.userId !== currentUserId);
   const onlineCount = conversation.participants.filter((item) => chat.onlineUserIds.has(item.userId)).length;
@@ -313,13 +330,13 @@ export function ConversationView({ conversation, onBack, compact = false, header
       ? `${conversation.participants.length} участник${pluralSuffix(conversation.participants.length)}${onlineCount > 0 ? `, ${onlineCount} в сети` : ''}`
       : peerInactive ? 'уволен' : peer && chat.onlineUserIds.has(peer.userId) ? 'в сети' : 'не в сети';
 
-  const markRead = useCallback((upToId: number) => {
+  const markRead = useCallback((upToId: number, remainingUnread = 0) => {
     if (upToId <= 0 || upToId <= lastMarkedRef.current || document.visibilityState !== 'visible') {
       return;
     }
 
     lastMarkedRef.current = upToId;
-    chat.markConversationReadLocally(conversation.id, upToId);
+    chat.markConversationReadLocally(conversation.id, upToId, remainingUnread);
     markChatRead(conversation.id, upToId).catch(() => {
       lastMarkedRef.current = 0;
     });
@@ -337,10 +354,111 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   }, [conversation.id]);
 
+  /**
+   * Первая загрузка. Если первое непрочитанное или запомненное место старше первой страницы,
+   * догружаем историю до него, чтобы открыть диалог именно там.
+   */
+  const loadInitial = useCallback(async () => {
+    try {
+      const page = await getChatMessages(conversation.id, undefined, PAGE_SIZE);
+      let items = page.items;
+      let more = page.hasMoreBefore;
+      const target = (firstUnreadId ?? 0) > 0 ? firstUnreadId! : savedPosition?.messageId ?? 0;
+      for (let attempt = 0; target > 0 && more && items.length > 0 && items[0].id > target && attempt < MAX_JUMP_PAGES; attempt += 1) {
+        const older = await getChatMessages(conversation.id, items[0].id, JUMP_PAGE_SIZE);
+        if (older.items.length === 0) {
+          more = false;
+          break;
+        }
+
+        items = [...older.items, ...items];
+        more = older.hasMoreBefore;
+      }
+
+      setMessages((current) => mergeMessages(current, items));
+      setHasMoreBefore(more);
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось загрузить сообщения.'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [conversation.id, firstUnreadId, savedPosition]);
+
   useEffect(() => {
     lastMarkedRef.current = conversation.myLastReadMessageId;
-    void loadLatest();
+    void loadInitial();
   }, [conversation.id]);
+
+  /** Отмечает прочитанным все, что сотрудник уже увидел на экране, а не только когда долистал до конца. */
+  function markVisibleRead() {
+    const element = scrollRef.current;
+    if (!element || document.visibilityState !== 'visible' || !initialScrollDoneRef.current) {
+      return;
+    }
+
+    let upTo = 0;
+    if (nearBottomRef.current) {
+      upTo = lastMessageIdRef.current;
+    } else {
+      const bottom = element.getBoundingClientRect().bottom;
+      element.querySelectorAll<HTMLElement>('[data-message-id]').forEach((node) => {
+        const rect = node.getBoundingClientRect();
+        // Видно целиком или хотя бы заметную часть длинного сообщения.
+        if (rect.top < bottom && (rect.bottom <= bottom + 2 || rect.top <= bottom - 48)) {
+          upTo = Math.max(upTo, Number(node.dataset.messageId) || 0);
+        }
+      });
+    }
+
+    if (upTo <= 0) {
+      return;
+    }
+
+    const remaining = messagesRef.current.filter((item) => item.id > upTo && item.senderUserId !== currentUserId && !isSystemMessage(item) && !item.isDeleted).length;
+    markRead(upTo, remaining);
+  }
+
+  /** Верхнее видимое сообщение и его сдвиг; null — лента внизу. */
+  function readScrollPosition(): ChatScrollPosition | null {
+    const element = scrollRef.current;
+    if (!element || nearBottomRef.current) {
+      return null;
+    }
+
+    const top = element.getBoundingClientRect().top;
+    for (const node of Array.from(element.querySelectorAll<HTMLElement>('[data-message-id]'))) {
+      const rect = node.getBoundingClientRect();
+      if (rect.bottom > top) {
+        return { messageId: Number(node.dataset.messageId) || 0, offset: rect.top - top };
+      }
+    }
+
+    return null;
+  }
+
+  function rememberPosition() {
+    if (!initialScrollDoneRef.current) {
+      return;
+    }
+
+    const position = readScrollPosition();
+    saveChatScrollPosition(currentUserId, conversation.id, position && position.messageId > 0 ? position : null);
+  }
+
+  const rememberPositionRef = useRef(rememberPosition);
+  rememberPositionRef.current = rememberPosition;
+  useLayoutEffect(() => () => {
+    // При уходе из диалога (другой чат, другая страница) сохраняем место сразу.
+    if (savePositionTimerRef.current !== null) {
+      window.clearTimeout(savePositionTimerRef.current);
+    }
+
+    if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+    }
+
+    rememberPositionRef.current();
+  }, []);
 
   useEffect(() => chat.subscribe((event) => {
     if (event.type === 'reconnected') {
@@ -380,11 +498,24 @@ export function ConversationView({ conversation, onBack, compact = false, header
         return;
       }
 
-      // Первое открытие: к разделителю «Новые сообщения», иначе — в самый низ.
+      // Первое открытие: к «Новые сообщения», иначе — туда, где сотрудник остановился, иначе — в самый низ.
       initialScrollDoneRef.current = true;
       const divider = element.querySelector<HTMLElement>('.chat-unread-divider');
-      element.scrollTop = divider ? Math.max(0, divider.offsetTop - 48) : element.scrollHeight;
+      const anchor = !divider && savedPosition
+        ? element.querySelector<HTMLElement>(`[data-message-id="${savedPosition.messageId}"]`)
+        : null;
+      if (divider) {
+        element.scrollTop = Math.max(0, offsetInList(element, divider) - 48);
+      } else if (anchor && savedPosition) {
+        element.scrollTop = Math.max(0, offsetInList(element, anchor) - savedPosition.offset);
+      } else {
+        element.scrollTop = element.scrollHeight;
+      }
+
       nearBottomRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < NEAR_BOTTOM_PX;
+      setAtBottom(nearBottomRef.current);
+      anchorRef.current = readScrollPosition();
+      markVisibleRead();
       return;
     }
 
@@ -416,6 +547,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
       }
 
       nearBottomRef.current = true;
+      setAtBottom(true);
     }
   }, [messages]);
 
@@ -427,8 +559,8 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === 'visible' && nearBottomRef.current) {
-        markRead(lastMessageId);
+      if (document.visibilityState === 'visible') {
+        markVisibleRead();
       }
     };
 
@@ -471,10 +603,28 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
     const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < NEAR_BOTTOM_PX;
     nearBottomRef.current = nearBottom;
+    setAtBottom(nearBottom);
     if (nearBottom) {
       setNewBelow(0);
-      markRead(lastMessageId);
     }
+
+    // Расчет по положению сообщений — не чаще раза за кадр.
+    if (scrollFrameRef.current === null) {
+      scrollFrameRef.current = window.requestAnimationFrame(() => {
+        scrollFrameRef.current = null;
+        anchorRef.current = readScrollPosition();
+        markVisibleRead();
+      });
+    }
+
+    if (savePositionTimerRef.current !== null) {
+      window.clearTimeout(savePositionTimerRef.current);
+    }
+
+    savePositionTimerRef.current = window.setTimeout(() => {
+      savePositionTimerRef.current = null;
+      rememberPosition();
+    }, 400);
 
     if (element.scrollTop < 80) {
       void loadOlder();
@@ -954,10 +1104,25 @@ export function ConversationView({ conversation, onBack, compact = false, header
         ref={scrollRef}
         onScroll={handleScroll}
         onLoadCapture={() => {
-          // Картинки догружаются позже и сдвигают ленту — если пользователь был внизу, остаемся внизу.
+          // Картинки догружаются позже и сдвигают ленту: внизу — остаемся внизу,
+          // иначе держим на месте сообщение, которое сотрудник сейчас читает.
           const element = scrollRef.current;
-          if (element && nearBottomRef.current) {
+          if (!element) {
+            return;
+          }
+
+          if (nearBottomRef.current) {
             element.scrollTop = element.scrollHeight;
+            return;
+          }
+
+          const anchor = anchorRef.current;
+          const node = anchor ? element.querySelector<HTMLElement>(`[data-message-id="${anchor.messageId}"]`) : null;
+          if (anchor && node) {
+            const shift = node.getBoundingClientRect().top - element.getBoundingClientRect().top - anchor.offset;
+            if (Math.abs(shift) > 1) {
+              element.scrollTop += shift;
+            }
           }
         }}
         aria-live="polite"
@@ -1015,9 +1180,12 @@ export function ConversationView({ conversation, onBack, compact = false, header
         })}
       </div>
 
-      {newBelow > 0 ? (
-        <button type="button" className="chat-jump-bottom" onClick={scrollToBottom} aria-label="К новым сообщениям">
-          ↓ <span className="chat-unread-badge">{newBelow}</span>
+      {!atBottom || newBelow > 0 ? (
+        <button type="button" className="chat-jump-bottom" onClick={scrollToBottom} aria-label="К последним сообщениям" title="К последним сообщениям">
+          ↓
+          {Math.max(newBelow, conversation.unreadCount) > 0 ? (
+            <span className="chat-unread-badge">{Math.max(newBelow, conversation.unreadCount)}</span>
+          ) : null}
         </button>
       ) : null}
 
@@ -1220,7 +1388,7 @@ function MessageBubble({
   showAuthor: boolean;
   isGroupEnd: boolean;
   canModerate: boolean;
-  readStatus: 'sent' | 'read' | null;
+  readStatus: ChatReadStatus | null;
   onReply: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -1327,7 +1495,7 @@ function MessageBubble({
         <div className="chat-bubble-meta">
           {message.editedAtUtc && !message.isDeleted ? <span title={`Изменено ${formatChatTime(message.editedAtUtc)}`}>изменено</span> : null}
           <span>{formatChatTime(message.createdAtUtc)}</span>
-          {readStatus ? <span className={`chat-ticks ${readStatus}`} title={readStatus === 'read' ? 'Прочитано' : 'Отправлено'}>{readStatus === 'read' ? '✓✓' : '✓'}</span> : null}
+          {readStatus ? <ChatTicks status={readStatus} /> : null}
         </div>
       </div>
 
@@ -1381,4 +1549,9 @@ function MessageBubble({
       ) : null}
     </div>
   );
+}
+
+/** Положение элемента от начала прокручиваемой ленты (не зависит от offsetParent). */
+function offsetInList(list: HTMLElement, node: HTMLElement) {
+  return node.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
 }

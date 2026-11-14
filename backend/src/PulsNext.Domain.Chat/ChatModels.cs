@@ -240,6 +240,7 @@ public class ChatParticipant(Session session) : XPObject(session)
     private DateTime? _leftAtUtc;
     private int _lastReadMessageId;
     private DateTime? _lastReadAtUtc;
+    private int _lastDeliveredMessageId;
     private bool _isMuted;
     private bool _isPinned;
     private bool _isArchived;
@@ -309,6 +310,15 @@ public class ChatParticipant(Session session) : XPObject(session)
     {
         get => _lastReadAtUtc;
         set => SetPropertyValue(nameof(LastReadAtUtc), ref _lastReadAtUtc, value);
+    }
+
+    /// <summary>
+    /// Последнее сообщение, которое дошло до браузера сотрудника (получено, но еще не обязательно прочитано).
+    /// </summary>
+    public int LastDeliveredMessageId
+    {
+        get => _lastDeliveredMessageId;
+        set => SetPropertyValue(nameof(LastDeliveredMessageId), ref _lastDeliveredMessageId, value);
     }
 
     /// <summary>

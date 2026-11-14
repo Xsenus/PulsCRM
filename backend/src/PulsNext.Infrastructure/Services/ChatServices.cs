@@ -60,6 +60,7 @@ public interface IChatService
     Task<ChatMessageDto> DeleteMessageAsync(int messageId, CancellationToken cancellationToken);
     Task<ChatMessageDto> ToggleReactionAsync(int messageId, string? emoji, CancellationToken cancellationToken);
     Task MarkReadAsync(int conversationId, int? messageId, CancellationToken cancellationToken);
+    Task MarkDeliveredAsync(IReadOnlyCollection<ChatDeliveredItem> items, CancellationToken cancellationToken);
     Task<ChatUnreadSummaryDto> GetUnreadSummaryAsync(CancellationToken cancellationToken);
     Task<ChatAttachmentDto> UploadAttachmentAsync(int conversationId, ChatAttachmentUploadCommand command, CancellationToken cancellationToken);
     Task<(ChatAttachmentDto Metadata, Stream Content)?> OpenAttachmentAsync(int attachmentId, bool thumbnail, CancellationToken cancellationToken);
@@ -218,6 +219,7 @@ public sealed class ChatService(
     private const int MinSearchLength = 2;
     private const int MaxForwardTargets = 10;
     private const int MaxMentions = 50;
+    private const int MaxDeliveredItems = 200;
     private const int MaxSearchLength = 200;
     private const int MaxImageSide = 50_000;
 
@@ -996,6 +998,8 @@ public sealed class ChatService(
 
         mine.LastReadMessageId = target;
         mine.LastReadAtUtc = DateTime.UtcNow;
+        // Прочитанное — тем более доставлено.
+        mine.LastDeliveredMessageId = Math.Max(mine.LastDeliveredMessageId, target);
         unitOfWork.CommitChanges();
 
         await eventPublisher.PublishAsync(GetActiveUserIds(conversation.Oid), ChatEventNames.ReadStateChanged, new ChatReadStateEventDto
@@ -1005,6 +1009,55 @@ public sealed class ChatService(
             LastReadMessageId = mine.LastReadMessageId,
             LastReadAtUtc = ForceUtc(mine.LastReadAtUtc)
         }, cancellationToken);
+    }
+
+    public async Task MarkDeliveredAsync(IReadOnlyCollection<ChatDeliveredItem> items, CancellationToken cancellationToken)
+    {
+        var me = CurrentUserId;
+        var requested = (items ?? Array.Empty<ChatDeliveredItem>())
+            .Where(x => x.ConversationId > 0 && x.MessageId > 0)
+            .GroupBy(x => x.ConversationId)
+            .Select(x => (ConversationId: x.Key, MessageId: x.Max(item => item.MessageId)))
+            .Take(MaxDeliveredItems)
+            .ToArray();
+        if (requested.Length == 0)
+        {
+            return;
+        }
+
+        var ids = requested.Select(x => x.ConversationId).ToArray();
+        // Чужие и покинутые диалоги просто пропускаем: это фоновая отметка, ошибка тут не нужна.
+        var participations = new XPQuery<ChatParticipant>(unitOfWork)
+            .Where(x => x.UserId == me && x.LeftAtUtc == null && x.Conversation != null && !x.Conversation.IsRemoved && ids.Contains(x.Conversation.Oid))
+            .ToList();
+        var changed = new List<ChatParticipant>();
+        foreach (var participation in participations)
+        {
+            var conversation = participation.Conversation!;
+            var target = Math.Min(requested.First(x => x.ConversationId == conversation.Oid).MessageId, conversation.LastMessageId);
+            if (target > participation.LastDeliveredMessageId)
+            {
+                participation.LastDeliveredMessageId = target;
+                changed.Add(participation);
+            }
+        }
+
+        if (changed.Count == 0)
+        {
+            return;
+        }
+
+        unitOfWork.CommitChanges();
+        foreach (var participation in changed)
+        {
+            var conversationId = participation.Conversation!.Oid;
+            await eventPublisher.PublishAsync(GetActiveUserIds(conversationId).Where(x => x != me).ToArray(), ChatEventNames.DeliveryStateChanged, new ChatDeliveryStateEventDto
+            {
+                ConversationId = conversationId,
+                UserId = me,
+                LastDeliveredMessageId = participation.LastDeliveredMessageId
+            }, cancellationToken);
+        }
     }
 
     public Task<ChatUnreadSummaryDto> GetUnreadSummaryAsync(CancellationToken cancellationToken)
@@ -1553,7 +1606,8 @@ public sealed class ChatService(
                         Role = x.Role,
                         IsInactive = users.GetValueOrDefault(x.UserId)?.IsInactive ?? true,
                         LastReadMessageId = x.LastReadMessageId,
-                        LastReadAtUtc = ForceUtc(x.LastReadAtUtc)
+                        LastReadAtUtc = ForceUtc(x.LastReadAtUtc),
+                        LastDeliveredMessageId = Math.Max(x.LastDeliveredMessageId, x.LastReadMessageId)
                     })
                     .ToArray()
             });

@@ -2,12 +2,13 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import type { ReactNode } from 'react';
 import { HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from '@microsoft/signalr';
 import { getToken } from './api';
-import { getChatConversation, getChatConversations, getChatDockState, getChatSettings, getChatStatus, updateChatDockState, updateChatSettings } from './chatApi';
+import { getChatConversation, getChatConversations, getChatDockState, getChatSettings, getChatStatus, markChatDelivered, updateChatDockState, updateChatSettings } from './chatApi';
 import { describeLastMessage, sortConversations } from './chatFormat';
 import { playChatSound } from './chatSounds';
 import { showDesktopNotification } from './desktopNotifications';
 import type {
   ChatConversationDto,
+  ChatDeliveryStateEventDto,
   ChatDockStateDto,
   ChatMessageDto,
   ChatPresenceEventDto,
@@ -140,7 +141,8 @@ interface ChatContextValue {
   refreshConversations: () => Promise<void>;
   upsertConversation: (conversation: ChatConversationDto) => void;
   removeConversation: (conversationId: number) => void;
-  markConversationReadLocally: (conversationId: number, messageId: number) => void;
+  /** remainingUnread — сколько непрочитанных осталось ниже (читают по мере прокрутки). */
+  markConversationReadLocally: (conversationId: number, messageId: number, remainingUnread?: number) => void;
   applyMessageLocally: (message: ChatMessageDto) => void;
   saveSettings: (settings: ChatUserSettingsDto) => Promise<void>;
   dismissNotification: (id: number) => void;
@@ -210,6 +212,57 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     setConversations((current) => current.filter((item) => item.id !== conversationId));
   }, []);
 
+  // «Доставлено»: сообщения, дошедшие до этого браузера, отмечаются пачкой раз в секунду.
+  const deliveredQueueRef = useRef(new Map<number, number>());
+  const deliveredSentRef = useRef(new Map<number, number>());
+  const deliveredTimerRef = useRef<number | null>(null);
+  const queueDelivered = useCallback((conversationId: number, messageId: number) => {
+    if (Math.max(deliveredSentRef.current.get(conversationId) ?? 0, deliveredQueueRef.current.get(conversationId) ?? 0) >= messageId) {
+      return;
+    }
+
+    deliveredQueueRef.current.set(conversationId, messageId);
+    if (deliveredTimerRef.current !== null) {
+      return;
+    }
+
+    deliveredTimerRef.current = window.setTimeout(() => {
+      deliveredTimerRef.current = null;
+      const items = Array.from(deliveredQueueRef.current, ([id, upTo]) => ({ conversationId: id, messageId: upTo }));
+      deliveredQueueRef.current.clear();
+      items.forEach((item) => deliveredSentRef.current.set(item.conversationId, item.messageId));
+      markChatDelivered(items).catch(() => {
+        // Не получилось — попробуем при следующем сообщении или обновлении списка.
+        items.forEach((item) => deliveredSentRef.current.delete(item.conversationId));
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => () => {
+    if (deliveredTimerRef.current !== null) {
+      window.clearTimeout(deliveredTimerRef.current);
+    }
+  }, []);
+
+  // Сообщения, пришедшие, пока вкладка была закрыта, доставлены, как только загрузился список.
+  useEffect(() => {
+    if (!currentUserId) {
+      return;
+    }
+
+    conversations.forEach((item) => {
+      const last = item.lastMessage;
+      if (!last || last.senderUserId === currentUserId || isSystemMessage(last)) {
+        return;
+      }
+
+      const mine = item.participants.find((participant) => participant.userId === currentUserId);
+      if (Math.max(mine?.lastDeliveredMessageId ?? 0, mine?.lastReadMessageId ?? 0, item.myLastReadMessageId) < last.id) {
+        queueDelivered(item.id, last.id);
+      }
+    });
+  }, [conversations, currentUserId, queueDelivered]);
+
   const refreshConversations = useCallback(async () => {
     try {
       const items = await getChatConversations(false);
@@ -220,12 +273,12 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     }
   }, []);
 
-  const markConversationReadLocally = useCallback((conversationId: number, messageId: number) => {
+  const markConversationReadLocally = useCallback((conversationId: number, messageId: number, remainingUnread = 0) => {
     setConversations((current) => current.map((item) => item.id === conversationId
       ? {
           ...item,
-          unreadCount: 0,
-          unreadMentionCount: 0,
+          unreadCount: Math.max(0, Math.min(item.unreadCount, remainingUnread)),
+          unreadMentionCount: remainingUnread > 0 ? item.unreadMentionCount : 0,
           myLastReadMessageId: Math.max(item.myLastReadMessageId, messageId),
           participants: item.participants.map((participant) => participant.userId === currentUserId
             ? { ...participant, lastReadMessageId: Math.max(participant.lastReadMessageId, messageId) }
@@ -297,6 +350,9 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
   const handleMessageCreated = useCallback(async (message: ChatMessageDto) => {
     emit({ type: 'messageCreated', message });
     const fromOther = message.senderUserId !== currentUserId && !isSystemMessage(message);
+    if (fromOther) {
+      queueDelivered(message.conversationId, message.id);
+    }
     const isVisibleHere = activeRef.current === message.conversationId && document.visibilityState === 'visible';
 
     let conversation = conversationsRef.current.find((item) => item.id === message.conversationId);
@@ -408,6 +464,14 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     });
     connection.on('conversationUpdated', (conversation: ChatConversationDto) => upsertConversation(conversation));
     connection.on('conversationRemoved', (payload: { conversationId: number }) => removeConversation(payload.conversationId));
+    connection.on('deliveryStateChanged', (state: ChatDeliveryStateEventDto) => {
+      setConversations((current) => current.map((item) => item.id !== state.conversationId ? item : {
+        ...item,
+        participants: item.participants.map((participant) => participant.userId === state.userId
+          ? { ...participant, lastDeliveredMessageId: Math.max(participant.lastDeliveredMessageId ?? 0, state.lastDeliveredMessageId) }
+          : participant)
+      }));
+    });
     connection.on('readStateChanged', (state: ChatReadStateEventDto) => {
       emit({ type: 'readStateChanged', state });
       setConversations((current) => current.map((item) => {
@@ -416,7 +480,12 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
         }
 
         const participants = item.participants.map((participant) => participant.userId === state.userId
-          ? { ...participant, lastReadMessageId: state.lastReadMessageId, lastReadAtUtc: state.lastReadAtUtc }
+          ? {
+              ...participant,
+              lastReadMessageId: state.lastReadMessageId,
+              lastReadAtUtc: state.lastReadAtUtc,
+              lastDeliveredMessageId: Math.max(participant.lastDeliveredMessageId ?? 0, state.lastReadMessageId)
+            }
           : participant);
         return state.userId === currentUserId
           ? { ...item, participants, unreadCount: 0, myLastReadMessageId: state.lastReadMessageId }
