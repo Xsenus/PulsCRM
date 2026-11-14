@@ -58,6 +58,11 @@ public sealed class ChatParticipantDto
     public bool IsInactive { get; set; }
     public int LastReadMessageId { get; set; }
     public DateTime? LastReadAtUtc { get; set; }
+
+    /// <summary>
+    /// До какого сообщения диалог доставлен в браузер участника (не меньше прочитанного).
+    /// </summary>
+    public int LastDeliveredMessageId { get; set; }
 }
 
 public sealed class ChatConversationDto
@@ -382,6 +387,7 @@ public static class ChatEventNames
     public const string ConversationUpdated = "conversationUpdated";
     public const string ConversationRemoved = "conversationRemoved";
     public const string ReadStateChanged = "readStateChanged";
+    public const string DeliveryStateChanged = "deliveryStateChanged";
     public const string Typing = "typing";
 }
 
@@ -391,6 +397,27 @@ public sealed class ChatReadStateEventDto
     public int UserId { get; set; }
     public int LastReadMessageId { get; set; }
     public DateTime? LastReadAtUtc { get; set; }
+}
+
+public sealed class ChatDeliveryStateEventDto
+{
+    public int ConversationId { get; set; }
+    public int UserId { get; set; }
+    public int LastDeliveredMessageId { get; set; }
+}
+
+/// <summary>
+/// Браузер сотрудника получил сообщения: по каждому диалогу — последнее полученное.
+/// </summary>
+public sealed class ChatMarkDeliveredRequest
+{
+    public IReadOnlyCollection<ChatDeliveredItem> Items { get; set; } = Array.Empty<ChatDeliveredItem>();
+}
+
+public sealed class ChatDeliveredItem
+{
+    public int ConversationId { get; set; }
+    public int MessageId { get; set; }
 }
 
 public sealed class ChatConversationRemovedEventDto

@@ -213,6 +213,18 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
     }
 
     /// <summary>
+    /// Отмечает сообщения доставленными в браузер сотрудника (по каждому диалогу — последнее полученное).
+    /// Собеседники видят две серые галочки.
+    /// </summary>
+    [HttpPost("delivered")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> MarkDelivered([FromBody] ChatMarkDeliveredRequest? request, CancellationToken cancellationToken)
+    {
+        await chatService.MarkDeliveredAsync(request?.Items ?? Array.Empty<ChatDeliveredItem>(), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Сообщает собеседникам, что пользователь печатает.
     /// </summary>
     [HttpPost("conversations/{id:int}/typing")]

@@ -48,7 +48,8 @@ const apiMocks = vi.hoisted(() => ({
   getChatSettings: vi.fn(),
   updateChatSettings: vi.fn(),
   getChatDockState: vi.fn(),
-  updateChatDockState: vi.fn()
+  updateChatDockState: vi.fn(),
+  markChatDelivered: vi.fn()
 }));
 vi.mock('./chatApi', () => apiMocks);
 vi.mock('./api', () => ({ getToken: () => 'token' }));
@@ -145,6 +146,7 @@ beforeEach(() => {
   apiMocks.getChatSettings.mockResolvedValue({ notificationsEnabled: true, soundEnabled: true, soundName: 'bell', soundVolume: 40, showMessagePreview: true });
   apiMocks.getChatDockState.mockResolvedValue({ open: false, conversationId: null, width: null, height: null });
   apiMocks.updateChatDockState.mockImplementation(async (state: unknown) => state);
+  apiMocks.markChatDelivered.mockResolvedValue(undefined);
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
 });
 
@@ -216,6 +218,34 @@ describe('ChatProvider', () => {
     act(() => latest!.markConversationReadLocally(20, 7));
     expect(latest!.conversations.find((item) => item.id === 20)!.unreadMentionCount).toBe(0);
     expect(latest!.totalUnread).toBe(0);
+  });
+
+  it('reports delivery of received messages in one batch and tracks the peer delivery state', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      apiMocks.getChatConversations.mockResolvedValue([
+        conversation(10, { lastMessage: message(4, 10) }),
+        conversation(20, { lastMessage: message(9, 20, { senderUserId: 1 }) })
+      ]);
+      await mount();
+      emit('messageCreated', message(5, 10));
+      emit('messageCreated', message(6, 10));
+      emit('messageCreated', message(7, 10, { senderUserId: 1 }));
+      await flush();
+      expect(apiMocks.markChatDelivered).not.toHaveBeenCalled();
+
+      await act(async () => {
+        vi.advanceTimersByTime(1100);
+      });
+      // Свои сообщения не отмечаются, по диалогу — последнее полученное.
+      expect(apiMocks.markChatDelivered).toHaveBeenCalledTimes(1);
+      expect(apiMocks.markChatDelivered).toHaveBeenCalledWith([{ conversationId: 10, messageId: 6 }]);
+
+      emit('deliveryStateChanged', { conversationId: 20, userId: 2, lastDeliveredMessageId: 9 });
+      expect(latest!.conversations.find((item) => item.id === 20)!.participants.find((item) => item.userId === 2)!.lastDeliveredMessageId).toBe(9);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('respects disabled sound and hidden preview', async () => {

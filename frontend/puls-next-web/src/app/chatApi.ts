@@ -65,6 +65,10 @@ export const updateChatPreferences = (id: number, request: ChatConversationPrefe
 export const forwardChatMessage = (messageId: number, conversationIds: number[]) =>
   call(() => api.post<ChatMessageDto[]>(`/api/chat/messages/${messageId}/forward`, { conversationIds }));
 
+/** Отмечает сообщения доставленными в этот браузер (по каждому диалогу — последнее полученное). */
+export const markChatDelivered = (items: Array<{ conversationId: number; messageId: number }>) =>
+  call(() => api.post<void>('/api/chat/delivered', { items }));
+
 /** Поиск по тексту сообщений: во всех диалогах или в одном. */
 export const searchChatMessages = (q: string, conversationId?: number, take = 50) =>
   call(() => api.get<ChatSearchResultDto[]>('/api/chat/search', { params: { q, conversationId, take } }));

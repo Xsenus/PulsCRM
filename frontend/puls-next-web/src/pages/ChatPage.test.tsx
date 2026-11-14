@@ -209,10 +209,12 @@ describe('ChatPage', () => {
     const bubbles = Array.from(container!.querySelectorAll('.chat-message'));
     expect(bubbles).toHaveLength(3);
     expect(container!.querySelector('.chat-unread-divider')?.textContent).toContain('Новые сообщения');
-    expect(container!.querySelector('.chat-message.own .chat-ticks')?.textContent).toBe('✓✓');
+    // Peer прочитал до 3 — две синие галочки.
+    expect(container!.querySelector('.chat-message.own .chat-ticks')?.getAttribute('aria-label')).toBe('Прочитано');
+    expect(container!.querySelector('.chat-message.own .chat-ticks')?.classList.contains('read')).toBe(true);
     expect(container!.querySelector('.chat-view-subtitle')?.textContent).toBe('в сети');
     expect(apiMocks.markChatRead).toHaveBeenCalledWith(10, 3);
-    expect(chatState.value.markConversationReadLocally).toHaveBeenCalledWith(10, 3);
+    expect(chatState.value.markConversationReadLocally).toHaveBeenCalledWith(10, 3, 0);
   });
 
   it('sends message on Enter, keeps Shift+Enter for new line, and supports reply', async () => {

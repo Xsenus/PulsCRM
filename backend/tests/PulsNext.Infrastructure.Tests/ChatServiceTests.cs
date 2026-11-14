@@ -507,6 +507,48 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkDelivered_TracksDeliveryAndReadImpliesDelivered()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var first = await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { Text = "Раз" }, CancellationToken.None);
+        var second = await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { Text = "Два" }, CancellationToken.None);
+        As(Outsider);
+        var foreign = await _service.OpenDirectAsync(Carol, CancellationToken.None);
+
+        As(Bob);
+        _publisher.Events.Clear();
+        await _service.MarkDeliveredAsync([
+            new ChatDeliveredItem { ConversationId = conversation.Id, MessageId = first.Id },
+            new ChatDeliveredItem { ConversationId = conversation.Id, MessageId = second.Id + 100 },
+            new ChatDeliveredItem { ConversationId = foreign.Id, MessageId = 1 }
+        ], CancellationToken.None);
+
+        var delivered = Assert.Single(_publisher.Events);
+        Assert.Equal(ChatEventNames.DeliveryStateChanged, delivered.Name);
+        Assert.Equal([Alice], delivered.UserIds);
+        // Не дальше последнего сообщения диалога.
+        Assert.Equal(second.Id, ((ChatDeliveryStateEventDto)delivered.Payload).LastDeliveredMessageId);
+
+        // Повтор ничего не рассылает.
+        _publisher.Events.Clear();
+        await _service.MarkDeliveredAsync([new ChatDeliveredItem { ConversationId = conversation.Id, MessageId = first.Id }], CancellationToken.None);
+        Assert.Empty(_publisher.Events);
+
+        As(Alice);
+        var forAlice = await _service.GetConversationAsync(conversation.Id, CancellationToken.None);
+        var bob = forAlice.Participants.Single(x => x.UserId == Bob);
+        Assert.Equal(second.Id, bob.LastDeliveredMessageId);
+        Assert.True(bob.LastReadMessageId < second.Id);
+
+        var third = await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { Text = "Три" }, CancellationToken.None);
+        As(Bob);
+        await _service.MarkReadAsync(conversation.Id, null, CancellationToken.None);
+        As(Alice);
+        Assert.Equal(third.Id, (await _service.GetConversationAsync(conversation.Id, CancellationToken.None)).Participants.Single(x => x.UserId == Bob).LastDeliveredMessageId);
+    }
+
+    [Fact]
     public async Task SendMessage_WithSameClientMessageId_DoesNotDuplicate()
     {
         As(Alice);

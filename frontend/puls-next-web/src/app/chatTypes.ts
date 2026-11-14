@@ -26,6 +26,8 @@ export interface ChatParticipantDto {
   isInactive: boolean;
   lastReadMessageId: number;
   lastReadAtUtc?: string | null;
+  /** До какого сообщения диалог доставлен в браузер участника. */
+  lastDeliveredMessageId?: number;
 }
 
 export interface ChatAttachmentDto {
@@ -132,6 +134,12 @@ export interface ChatDockStateDto {
   conversationId?: number | null;
   width?: number | null;
   height?: number | null;
+}
+
+export interface ChatDeliveryStateEventDto {
+  conversationId: number;
+  userId: number;
+  lastDeliveredMessageId: number;
 }
 
 export interface ChatReadStateEventDto {

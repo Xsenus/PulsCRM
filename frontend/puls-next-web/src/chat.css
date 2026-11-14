@@ -664,12 +664,31 @@ textarea.chat-input {
 }
 
 .chat-ticks {
-  letter-spacing: -0.2em;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  color: #94a3b8;
+}
+
+.chat-ticks svg {
+  display: block;
 }
 
 .chat-ticks.read {
-  color: #a7f3d0;
+  color: #2563eb;
+}
+
+/* На синем пузыре своего сообщения: серые — полупрозрачные белые, прочитано — яркий голубой. */
+.chat-message.own .chat-ticks {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.chat-message.own .chat-ticks.read {
+  color: #67e8f9;
+  filter: drop-shadow(0 0 1px rgba(8, 47, 73, 0.45));
+}
+
+.chat-ticks.in-list {
+  flex: none;
 }
 
 .chat-list-section {
