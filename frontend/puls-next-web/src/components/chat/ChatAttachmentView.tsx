@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchChatAttachmentBlob } from '../../app/chatApi';
 import { acquireChatImage } from '../../app/chatImageLoader';
+import { albumRatio, computeAlbumLayout } from '../../app/chatAlbumLayout';
 
 /** Картинки начинают грузиться за столько пикселей до появления на экране. */
 const PRELOAD_MARGIN_PX = 600;
@@ -92,15 +93,21 @@ function FileIcon({ fileName }: { fileName: string }) {
   );
 }
 
-function ChatImageThumb({ attachment, single, onOpen }: { attachment: ChatAttachmentDto; single: boolean; onOpen: () => void }) {
+function ChatImageThumb({ attachment, single, tile, onOpen }: {
+  attachment: ChatAttachmentDto;
+  single: boolean;
+  /** Положение плитки в альбоме (проценты). */
+  tile?: React.CSSProperties;
+  onOpen: () => void;
+}) {
   const { ref, near } = useNearViewport<HTMLButtonElement>();
   const { url, failed } = useChatImageUrl(attachment.id, Boolean(attachment.hasThumbnail), near);
   const [loaded, setLoaded] = useState(false);
   const hasSize = !!(attachment.width && attachment.height);
   // Место по пропорциям картинки резервируется сразу, чтобы лента не прыгала, пока она грузится.
-  const frameStyle: React.CSSProperties | undefined = single && hasSize
+  const frameStyle: React.CSSProperties | undefined = tile ?? (single && hasSize
     ? { aspectRatio: `${attachment.width} / ${attachment.height}`, width: attachment.width! >= attachment.height! ? 280 : 180 }
-    : undefined;
+    : undefined);
 
   if (failed) {
     return (
@@ -118,7 +125,7 @@ function ChatImageThumb({ attachment, single, onOpen }: { attachment: ChatAttach
     <button
       ref={ref}
       type="button"
-      className={`chat-image-thumb${frameStyle ? ' sized' : ''}${loaded ? ' loaded' : ''}`}
+      className={`chat-image-thumb${frameStyle ? ' sized' : ''}${tile ? ' tile' : ''}${loaded ? ' loaded' : ''}`}
       style={frameStyle}
       onClick={onOpen}
       title={attachment.fileName}
@@ -149,13 +156,12 @@ export function ChatAttachmentList({ attachments }: { attachments: ChatAttachmen
 
   return (
     <div className="chat-attachments">
-      {images.length > 0 ? (
-        <div className={`chat-image-grid chat-image-grid-${Math.min(images.length, 4)}`}>
-          {images.map((attachment, index) => (
-            <ChatImageThumb key={attachment.id} attachment={attachment} single={images.length === 1} onOpen={() => setOpenIndex(index)} />
-          ))}
+      {images.length === 1 ? (
+        <div className="chat-image-grid">
+          <ChatImageThumb attachment={images[0]} single onOpen={() => setOpenIndex(0)} />
         </div>
       ) : null}
+      {images.length > 1 ? <ChatPhotoAlbum images={images} onOpen={setOpenIndex} /> : null}
       {files.map((attachment) => (
         <button key={attachment.id} type="button" className="chat-file-card" onClick={() => void downloadChatAttachment(attachment)} title="Скачать">
           <FileIcon fileName={attachment.fileName} />
@@ -168,6 +174,31 @@ export function ChatAttachmentList({ attachments }: { attachments: ChatAttachmen
       {openIndex !== null ? (
         <ChatImageLightbox images={images} index={openIndex} onIndexChange={setOpenIndex} onClose={() => setOpenIndex(null)} />
       ) : null}
+    </div>
+  );
+}
+
+/** Несколько фото одного сообщения — мозаикой по пропорциям, по порядку. */
+function ChatPhotoAlbum({ images, onOpen }: { images: ChatAttachmentDto[]; onOpen: (index: number) => void }) {
+  const layout = useMemo(() => computeAlbumLayout(images.map((item) => albumRatio(item.width, item.height))), [images]);
+  const percent = (value: number) => `${(value * 100).toFixed(4)}%`;
+
+  return (
+    <div className="chat-album" style={{ aspectRatio: `1 / ${layout.height.toFixed(4)}` }} role="group" aria-label={`Альбом: ${images.length} фото`}>
+      {layout.tiles.map((tile) => (
+        <ChatImageThumb
+          key={images[tile.index].id}
+          attachment={images[tile.index]}
+          single={false}
+          tile={{
+            left: percent(tile.x),
+            top: percent(tile.y / layout.height),
+            width: percent(tile.width),
+            height: percent(tile.height / layout.height)
+          }}
+          onOpen={() => onOpen(tile.index)}
+        />
+      ))}
     </div>
   );
 }

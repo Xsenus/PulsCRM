@@ -1008,15 +1008,6 @@ textarea.chat-input {
   overflow: hidden;
 }
 
-.chat-image-grid-2,
-.chat-image-grid-4 {
-  grid-template-columns: 1fr 1fr;
-}
-
-.chat-image-grid-3 {
-  grid-template-columns: 1fr 1fr 1fr;
-}
-
 .chat-image-thumb {
   position: relative;
   overflow: hidden;
@@ -1036,10 +1027,24 @@ textarea.chat-input {
   object-fit: cover;
 }
 
-.chat-image-grid-2 .chat-image-thumb img,
-.chat-image-grid-3 .chat-image-thumb img,
-.chat-image-grid-4 .chat-image-thumb img {
-  height: 140px;
+/* Альбом: плитки абсолютно внутри рамки с пропорциями всей мозаики; щели — прозрачная рамка плитки. */
+.chat-album {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.chat-image-thumb.tile {
+  position: absolute;
+  min-height: 0;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+.chat-view-compact .chat-album {
+  width: 260px;
 }
 
 /* Размер известен заранее: рамка по пропорциям, картинки заполняют ее. */
@@ -1320,6 +1325,9 @@ textarea.chat-input {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 8px;
+  /* Пачка до 10 файлов не вытесняет ленту: больше двух рядов — прокрутка. */
+  max-height: 124px;
+  overflow-y: auto;
 }
 
 .chat-upload {

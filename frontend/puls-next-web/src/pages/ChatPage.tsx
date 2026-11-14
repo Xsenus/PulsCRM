@@ -37,6 +37,7 @@ import { ChatSettingsDialog, ConversationInfoDialog, ForwardMessageDialog, NewCh
 import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
 import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
 import { prepareChatImageUpload } from '../app/chatImageThumbnail';
+import { createTaskLimiter } from '../app/taskLimiter';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
 import { ChatTicks } from '../components/chat/ChatTicks';
 import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
@@ -50,6 +51,8 @@ const JUMP_PAGE_SIZE = 200;
 const MAX_JUMP_PAGES = 25;
 const NEAR_BOTTOM_PX = 120;
 const LOAD_OLDER_THRESHOLD_PX = 800;
+/** Общая для всех диалогов очередь отправки вложений. */
+const scheduleUpload = createTaskLimiter(3);
 
 export function ChatPage() {
   const { conversationId: routeId } = useParams();
@@ -730,10 +733,11 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
       const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
       setUploads((current) => [...current, { key, file, progress: 0, previewUrl }]);
-      prepareChatImageUpload(file)
+      // Файлы пачки готовятся и отправляются по 3 одновременно, по порядку выбора.
+      scheduleUpload(() => prepareChatImageUpload(file)
         .then((extras) => uploadChatAttachment(conversation.id, file, (progress) => {
           setUploads((current) => current.map((item) => item.key === key ? { ...item, progress } : item));
-        }, extras))
+        }, extras)))
         .then((attachment) => setUploads((current) => current.map((item) => item.key === key ? { ...item, attachment, progress: 100 } : item)))
         .catch((error) => setUploads((current) => current.map((item) => item.key === key ? { ...item, error: getApiErrorMessage(error, 'Ошибка загрузки') } : item)));
     });
