@@ -1,46 +1,64 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchChatAttachmentBlob } from '../../app/chatApi';
+import { acquireChatImage } from '../../app/chatImageLoader';
+
+/** Картинки начинают грузиться за столько пикселей до появления на экране. */
+const PRELOAD_MARGIN_PX = 600;
 import { formatFileSize } from '../../app/chatFormat';
 import type { ChatAttachmentDto } from '../../app/chatTypes';
 import { showToast } from '../../app/toast';
 
-/** Кэш object URL изображений на время сессии, чтобы при прокрутке ленты не качать повторно. */
-const imageUrlCache = new Map<string, Promise<string>>();
-
-function loadImageUrl(attachmentId: number, thumbnail: boolean) {
-  const key = `${attachmentId}:${thumbnail ? 'thumb' : 'full'}`;
-  let promise = imageUrlCache.get(key);
-  if (!promise) {
-    promise = fetchChatAttachmentBlob(attachmentId, true, thumbnail).then((blob) => URL.createObjectURL(blob));
-    promise.catch(() => imageUrlCache.delete(key));
-    imageUrlCache.set(key, promise);
-  }
-
-  return promise;
-}
-
-/** URL изображения; с thumbnail=true — уменьшенной копии (в ленте), иначе оригинала (в просмотре). */
-export function useChatImageUrl(attachmentId: number | null, thumbnail = false) {
+/**
+ * URL изображения; с thumbnail=true — уменьшенной копии (в ленте), иначе оригинала (в просмотре).
+ * enabled=false — пока не грузить (картинка далеко за экраном).
+ */
+export function useChatImageUrl(attachmentId: number | null, thumbnail = false, enabled = true) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (!attachmentId) {
+    if (!attachmentId || !enabled) {
       return;
     }
 
     let active = true;
     setFailed(false);
-    loadImageUrl(attachmentId, thumbnail)
+    const { promise, release } = acquireChatImage(attachmentId, thumbnail);
+    promise
       .then((value) => active && setUrl(value))
       .catch(() => active && setFailed(true));
     return () => {
       active = false;
+      release();
     };
-  }, [attachmentId, thumbnail]);
+  }, [attachmentId, thumbnail, enabled]);
 
   return { url, failed };
+}
+
+/** Становится true, когда элемент подходит к видимой области ленты (с запасом), и больше не сбрасывается. */
+function useNearViewport<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [near, setNear] = useState(() => typeof IntersectionObserver === 'undefined');
+
+  useEffect(() => {
+    const element = ref.current;
+    if (near || !element || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        setNear(true);
+        observer.disconnect();
+      }
+    }, { root: element.closest('.chat-messages'), rootMargin: `${PRELOAD_MARGIN_PX}px 0px` });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [near]);
+
+  return { ref, near };
 }
 
 export async function downloadChatAttachment(attachment: ChatAttachmentDto) {
@@ -75,10 +93,13 @@ function FileIcon({ fileName }: { fileName: string }) {
 }
 
 function ChatImageThumb({ attachment, single, onOpen }: { attachment: ChatAttachmentDto; single: boolean; onOpen: () => void }) {
-  const { url, failed } = useChatImageUrl(attachment.id, Boolean(attachment.hasThumbnail));
-  // Пока картинка грузится, держим место по ее пропорциям, чтобы лента не прыгала.
-  const placeholderStyle = single && attachment.width && attachment.height
-    ? { aspectRatio: `${attachment.width} / ${attachment.height}`, width: attachment.width >= attachment.height ? 280 : 180, height: 'auto' }
+  const { ref, near } = useNearViewport<HTMLButtonElement>();
+  const { url, failed } = useChatImageUrl(attachment.id, Boolean(attachment.hasThumbnail), near);
+  const [loaded, setLoaded] = useState(false);
+  const hasSize = !!(attachment.width && attachment.height);
+  // Место по пропорциям картинки резервируется сразу, чтобы лента не прыгала, пока она грузится.
+  const frameStyle: React.CSSProperties | undefined = single && hasSize
+    ? { aspectRatio: `${attachment.width} / ${attachment.height}`, width: attachment.width! >= attachment.height! ? 280 : 180 }
     : undefined;
 
   if (failed) {
@@ -94,10 +115,29 @@ function ChatImageThumb({ attachment, single, onOpen }: { attachment: ChatAttach
   }
 
   return (
-    <button type="button" className="chat-image-thumb" onClick={onOpen} title={attachment.fileName} aria-label={`Открыть изображение ${attachment.fileName}`}>
-      {url
-        ? <img src={url} alt={attachment.fileName} loading="lazy" width={attachment.width ?? undefined} height={attachment.height ?? undefined} />
-        : <span className="chat-image-placeholder" style={placeholderStyle} />}
+    <button
+      ref={ref}
+      type="button"
+      className={`chat-image-thumb${frameStyle ? ' sized' : ''}${loaded ? ' loaded' : ''}`}
+      style={frameStyle}
+      onClick={onOpen}
+      title={attachment.fileName}
+      aria-label={`Открыть изображение ${attachment.fileName}`}
+    >
+      {/* Крошечное размытое превью приходит вместе с сообщением — фото видно сразу, четкое догружается. */}
+      {attachment.previewDataUrl && !loaded ? <img className="chat-image-blur" src={attachment.previewDataUrl} alt="" aria-hidden="true" /> : null}
+      {!attachment.previewDataUrl && !loaded ? <span className="chat-image-placeholder" /> : null}
+      {url ? (
+        <img
+          className="chat-image-full"
+          src={url}
+          alt={attachment.fileName}
+          decoding="async"
+          width={attachment.width ?? undefined}
+          height={attachment.height ?? undefined}
+          onLoad={() => setLoaded(true)}
+        />
+      ) : null}
     </button>
   );
 }
@@ -140,6 +180,8 @@ function ChatImageLightbox({ images, index, onIndexChange, onClose }: {
 }) {
   const current = images[index];
   const { url } = useChatImageUrl(current?.id ?? null);
+  // Пока грузится оригинал, показываем уже загруженную копию из ленты.
+  const { url: previewUrl } = useChatImageUrl(current?.hasThumbnail ? current.id : null, true);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -170,7 +212,9 @@ function ChatImageLightbox({ images, index, onIndexChange, onClose }: {
       {index > 0 ? (
         <button type="button" className="chat-lightbox-nav chat-lightbox-prev" aria-label="Предыдущее" onClick={(event) => { event.stopPropagation(); onIndexChange(index - 1); }}>‹</button>
       ) : null}
-      {url ? <img src={url} alt={current.fileName} onClick={(event) => event.stopPropagation()} /> : <span className="chat-lightbox-loading">Загрузка…</span>}
+      {url || previewUrl || current.previewDataUrl
+        ? <img src={url ?? previewUrl ?? current.previewDataUrl!} alt={current.fileName} className={url ? undefined : 'chat-lightbox-preview'} onClick={(event) => event.stopPropagation()} />
+        : <span className="chat-lightbox-loading">Загрузка…</span>}
       {index < images.length - 1 ? (
         <button type="button" className="chat-lightbox-nav chat-lightbox-next" aria-label="Следующее" onClick={(event) => { event.stopPropagation(); onIndexChange(index + 1); }}>›</button>
       ) : null}

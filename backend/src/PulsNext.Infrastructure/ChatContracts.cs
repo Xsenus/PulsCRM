@@ -132,6 +132,11 @@ public sealed class ChatAttachmentDto
     public bool HasThumbnail { get; set; }
 
     /// <summary>
+    /// Крошечное размытое превью (data:URL), показывается до загрузки картинки.
+    /// </summary>
+    public string? PreviewDataUrl { get; set; }
+
+    /// <summary>
     /// Размеры оригинала изображения в пикселях, если известны.
     /// </summary>
     public int? Width { get; set; }
@@ -369,6 +374,11 @@ public sealed class ChatAttachmentUploadCommand
     /// Уменьшенная копия изображения, подготовленная браузером (JPEG, PNG или WebP). Необязательна.
     /// </summary>
     public Stream? Thumbnail { get; init; }
+
+    /// <summary>
+    /// Крошечное превью изображения (data:URL WebP или JPEG). Необязательно.
+    /// </summary>
+    public string? PreviewDataUrl { get; init; }
 
     /// <summary>
     /// Размеры оригинала изображения в пикселях, если браузер их определил.

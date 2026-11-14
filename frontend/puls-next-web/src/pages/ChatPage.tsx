@@ -49,6 +49,7 @@ const PAGE_SIZE = 50;
 const JUMP_PAGE_SIZE = 200;
 const MAX_JUMP_PAGES = 25;
 const NEAR_BOTTOM_PX = 120;
+const LOAD_OLDER_THRESHOLD_PX = 800;
 
 export function ChatPage() {
   const { conversationId: routeId } = useParams();
@@ -384,7 +385,14 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   }, [conversation.id, firstUnreadId, savedPosition]);
 
+  // Первая загрузка — ровно один раз (StrictMode в разработке вызывает эффекты дважды).
+  const initialLoadStartedRef = useRef(false);
   useEffect(() => {
+    if (initialLoadStartedRef.current) {
+      return;
+    }
+
+    initialLoadStartedRef.current = true;
     lastMarkedRef.current = conversation.myLastReadMessageId;
     void loadInitial();
   }, [conversation.id]);
@@ -626,7 +634,8 @@ export function ConversationView({ conversation, onBack, compact = false, header
       rememberPosition();
     }, 400);
 
-    if (element.scrollTop < 80) {
+    // Историю подгружаем заранее, пока до верха еще есть запас, — без паузы на «Загрузка…».
+    if (element.scrollTop < LOAD_OLDER_THRESHOLD_PX) {
       void loadOlder();
     }
   };

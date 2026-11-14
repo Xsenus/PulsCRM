@@ -312,6 +312,12 @@ public sealed class ChatAttachmentUploadRequest
     public IFormFile? Thumbnail { get; set; }
 
     /// <summary>
+    /// Крошечное размытое превью (data:URL WebP или JPEG), необязательно.
+    /// </summary>
+    [FromForm(Name = "preview")]
+    public string? Preview { get; set; }
+
+    /// <summary>
     /// Ширина оригинала изображения в пикселях, необязательно.
     /// </summary>
     [FromForm(Name = "width")]

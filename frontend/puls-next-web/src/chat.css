@@ -1018,6 +1018,8 @@ textarea.chat-input {
 }
 
 .chat-image-thumb {
+  position: relative;
+  overflow: hidden;
   display: block;
   padding: 0;
   border: 0;
@@ -1038,6 +1040,46 @@ textarea.chat-input {
 .chat-image-grid-3 .chat-image-thumb img,
 .chat-image-grid-4 .chat-image-thumb img {
   height: 140px;
+}
+
+/* Размер известен заранее: рамка по пропорциям, картинки заполняют ее. */
+.chat-image-thumb.sized img,
+.chat-image-thumb.sized .chat-image-placeholder {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+.chat-image-thumb.sized .chat-image-full {
+  position: absolute;
+  inset: 0;
+}
+
+/* Пока четкая картинка не загрузилась, она прозрачная и не занимает места. */
+.chat-image-thumb:not(.loaded) .chat-image-full {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.chat-image-full {
+  transition: opacity 0.2s ease;
+}
+
+.chat-image-blur {
+  filter: blur(10px);
+  transform: scale(1.08);
+}
+
+.chat-lightbox-preview {
+  filter: blur(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-image-full {
+    transition: none;
+  }
 }
 
 .chat-image-placeholder {

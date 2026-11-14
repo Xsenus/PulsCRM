@@ -301,6 +301,10 @@ test('large images are uploaded with a thumbnail and the feed loads the thumbnai
   await expect.poll(() => uploads.length).toBe(1);
   const { body, length } = uploads[0];
   expect(body).toContain('name="thumbnail"');
+  // Крошечное размытое превью уходит вместе с файлом (data:URL до 2,5 КБ).
+  const preview = /name="preview"\r\n\r\n(data:image\/(?:webp|jpeg);base64,[^\r]+)\r\n/.exec(body)?.[1];
+  expect(preview).toBeTruthy();
+  expect(preview!.length).toBeLessThanOrEqual(2500);
   expect(body).toMatch(/name="width"\r\n\r\n2000\r\n/);
   expect(body).toMatch(/name="height"\r\n\r\n1500\r\n/);
   // Копия добавляет к запросу заметно меньше оригинала.

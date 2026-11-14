@@ -806,7 +806,8 @@ public sealed class ChatService(
             SortOrder = source.SortOrder,
             UploadedAtUtc = now,
             ImageWidth = source.ImageWidth,
-            ImageHeight = source.ImageHeight
+            ImageHeight = source.ImageHeight,
+            PreviewDataUrl = source.PreviewDataUrl
         };
 
         var thumbnail = await ReadStoredFileAsync(source.ThumbnailRelativePath, cancellationToken);
@@ -1118,6 +1119,7 @@ public sealed class ChatService(
 
         if (isImage)
         {
+            attachment.PreviewDataUrl = NormalizePreviewDataUrl(command.PreviewDataUrl);
             if (command.Width is > 0 and <= MaxImageSide && command.Height is > 0 and <= MaxImageSide)
             {
                 attachment.ImageWidth = command.Width.Value;
@@ -1726,6 +1728,7 @@ public sealed class ChatService(
             Length = attachment.Length,
             IsImage = ImageContentTypes.Contains(attachment.ContentType ?? string.Empty),
             HasThumbnail = !string.IsNullOrWhiteSpace(attachment.ThumbnailRelativePath),
+            PreviewDataUrl = attachment.PreviewDataUrl,
             Width = attachment.ImageWidth > 0 && attachment.ImageHeight > 0 ? attachment.ImageWidth : null,
             Height = attachment.ImageWidth > 0 && attachment.ImageHeight > 0 ? attachment.ImageHeight : null,
             UploadedAtUtc = ForceUtc(attachment.UploadedAtUtc)
@@ -1735,6 +1738,39 @@ public sealed class ChatService(
     /// Читает уменьшенную копию от браузера. Тип определяется по сигнатуре, а не по заявленному MIME:
     /// принимаются только JPEG, PNG и WebP не больше <see cref="MaxThumbnailBytes"/>. Иначе копия игнорируется.
     /// </summary>
+    /// <summary>
+    /// Принимает превью, только если это короткий data:URL WebP/JPEG с корректным base64 и сигнатурой картинки.
+    /// Иначе превью просто не сохраняется: оно необязательно.
+    /// </summary>
+    private static string? NormalizePreviewDataUrl(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length > ChatAttachmentLimits.MaxPreviewDataUrlLength)
+        {
+            return null;
+        }
+
+        string[] prefixes = ["data:image/webp;base64,", "data:image/jpeg;base64,"];
+        var prefix = prefixes.FirstOrDefault(x => value.StartsWith(x, StringComparison.Ordinal));
+        if (prefix is null)
+        {
+            return null;
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(value[prefix.Length..]);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+
+        var isJpeg = bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+        var isWebp = bytes.Length >= 12 && bytes.AsSpan(0, 4).SequenceEqual("RIFF"u8) && bytes.AsSpan(8, 4).SequenceEqual("WEBP"u8);
+        return (prefix.Contains("jpeg") ? isJpeg : isWebp) ? value : null;
+    }
+
     private static async Task<(byte[] Bytes, string ContentType, string Extension)?> ReadThumbnailAsync(Stream content, CancellationToken cancellationToken)
     {
         var buffer = new byte[MaxThumbnailBytes + 1];
