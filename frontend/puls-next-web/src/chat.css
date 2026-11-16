@@ -2295,65 +2295,187 @@ textarea.chat-input {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
 
-.chat-desktop-toggle {
+/* Системные уведомления: карточка с переключателем, статусом и помощью по настройке браузера. */
+.notify-card {
+  display: grid;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.notify-card.attention {
+  border-color: #c7d7fe;
+  background: #f5f8ff;
+}
+
+.notify-card-head {
+  align-items: flex-start;
+}
+
+.notify-card-head input {
+  margin-top: 2px;
+  flex: none;
+}
+
+.notify-card-title {
+  flex: 1;
   display: grid;
   gap: 2px;
 }
 
-.chat-desktop-status {
-  padding-left: 28px;
-  font-size: 12px;
-}
-
-.chat-desktop-status.warn {
-  color: #9a3412;
-}
-
-/* Инструкция «Как включить без HTTPS» под системными оповещениями. */
-.chat-insecure-help {
-  margin: 6px 0 0 28px;
-  padding: 8px 12px;
-  border: 1px solid #fed7aa;
-  border-radius: 10px;
-  background: #fff7ed;
+.notify-card-hint {
+  color: var(--text-muted);
   font-size: 12.5px;
-  line-height: 1.5;
 }
 
-.chat-insecure-help summary {
-  cursor: pointer;
+.notify-status {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.notify-status.ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.notify-status.neutral {
+  background: #eef2f7;
+  color: var(--text-muted);
+}
+
+.notify-status.warn {
+  background: #fff1e6;
   color: #9a3412;
 }
 
-.chat-insecure-help p,
-.chat-insecure-help ol {
-  margin: 8px 0 0;
+.notify-setup {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #dbe6ff;
 }
 
-.chat-insecure-help ol {
-  padding-left: 18px;
+.notify-setup-title {
+  font-weight: 800;
+  font-size: 14px;
 }
 
-.chat-insecure-help li + li {
-  margin-top: 4px;
+.notify-setup-text {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.chat-insecure-help code {
-  padding: 1px 5px;
-  border-radius: 5px;
+.notify-steps {
+  display: grid;
+  gap: 10px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notify-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.notify-step-number {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.notify-download {
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 13.5px;
+}
+
+.notify-link-button {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notify-link-button:hover {
+  text-decoration: underline;
+}
+
+.notify-manual {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
   background: #ffffff;
+  border: 1px solid #dbe6ff;
+  font-size: 13px;
+}
+
+.notify-manual-step + .notify-copy-row {
+  margin-bottom: 4px;
+}
+
+.notify-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notify-copy-row code {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #f1f5fb;
+  font-size: 12.5px;
   overflow-wrap: anywhere;
 }
 
-.chat-copy-button {
-  padding: 1px 8px;
-  border: 1px solid #fdba74;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #9a3412;
+.notify-chip-button {
+  flex: none;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #e7efff;
+  color: var(--brand-2);
   font: inherit;
-  font-size: 11.5px;
+  font-size: 12.5px;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.notify-chip-button:hover {
+  background: #d8e5ff;
+}
+
+.notify-admin-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
