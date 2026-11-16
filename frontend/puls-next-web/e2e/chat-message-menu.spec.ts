@@ -82,6 +82,8 @@ test('right click on a message opens one menu with reactions and all actions', a
   await menu.getByRole('menuitem', { name: 'Реакция 👍' }).click();
   await expect(menu).toBeHidden();
   await expect(first.locator('.chat-reaction.mine')).toContainText('👍');
+  // Как в Telegram: плашка реакции — внутри пузыря, в одной строке со временем.
+  await expect(first.locator('.chat-bubble .chat-bubble-footer .chat-reaction.mine')).toBeVisible();
   expect(calls.reactions).toEqual([{ emoji: '👍' }]);
 
   // Свое сообщение: есть «Изменить» и «Удалить»; «Ответить» ставит ответ в поле ввода.

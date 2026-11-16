@@ -1597,29 +1597,33 @@ function MessageBubble({
           </>
         )}
 
-        <div className="chat-bubble-meta">
-          {message.editedAtUtc && !message.isDeleted ? <span title={`Изменено ${formatChatTime(message.editedAtUtc)}`}>изменено</span> : null}
-          <span>{formatChatTime(message.createdAtUtc)}</span>
-          {readStatus ? <ChatTicks status={readStatus} /> : null}
+        {/* Как в Telegram: реакции внутри пузыря внизу, время и галочки — справа в той же строке. */}
+        <div className={`chat-bubble-footer${message.reactions.length > 0 ? ' with-reactions' : ''}`}>
+          {message.reactions.length > 0 ? (
+            <div className="chat-reactions">
+              {message.reactions.map((reaction) => (
+                <button
+                  key={reaction.emoji}
+                  type="button"
+                  className={`chat-reaction${reaction.reactedByMe ? ' mine' : ''}`}
+                  onClick={() => onReact(reaction.emoji)}
+                  title={reaction.reactedByMe ? 'Убрать реакцию' : 'Поставить такую же'}
+                  aria-label={`${reaction.emoji} ${reaction.count}${reaction.reactedByMe ? ', ваша реакция' : ''}`}
+                  aria-pressed={reaction.reactedByMe}
+                >
+                  <span className="chat-reaction-emoji">{reaction.emoji}</span>
+                  <span className="chat-reaction-count">{reaction.count}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <div className="chat-bubble-meta">
+            {message.editedAtUtc && !message.isDeleted ? <span title={`Изменено ${formatChatTime(message.editedAtUtc)}`}>изменено</span> : null}
+            <span>{formatChatTime(message.createdAtUtc)}</span>
+            {readStatus ? <ChatTicks status={readStatus} /> : null}
+          </div>
         </div>
       </div>
-
-      {message.reactions.length > 0 ? (
-        <div className="chat-reactions">
-          {message.reactions.map((reaction) => (
-            <button
-              key={reaction.emoji}
-              type="button"
-              className={`chat-reaction${reaction.reactedByMe ? ' mine' : ''}`}
-              onClick={() => onReact(reaction.emoji)}
-              title={reaction.reactedByMe ? 'Убрать реакцию' : 'Поставить такую же'}
-            >
-              <span>{reaction.emoji}</span>
-              <span>{reaction.count}</span>
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       {menuAt && !message.isDeleted ? (
         <ChatContextMenu position={menuAt} label="Действия с сообщением" className="chat-message-context" onClose={closeMenu}>
