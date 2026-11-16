@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface ChatMenuPosition {
@@ -19,6 +19,41 @@ export function getContextMenuPosition(event: { clientX: number; clientY: number
   }
 
   return { x: event.clientX, y: event.clientY };
+}
+
+/** Пункт контекстного меню: иконка в своей колонке и подпись. */
+export function ChatMenuItem({ icon, danger = false, onClick, children }: {
+  icon: string;
+  danger?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button type="button" role="menuitem" className={`chat-menu-item${danger ? ' danger' : ''}`} onClick={onClick}>
+      <span className="chat-menu-icon" aria-hidden="true">{icon}</span>
+      <span className="chat-menu-label">{children}</span>
+    </button>
+  );
+}
+
+/**
+ * Пункты меню по группам с чертой между ними. Пустые пункты (false/null) и пустые группы пропускаются,
+ * поэтому лишних или двойных разделителей не бывает.
+ */
+export function ChatMenuGroups({ groups }: { groups: ReactNode[][] }) {
+  const visible = groups
+    .map((group) => group.filter((item) => item !== null && item !== undefined && item !== false))
+    .filter((group) => group.length > 0);
+  return (
+    <>
+      {visible.map((group, index) => (
+        <Fragment key={index}>
+          {index > 0 ? <div role="separator" className="chat-menu-separator" /> : null}
+          {group.map((item, itemIndex) => <Fragment key={itemIndex}>{item}</Fragment>)}
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 /**
@@ -47,7 +82,8 @@ export function ChatContextMenu({ position, label, className = '', onClose, chil
       x: Math.max(MARGIN, Math.min(position.x, window.innerWidth - width - MARGIN)),
       y: Math.max(MARGIN, Math.min(position.y, window.innerHeight - height - MARGIN))
     });
-    element.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus({ preventScroll: true });
+    // Фокус на само меню, а не на первый пункт: с мыши без рамки на первой реакции, ↓ ведет к первому пункту.
+    element.focus({ preventScroll: true });
   }, [position]);
 
   useEffect(() => {
@@ -111,6 +147,7 @@ export function ChatContextMenu({ position, label, className = '', onClose, chil
       className={`chat-message-menu chat-context-menu ${className}`}
       role="menu"
       aria-label={label}
+      tabIndex={-1}
       style={{ left: placement.x, top: placement.y }}
       onContextMenu={(event) => event.preventDefault()}
     >

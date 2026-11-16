@@ -946,59 +946,97 @@ textarea.chat-input {
 }
 
 .chat-message-menu {
+  display: grid;
+  min-width: 232px;
+  padding: 6px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   background: #ffffff;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
 }
 
+.chat-message-menu.chat-context-menu:focus {
+  outline: none;
+}
+
+/* Пункт меню: иконка в своей колонке фиксированной ширины, текст с отступом от нее, единый размер. */
+.chat-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-menu-icon {
+  flex: none;
+  width: 20px;
+  font-size: 16px;
+  line-height: 1;
+  text-align: center;
+}
+
+.chat-menu-item:hover,
+.chat-menu-item:focus-visible {
+  outline: none;
+  background: #f1f5fb;
+}
+
+.chat-menu-item.danger {
+  color: var(--danger, #dc2626);
+}
+
+.chat-menu-item.danger:hover,
+.chat-menu-item.danger:focus-visible {
+  background: #fef2f2;
+}
+
+/* Черта между группами пунктов контекстного меню. */
+.chat-menu-separator {
+  height: 1px;
+  margin: 5px 8px;
+  background: var(--border);
+}
+
+/* Быстрые реакции — внизу меню, компактной строкой. */
 .chat-context-reactions {
   display: flex;
   justify-content: space-between;
   gap: 2px;
-  padding: 2px 2px 6px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 2px 4px;
 }
 
-.chat-message-menu .chat-context-reactions button {
-  width: 34px;
-  height: 34px;
+.chat-context-reactions button {
+  width: 30px;
+  height: 30px;
   padding: 0;
-  text-align: center;
-  font-size: 20px;
-  transition: transform 0.1s ease;
-}
-
-.chat-message-menu .chat-context-reactions button:hover,
-.chat-message-menu .chat-context-reactions button:focus-visible {
-  transform: scale(1.2);
-  background: #f1f5fb;
-}
-
-.chat-message-menu .chat-context-reactions button.mine {
-  background: #e7efff;
-}
-
-.chat-message-menu {
-  display: grid;
-  min-width: 170px;
-  padding: 4px;
-}
-
-.chat-message-menu button {
   border: 0;
   border-radius: 8px;
   background: none;
-  padding: 8px 10px;
-  text-align: left;
-  font-size: 13px;
+  font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  color: var(--text);
+  transition: transform 0.1s ease, background 0.1s ease;
 }
 
-.chat-message-menu button:hover {
+.chat-context-reactions button:hover,
+.chat-context-reactions button:focus-visible {
+  outline: none;
+  transform: scale(1.15);
   background: #f1f5fb;
+}
+
+.chat-context-reactions button.mine {
+  background: #e7efff;
 }
 
 /* Вложения */
