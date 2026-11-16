@@ -5,7 +5,8 @@ import { getToken } from './api';
 import { getChatConversation, getChatConversations, getChatDockState, getChatSettings, getChatStatus, markChatDelivered, updateChatDockState, updateChatSettings } from './chatApi';
 import { describeLastMessage, sortConversations } from './chatFormat';
 import { playChatSound } from './chatSounds';
-import { showDesktopNotification } from './desktopNotifications';
+import { requestOpenConversation, showDesktopNotification } from './desktopNotifications';
+import { isWebPushActive, SW_OPEN_CONVERSATION_MESSAGE, syncWebPush } from './webPush';
 import type {
   ChatConversationDto,
   ChatDeliveryStateEventDto,
@@ -184,8 +185,35 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
   const activeRef = useRef<number | null>(null);
   const lastTypingSentRef = useRef<Record<number, number>>({});
 
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const enabled = !!status?.enabled;
   const currentUserId = status?.currentUserId ?? userId ?? 0;
+  const pushWanted = settings.notificationsEnabled && !!settings.desktopNotificationsEnabled;
+
+  // Web Push: подписка браузера следует настройке «системные оповещения» (только после загрузки настроек,
+  // иначе значения по умолчанию на миг отписали бы браузер). При каждом запуске подписка обновляется на сервере.
+  useEffect(() => {
+    if (!enabled || !settingsLoaded) {
+      return;
+    }
+
+    void syncWebPush(pushWanted);
+  }, [enabled, settingsLoaded, pushWanted]);
+
+  // Клик по уведомлению сервис-воркера при открытой вкладке — открыть диалог здесь.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === SW_OPEN_CONVERSATION_MESSAGE && Number(event.data.conversationId) > 0) {
+        requestOpenConversation(Number(event.data.conversationId));
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleMessage);
+  }, []);
 
   conversationsRef.current = conversations;
   settingsRef.current = settings;
@@ -333,7 +361,8 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     };
 
     // Вкладка в фоне — дополнительно системное оповещение (если пользователь включил и браузер разрешил).
-    if (current.desktopNotificationsEnabled && document.visibilityState === 'hidden') {
+    // При действующей подписке Web Push его показывает сервис-воркер — второе не нужно.
+    if (current.desktopNotificationsEnabled && document.visibilityState === 'hidden' && !isWebPushActive()) {
       showDesktopNotification({
         title: `${mentionsMe ? '@ ' : ''}${isGroup ? `${conversation.title} — ${message.senderName}` : message.senderName}`,
         body: preview,
@@ -426,7 +455,14 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
 
     let disposed = false;
     void refreshConversations();
-    getChatSettings().then((value) => !disposed && setSettings(value)).catch(() => undefined);
+    getChatSettings()
+      .then((value) => {
+        if (!disposed) {
+          setSettings(value);
+          setSettingsLoaded(true);
+        }
+      })
+      .catch(() => undefined);
 
     const connection = new HubConnectionBuilder()
       .withUrl(`${API_BASE}/hubs/chat`, {

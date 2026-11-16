@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import type { ReactNode } from 'react';
 import { getCurrentUser, getToken, login as loginRequest, setToken } from './api';
 import { rememberLastLoginProfile } from './lastLoginProfile';
+import { disableWebPush } from './webPush';
 import type { CurrentUserDto } from './types';
 
 interface AuthContextValue {
@@ -63,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response.user);
     },
     logout: () => {
+      // Уведомления чата (Web Push) этого браузера больше не должны приходить вышедшему сотруднику.
+      void disableWebPush({ notifyServer: false });
       setToken(null);
       setUser(null);
     }

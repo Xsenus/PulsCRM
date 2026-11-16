@@ -2309,3 +2309,51 @@ textarea.chat-input {
 .chat-desktop-status.warn {
   color: #9a3412;
 }
+
+/* Инструкция «Как включить без HTTPS» под системными оповещениями. */
+.chat-insecure-help {
+  margin: 6px 0 0 28px;
+  padding: 8px 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.chat-insecure-help summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #9a3412;
+}
+
+.chat-insecure-help p,
+.chat-insecure-help ol {
+  margin: 8px 0 0;
+}
+
+.chat-insecure-help ol {
+  padding-left: 18px;
+}
+
+.chat-insecure-help li + li {
+  margin-top: 4px;
+}
+
+.chat-insecure-help code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.chat-copy-button {
+  padding: 1px 8px;
+  border: 1px solid #fdba74;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #9a3412;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
