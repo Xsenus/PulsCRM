@@ -150,7 +150,8 @@ const dispatchBatchesResponse = {
 };
 
 const pages = [
-  { path: '/', heading: 'Дашборд', content: 'Новая рассылка', kind: 'page' },
+  // Заголовок дашборда — приветствие по имени, поэтому ищем заголовок блока ссылок.
+  { path: '/', title: 'Дашборд', heading: 'Быстрые ссылки', content: 'Новая рассылка', kind: 'page' },
   { path: '/employees', heading: 'Сотрудники', content: 'Demo Employee', kind: 'table' },
   { path: '/organizations', heading: 'Организации', content: 'Mobile Org', kind: 'table' },
   { path: '/campaigns', heading: 'Рассылки', content: 'Monthly Digest', kind: 'table' },
@@ -208,7 +209,7 @@ test.beforeEach(async ({ page }) => {
 
 for (const viewport of viewports) {
   for (const pageCase of pages) {
-    test(`${pageCase.heading} fits ${viewport.name} viewport`, async ({ page }) => {
+    test(`${'title' in pageCase ? pageCase.title : pageCase.heading} fits ${viewport.name} viewport`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto(pageCase.path);
 

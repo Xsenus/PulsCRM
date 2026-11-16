@@ -9,7 +9,7 @@ namespace PulsNext.Api.Controllers;
 /// Диагностика очереди рассылок и операторские действия с элементами отправки.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/dispatch")]
 public sealed class DispatchController(IDispatchDiagnosticsService dispatchDiagnosticsService) : ControllerBase
 {

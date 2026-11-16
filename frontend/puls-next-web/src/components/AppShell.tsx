@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { getDatabaseInfo } from '../app/api';
 import { useAuth } from '../app/AuthContext';
+import { canAccess, type AccessLevel } from '../app/access';
 import { ChatProvider, useChat } from '../app/ChatContext';
 import { ChatDock } from './chat/ChatDock';
 import { ChatNotifications } from './chat/ChatNotifications';
@@ -10,15 +11,19 @@ type MenuIconKey = 'dashboard' | 'chat' | 'analytics' | 'employees' | 'organizat
 
 const SIDEBAR_STATE_KEY = 'puls-next-sidebar-collapsed';
 
-const menu: Array<{ to?: string; label: string; icon: MenuIconKey; children?: Array<{ to: string; label: string }> }> = [
-  { to: '/', label: 'Дашборд', icon: 'dashboard' },
-  { to: '/chat', label: 'Чат', icon: 'chat' },
-  { label: 'Аналитика', icon: 'analytics', children: [{ to: '/analytics/parus-tornado', label: 'Парус Торнадо' }] },
-  { to: '/employees', label: 'Сотрудники', icon: 'employees' },
-  { to: '/organizations', label: 'Организации', icon: 'organizations' },
-  { to: '/campaigns', label: 'Рассылки', icon: 'campaigns' },
-  { to: '/dispatch', label: 'Очередь', icon: 'dispatch' },
-  { to: '/settings', label: 'Настройки', icon: 'settings' }
+/**
+ * Меню. access — кому виден раздел (см. app/access.ts): новый раздел для сотрудников — строка с access: 'everyone'
+ * и маршрут вне <RequireAccess level="admin"> в App.tsx.
+ */
+const menu: Array<{ to?: string; label: string; icon: MenuIconKey; access: AccessLevel; children?: Array<{ to: string; label: string }> }> = [
+  { to: '/', label: 'Дашборд', icon: 'dashboard', access: 'everyone' },
+  { to: '/chat', label: 'Чат', icon: 'chat', access: 'everyone' },
+  { to: '/employees', label: 'Сотрудники', icon: 'employees', access: 'everyone' },
+  { label: 'Аналитика', icon: 'analytics', access: 'admin', children: [{ to: '/analytics/parus-tornado', label: 'Парус Торнадо' }] },
+  { to: '/organizations', label: 'Организации', icon: 'organizations', access: 'admin' },
+  { to: '/campaigns', label: 'Рассылки', icon: 'campaigns', access: 'admin' },
+  { to: '/dispatch', label: 'Очередь', icon: 'dispatch', access: 'admin' },
+  { to: '/settings', label: 'Настройки', icon: 'settings', access: 'admin' }
 ];
 
 function MenuIcon({ icon }: { icon: MenuIconKey }) {
@@ -311,7 +316,7 @@ function AppShellLayout({ children }: { children: React.ReactNode }) {
 
         <nav className="menu">
           {menu.map((item) => {
-            if (item.icon === 'chat' && !chat.enabled) {
+            if ((item.icon === 'chat' && !chat.enabled) || !canAccess(user, item.access)) {
               return null;
             }
 

@@ -10,7 +10,7 @@ namespace PulsNext.Api.Controllers;
 /// Protected administrative diagnostics for the API environment.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/diagnostics")]
 public sealed class DiagnosticsController(
     IStorageDiagnosticsService storageDiagnosticsService,

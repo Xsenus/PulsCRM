@@ -9,7 +9,7 @@ namespace PulsNext.Api.Controllers;
 /// Работа с карточками организаций и их справочниками.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/organizations")]
 public sealed class OrganizationsController(IOrganizationService organizationService) : ControllerBase
 {

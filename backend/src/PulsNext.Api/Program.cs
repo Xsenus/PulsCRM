@@ -118,7 +118,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Разделы администрирования — только для сотрудников с флагом «Администратор системы» (проверяется по базе).
+    options.AddPolicy(AccessPolicies.Admin, policy => policy.RequireAuthenticatedUser().AddRequirements(new AdminRequirement()));
+});
 
 var app = builder.Build();
 
