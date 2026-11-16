@@ -914,32 +914,94 @@ textarea.chat-input {
 }
 
 /* Реакции */
+/* Реакции — внутри пузыря внизу, как в Telegram: плашки слева, время справа в той же строке. */
+.chat-bubble-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 4px 8px;
+}
+
+.chat-bubble-footer.with-reactions {
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.chat-bubble-footer .chat-bubble-meta {
+  margin-left: auto;
+}
+
 .chat-reactions {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin-top: 3px;
 }
 
 .chat-reaction {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 24px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
+  height: 26px;
+  padding: 0 9px 0 7px;
+  border: 0;
   border-radius: 999px;
-  background: #ffffff;
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
-  cursor: pointer;
-}
-
-.chat-reaction.mine {
-  border-color: rgba(37, 99, 235, 0.5);
   background: #e7efff;
   color: var(--brand-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.chat-reaction:hover {
+  background: #d8e5ff;
+}
+
+.chat-reaction:active {
+  transform: scale(0.94);
+}
+
+.chat-reaction-emoji {
+  font-size: 15px;
+}
+
+/* Своя реакция — залитая плашка. */
+.chat-reaction.mine {
+  background: var(--chat-own, #2563eb);
+  color: #ffffff;
+}
+
+.chat-reaction.mine:hover {
+  background: #1d4ed8;
+}
+
+/* На своем синем пузыре: полупрозрачные белые плашки, своя реакция — белая. */
+.chat-message.own .chat-reaction {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.chat-message.own .chat-reaction:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.chat-message.own .chat-reaction.mine {
+  background: #ffffff;
+  color: var(--brand-2);
+}
+
+/* Крупные эмодзи без пузыря: плашки как у чужого сообщения. */
+.chat-message.own .chat-bubble.emoji-only .chat-reaction {
+  background: #e7efff;
+  color: var(--brand-2);
+}
+
+.chat-message.own .chat-bubble.emoji-only .chat-reaction.mine {
+  background: var(--chat-own, #2563eb);
+  color: #ffffff;
 }
 
 /* Действия с сообщением — в контекстном меню (ПКМ или долгое нажатие), а не панелью над каждым сообщением. */
