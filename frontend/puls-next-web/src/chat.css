@@ -17,13 +17,15 @@
 }
 
 /* Страница чата занимает ровно высоту окна под шапкой: без ручного расчета высоты шапки и отступов,
-   который расходился с реальной разметкой и давал прокрутку всей страницы. */
-.content-shell:has(> .content > .chat-page) {
+   который расходился с реальной разметкой и давал прокрутку всей страницы. Класс content-shell-fill ставит
+   AppShell на маршрутах /chat: селектор :has() не поддерживают Chrome < 105, Firefox < 121 и старые сборки
+   Яндекс.Браузера — там чат сжимался до min-height, примерно в половину окна. */
+.content-shell-fill {
   height: 100vh;
   height: 100dvh;
 }
 
-.content:has(> .chat-page) {
+.content-shell-fill > .content {
   flex: 1;
   min-height: 0;
   display: flex;
