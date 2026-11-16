@@ -7,13 +7,27 @@
   --chat-bg: #eef3fa;
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
-  height: calc(100vh - 78px - 28px - 34px);
+  flex: 1;
   min-height: 480px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   overflow: hidden;
+}
+
+/* Страница чата занимает ровно высоту окна под шапкой: без ручного расчета высоты шапки и отступов,
+   который расходился с реальной разметкой и давал прокрутку всей страницы. */
+.content-shell:has(> .content > .chat-page) {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.content:has(> .chat-page) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-page-loading,
@@ -1293,6 +1307,7 @@ textarea.chat-input {
   background: var(--surface-muted);
   line-height: 1.4;
   outline: none;
+  overflow-y: hidden;
 }
 
 .chat-textarea:focus {
@@ -1459,14 +1474,18 @@ textarea.chat-input {
 
 .chat-emoji-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  /* minmax(0, 1fr): колонки сжимаются под полосу прокрутки (в Windows она занимает место), без горизонтальной прокрутки. */
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 2px;
   padding: 6px;
   max-height: 220px;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
 .chat-emoji-item {
+  min-width: 0;
+  padding: 0;
   height: 34px;
   border: 0;
   border-radius: 8px;
@@ -1513,6 +1532,7 @@ textarea.chat-input {
 .chat-icon-picker {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   gap: 4px;
 }
 
@@ -1556,9 +1576,15 @@ textarea.chat-input {
 .chat-user-list,
 .chat-member-list {
   display: grid;
+  align-content: start;
   gap: 2px;
   max-height: 340px;
   overflow-y: auto;
+}
+
+/* Постоянная высота списка при поиске: иначе окно, отцентрованное по вертикали, прыгает при каждой букве. */
+.chat-user-list {
+  height: min(340px, 45vh);
 }
 
 .chat-user-row,
@@ -1828,7 +1854,6 @@ textarea.chat-input {
 @media (max-width: 860px) {
   .chat-page {
     grid-template-columns: 1fr;
-    height: calc(100vh - 78px - 32px);
     border-radius: 18px;
   }
 
@@ -1848,16 +1873,18 @@ textarea.chat-input {
     max-width: 86%;
   }
 
+  /* Панель — над пузырем и растет внутрь ленты: у чужих от левого края, у своих от правого, иначе у короткого
+     пузыря она вылезает за край ленты и появляется горизонтальная прокрутка. */
   .chat-message-actions,
   .chat-message.own .chat-message-actions {
     top: -16px;
-    left: auto;
-    right: 4px;
+    left: 4px;
+    right: auto;
   }
 
   .chat-message.own .chat-message-actions {
-    right: auto;
-    left: 4px;
+    left: auto;
+    right: 4px;
   }
 
   .chat-view-actions .chat-icon-button:not(:last-child) {
@@ -2062,16 +2089,18 @@ textarea.chat-input {
   max-width: 86%;
 }
 
+/* Панель — над пузырем и растет внутрь ленты: у чужих от левого края, у своих от правого, иначе у короткого
+   пузыря она вылезает за край ленты и появляется горизонтальная прокрутка. */
 .chat-view-compact .chat-message-actions,
 .chat-view-compact .chat-message.own .chat-message-actions {
   top: -16px;
-  left: auto;
-  right: 4px;
+  left: 4px;
+  right: auto;
 }
 
 .chat-view-compact .chat-message.own .chat-message-actions {
-  right: auto;
-  left: 4px;
+  left: auto;
+  right: 4px;
 }
 
 .chat-view-compact .chat-composer {
