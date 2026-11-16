@@ -7,7 +7,7 @@ import { ChatProvider, useChat } from '../app/ChatContext';
 import { ChatDock } from './chat/ChatDock';
 import { ChatNotifications } from './chat/ChatNotifications';
 
-type MenuIconKey = 'dashboard' | 'chat' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings';
+type MenuIconKey = 'dashboard' | 'chat' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings' | 'status';
 
 const SIDEBAR_STATE_KEY = 'puls-next-sidebar-collapsed';
 
@@ -23,7 +23,8 @@ const menu: Array<{ to?: string; label: string; icon: MenuIconKey; access: Acces
   { to: '/organizations', label: 'Организации', icon: 'organizations', access: 'admin' },
   { to: '/campaigns', label: 'Рассылки', icon: 'campaigns', access: 'admin' },
   { to: '/dispatch', label: 'Очередь', icon: 'dispatch', access: 'admin' },
-  { to: '/settings', label: 'Настройки', icon: 'settings', access: 'admin' }
+  { to: '/settings', label: 'Настройки', icon: 'settings', access: 'admin' },
+  { to: '/system', label: 'Состояние системы', icon: 'status', access: 'admin' }
 ];
 
 function MenuIcon({ icon }: { icon: MenuIconKey }) {
@@ -83,6 +84,12 @@ function MenuIcon({ icon }: { icon: MenuIconKey }) {
             d="M5 5.5A1.5 1.5 0 0 1 6.5 4h11A1.5 1.5 0 0 1 19 5.5v2A1.5 1.5 0 0 1 17.5 9h-11A1.5 1.5 0 0 1 5 7.5Zm0 6A1.5 1.5 0 0 1 6.5 10h11a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 5 13.5Zm0 6A1.5 1.5 0 0 1 6.5 16h11a1.5 1.5 0 0 1 1.5 1.5v1A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5ZM8 6v1h8V6Zm0 6v1h8v-1Zm0 6v1h8v-1Z"
             fill="currentColor"
           />
+        </svg>
+      );
+    case 'status':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 13h4l2-6 4 12 2-6h6v-2h-4.6L15 4.8 11 16.8 9 10.8 7.6 11H3Z" fill="currentColor" />
         </svg>
       );
     case 'settings':

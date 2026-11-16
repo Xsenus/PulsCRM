@@ -1,0 +1,61 @@
+import { expect, test } from '@playwright/test';
+import { fulfillJson, regularUser, setupAuthenticatedSession } from './helpers';
+
+const status = {
+  version: '1.0.59',
+  startedAtUtc: new Date(Date.now() - 3 * 3600_000).toISOString(),
+  checkedAtUtc: new Date().toISOString(),
+  machineName: 'SERVER2016',
+  overall: 'warn',
+  checks: [
+    { name: 'База Пульса (SQL Server)', status: 'ok', detail: 'Доступна, сотрудников: 27.', durationMs: 12 },
+    { name: 'База чата (PostgreSQL)', status: 'ok', detail: 'Доступна, кодировка UTF8.', durationMs: 5 },
+    { name: 'Место на диске', status: 'warn', detail: 'Свободно 3 ГБ из 100 ГБ на диске C:\\.', durationMs: 1 }
+  ],
+  storage: [{ name: 'Вложения чата', path: 'C:\\PulsCRMData\\chat', bytes: 734003200, files: 512 }],
+  diskFreeBytes: 3 * 1024 ** 3,
+  diskTotalBytes: 100 * 1024 ** 3,
+  queueDepth: 4,
+  failedLast24Hours: 1,
+  sentLast24Hours: 120,
+  pushSubscriptions: 6,
+  logDirectory: 'C:\\PulsCRMData\\logs',
+  logFiles: ['api-20261116.log', 'api-20261115.log'],
+  recentProblems: [
+    { timestampUtc: new Date().toISOString(), level: 'Error', category: 'PulsNext.Api.Errors', message: 'Необработанная ошибка запроса 0HNQ:1', exception: 'System.Exception: тест' },
+    { timestampUtc: new Date().toISOString(), level: 'Warning', category: 'PulsNext.Infrastructure.HttpWebPushSender', message: 'Web Push: сервис fcm.googleapis.com ответил 403.', exception: null }
+  ]
+};
+
+test('administrator sees system status, problems and can download a log file', async ({ page }) => {
+  await setupAuthenticatedSession(page);
+  await page.route(/\/api\/chat\/status$/, (route) => fulfillJson(route, { enabled: false }));
+  await page.route(/\/api\/diagnostics\/status$/, (route) => fulfillJson(route, status));
+  await page.route(/\/api\/diagnostics\/logs\/api-20261116\.log$/, (route) => route.fulfill({ status: 200, contentType: 'text/plain', body: 'log line' }));
+  await page.goto('/system');
+
+  await expect(page.getByRole('heading', { name: 'Состояние системы' })).toBeVisible();
+  await expect(page.getByRole('status')).toContainText('Есть замечания');
+  await expect(page.locator('.status-check')).toHaveCount(3);
+  await expect(page.locator('.status-check.warn')).toContainText('Место на диске');
+  await expect(page.locator('.status-table')).toContainText('700 МБ');
+  await expect(page.locator('.stat-card', { hasText: 'Подписок на уведомления' })).toContainText('6');
+
+  // Подробности ошибки раскрываются по клику.
+  await page.locator('.status-problem-head', { hasText: 'Необработанная ошибка' }).click();
+  await expect(page.locator('.status-problem-details')).toContainText('System.Exception: тест');
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: /api-20261116\.log/ }).click()
+  ]);
+  expect(download.suggestedFilename()).toBe('api-20261116.log');
+});
+
+test('the status page is admin only', async ({ page }) => {
+  await setupAuthenticatedSession(page, regularUser);
+  await page.route(/\/api\/chat\/status$/, (route) => fulfillJson(route, { enabled: false }));
+  await page.route(/\/api\/colleagues$/, (route) => fulfillJson(route, []));
+  await page.goto('/system');
+  await expect(page).toHaveURL(/\/$/);
+});

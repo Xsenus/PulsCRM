@@ -101,7 +101,7 @@ test('an administrator keeps every section, the table and can switch to cards', 
   const calls = await mockApp(page, currentUser);
   await page.goto('/');
 
-  await expect(page.locator('nav.menu .menu-link-label')).toHaveText(['Дашборд', 'Чат', 'Сотрудники', 'Аналитика', 'Организации', 'Рассылки', 'Очередь', 'Настройки']);
+  await expect(page.locator('nav.menu .menu-link-label')).toHaveText(['Дашборд', 'Чат', 'Сотрудники', 'Аналитика', 'Организации', 'Рассылки', 'Очередь', 'Настройки', 'Состояние системы']);
   await expect(page.getByRole('heading', { level: 2, name: 'Рассылки' })).toBeVisible();
   await expect(page.getByText('2806')).toBeVisible();
   expect(calls.dashboard).toBeGreaterThanOrEqual(1);
