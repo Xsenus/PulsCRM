@@ -16,7 +16,9 @@ public interface IAuthService
 public sealed class AuthService(
     LegacyUnitOfWork legacyUnitOfWork,
     ICurrentUserAccessor currentUserAccessor,
-    IJwtTokenFactory jwtTokenFactory) : IAuthService
+    IJwtTokenFactory jwtTokenFactory,
+    LoginThrottle? loginThrottle = null,
+    Microsoft.AspNetCore.Http.IHttpContextAccessor? httpContextAccessor = null) : IAuthService
 {
     public Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
     {
@@ -25,6 +27,23 @@ public sealed class AuthService(
         ValidationHelper.Guard(!string.IsNullOrWhiteSpace(request.Password), "Введите пароль.");
 
         var login = request.Login.Trim();
+        var address = httpContextAccessor?.HttpContext?.Connection.RemoteIpAddress?.ToString();
+        loginThrottle?.EnsureAllowed(login, address);
+        try
+        {
+            var response = Authenticate(login, request.Password);
+            loginThrottle?.RegisterSuccess(login, address);
+            return Task.FromResult(response);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            loginThrottle?.RegisterFailure(login, address);
+            throw;
+        }
+    }
+
+    private AuthResponse Authenticate(string login, string password)
+    {
         var users = new XPQuery<LegacyUser>(legacyUnitOfWork).ToList();
         var user = users.FirstOrDefault(x => string.Equals(x.Name, login, StringComparison.OrdinalIgnoreCase));
 
@@ -38,13 +57,13 @@ public sealed class AuthService(
             throw new UnauthorizedAccessException("Пользователь уволен и не может войти в систему.");
         }
 
-        var hash = LegacyPasswordHasher.HashUnicodeMd5(request.Password);
+        var hash = LegacyPasswordHasher.HashUnicodeMd5(password);
         if (!string.Equals(user.Password, hash, StringComparison.OrdinalIgnoreCase))
         {
             throw new UnauthorizedAccessException("Неверный пароль.");
         }
 
-        return Task.FromResult(jwtTokenFactory.Create(user));
+        return jwtTokenFactory.Create(user);
     }
 
     public Task<IReadOnlyCollection<LoginUserOptionDto>> GetLoginUsersAsync(string? search, int take, CancellationToken cancellationToken)
