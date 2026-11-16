@@ -91,7 +91,9 @@ jobs:
 
   e2e:
     name: E2E (Playwright)
-    runs-on: ubuntu-latest
+    # Образ закреплен: Playwright ставит браузеры и системные зависимости только на поддерживаемые версии
+    # Ubuntu (ubuntu-latest уже 26.04, которую Playwright 1.60 не поддерживает).
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
 
     defaults:
