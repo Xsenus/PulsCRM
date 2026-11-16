@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using PulsNext.Domain.Chat;
 using PulsNext.Domain.Legacy;
@@ -112,6 +113,15 @@ public static class ServiceCollectionExtensions
         {
             var chatConnectionString = GetConnectionString(configuration, contentRootPath, "ChatDb");
             var autoCreateChatSchema = configuration.GetSection(ChatOptions.SectionName).GetValue(nameof(ChatOptions.AutoCreateSchema), true);
+            if (autoCreateChatSchema)
+            {
+                // Первым из фоновых сервисов чата: база должна появиться до обращений XPO и проверки кодировки.
+                services.AddHostedService(provider => new ChatDatabaseBootstrapHostedService(
+                    new NpgsqlChatDatabaseAdmin(chatConnectionString),
+                    chatConnectionString,
+                    provider.GetRequiredService<ILogger<ChatDatabaseBootstrapHostedService>>()));
+            }
+
             services.AddXpoCustomSession<ChatUnitOfWork>(true, options =>
                 options.UseConnectionString(chatConnectionString)
                     .UseAutoCreationOption(autoCreateChatSchema ? AutoCreateOption.DatabaseAndSchema : AutoCreateOption.SchemaAlreadyExists)
