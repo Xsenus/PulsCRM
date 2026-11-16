@@ -75,6 +75,9 @@ test('an employee sees colleagues as cards with contacts and search', async ({ p
   await expect(page.getByRole('tablist', { name: 'Вид списка сотрудников' })).toHaveCount(0);
   const cards = page.locator('.colleague-card');
   await expect(cards).toHaveCount(3);
+  // Три карточки в ряд на обычном экране.
+  const tops = await cards.evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().top)));
+  expect(new Set(tops).size).toBe(1);
   const petrova = page.getByRole('article', { name: 'Петрова Анна Сергеевна' });
   await expect(petrova).toContainText('Главный бухгалтер');
   await expect(petrova).toContainText('Бухгалтерия');
