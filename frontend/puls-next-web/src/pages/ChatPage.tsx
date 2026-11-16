@@ -916,7 +916,11 @@ export function ConversationView({ conversation, onBack, compact = false, header
     const element = textareaRef.current;
     if (element) {
       element.style.height = 'auto';
-      element.style.height = `${Math.min(element.scrollHeight, 200)}px`;
+      // scrollHeight не включает рамку, а высота задается с ней (border-box): без рамки поле на 2 px ниже текста
+      // и всегда показывает полосу прокрутки. Прокрутка нужна, только когда текст выше 200 px.
+      const needed = element.scrollHeight + element.offsetHeight - element.clientHeight;
+      element.style.height = `${Math.min(needed, 200)}px`;
+      element.style.overflowY = needed > 200 ? 'auto' : 'hidden';
     }
   }, [text]);
 

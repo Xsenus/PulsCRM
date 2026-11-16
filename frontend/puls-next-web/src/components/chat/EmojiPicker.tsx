@@ -30,7 +30,8 @@ export const EMOJI_GROUPS: Array<{ key: string; label: string; icon: string; ite
 ];
 
 /** Иконки для групповых чатов. */
-export const GROUP_ICONS = ['💬', '👥', '💼', '📊', '📈', '🛠️', '🚀', '📣', '🏢', '💰', '🧾', '🎯', '⚙️', '📦', '🤝', '☕'];
+// 12 иконок помещаются в одну строку окна «Новый чат».
+export const GROUP_ICONS = ['💬', '👥', '💼', '📊', '📈', '🛠️', '🚀', '📣', '🏢', '💰', '🎯', '🤝'];
 
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
