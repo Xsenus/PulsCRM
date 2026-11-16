@@ -366,6 +366,7 @@ public class ChatMessage(Session session) : XPObject(session)
     private DateTime _createdAtUtc;
     private DateTime? _editedAtUtc;
     private DateTime? _deletedAtUtc;
+    private int _deletedByUserId;
     private int _forwardedFromUserId;
     private string? _forwardedFromName;
     private string? _mentionedUserIds;
@@ -480,12 +481,22 @@ public class ChatMessage(Session session) : XPObject(session)
     }
 
     /// <summary>
-    /// Когда удалено (UTC); текст и вложения удаленного сообщения не выдаются.
+    /// Когда удалено (UTC). Удаление мягкое: текст, вложения (вместе с файлами) и реакции остаются в базе,
+    /// но участникам не выдаются.
     /// </summary>
     public DateTime? DeletedAtUtc
     {
         get => _deletedAtUtc;
         set => SetPropertyValue(nameof(DeletedAtUtc), ref _deletedAtUtc, value);
+    }
+
+    /// <summary>
+    /// Кто удалил (legacy Oid): автор или администратор группового чата.
+    /// </summary>
+    public int DeletedByUserId
+    {
+        get => _deletedByUserId;
+        set => SetPropertyValue(nameof(DeletedByUserId), ref _deletedByUserId, value);
     }
 }
 

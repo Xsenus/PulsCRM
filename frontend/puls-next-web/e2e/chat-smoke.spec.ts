@@ -369,9 +369,8 @@ test('a message can be forwarded to another chat', async ({ page }) => {
 
   await page.goto('/chat/10');
   const first = page.locator('[data-message-id="1"]');
-  await first.hover();
-  await first.getByRole('button', { name: 'Еще' }).click();
-  await first.getByRole('menuitem', { name: 'Переслать' }).click();
+  await first.click({ button: 'right' });
+  await page.getByRole('menu', { name: 'Действия с сообщением' }).getByRole('menuitem', { name: /Переслать/ }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Переслать сообщение' });
   await expect(dialog).toBeVisible();

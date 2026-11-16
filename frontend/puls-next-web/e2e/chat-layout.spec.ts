@@ -65,14 +65,7 @@ async function expectNoHorizontalScroll(locator: Locator) {
   expect(size.scrollWidth).toBeLessThanOrEqual(size.clientWidth);
 }
 
-async function expectInside(inner: Locator, outer: Locator) {
-  const innerBox = (await inner.boundingBox())!;
-  const outerBox = (await outer.boundingBox())!;
-  expect(innerBox.x).toBeGreaterThanOrEqual(outerBox.x);
-  expect(innerBox.x + innerBox.width).toBeLessThanOrEqual(outerBox.x + outerBox.width + 0.5);
-}
-
-test('hover actions of short messages stay inside the floating chat window', async ({ page }) => {
+test('floating chat window: no toolbar over messages, the message menu stays inside the screen', async ({ page }) => {
   await mockChat(page, true);
   await page.goto('/employees');
 
@@ -84,10 +77,22 @@ test('hover actions of short messages stay inside the floating chat window', asy
   for (const selector of ['.chat-message.own', '.chat-message:not(.own)']) {
     const message = dock.locator(selector);
     await message.hover();
-    const actions = message.locator('.chat-message-actions');
-    await expect(actions).toBeVisible();
-    await expectInside(actions, list);
+    // Над сообщением при наведении больше ничего не рисуется — действия в меню по ПКМ.
+    await expect(message.getByRole('toolbar')).toHaveCount(0);
     await expectNoHorizontalScroll(list);
+
+    const bubble = message.locator('.chat-bubble');
+    const box = (await bubble.boundingBox())!;
+    await bubble.click({ button: 'right', position: { x: box.width - 2, y: box.height / 2 } });
+    const menu = page.getByRole('menu', { name: 'Действия с сообщением' });
+    await expect(menu).toBeVisible();
+    const menuBox = (await menu.boundingBox())!;
+    expect(menuBox.x).toBeGreaterThanOrEqual(0);
+    expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+    expect(menuBox.y + menuBox.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+    await expectNoHorizontalScroll(list);
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
   }
 });
 

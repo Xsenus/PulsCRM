@@ -123,7 +123,7 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteMessage_HidesTextAttachmentsAndReactions()
+    public async Task DeleteMessage_HidesContentButKeepsItInDatabase()
     {
         As(Alice);
         var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
@@ -141,8 +141,22 @@ public sealed class ChatServiceTests : IDisposable
         Assert.Null(deleted.Text);
         Assert.Empty(deleted.Attachments);
         Assert.Empty(deleted.Reactions);
-        Assert.Empty(_fileStore.Files);
         Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, false, CancellationToken.None));
+        As(Bob);
+        var forBob = Assert.Single((await _service.GetMessagesAsync(conversation.Id, null, 50, CancellationToken.None)).Items);
+        Assert.True(forBob.IsDeleted);
+        Assert.Null(forBob.Text);
+        Assert.Empty(forBob.Attachments);
+        Assert.Null(await _service.OpenAttachmentAsync(attachment.Id, false, CancellationToken.None));
+
+        // В базе и на диске все осталось: текст, вложение с файлом, реакция, кто и когда удалил.
+        var stored = _unitOfWork.GetObjectByKey<ChatMessage>(message.Id, true)!;
+        Assert.Equal("Смотри", stored.Text);
+        Assert.Equal(Alice, stored.DeletedByUserId);
+        Assert.NotNull(stored.DeletedAtUtc);
+        Assert.Single(new XPQuery<ChatAttachment>(_unitOfWork).Where(x => x.Message == stored));
+        Assert.Single(new XPQuery<ChatReaction>(_unitOfWork).Where(x => x.Message == stored));
+        Assert.NotEmpty(_fileStore.Files);
     }
 
     [Fact]
@@ -286,7 +300,10 @@ public sealed class ChatServiceTests : IDisposable
         As(Alice);
         var message = Assert.Single((await _service.GetMessagesAsync(conversation.Id, null, 50, CancellationToken.None)).Items);
         await _service.DeleteMessageAsync(message.Id, CancellationToken.None);
-        Assert.Empty(_fileStore.Files);
+        // Файлы удаленного сообщения остаются на диске, но не отдаются ни оригиналом, ни копией.
+        Assert.Equal(2, _fileStore.Files.Count);
+        Assert.Null(await _service.OpenAttachmentAsync(image.Id, false, CancellationToken.None));
+        Assert.Null(await _service.OpenAttachmentAsync(image.Id, true, CancellationToken.None));
     }
 
     [Fact]
@@ -461,10 +478,15 @@ public sealed class ChatServiceTests : IDisposable
         Assert.Equal(2, _publisher.Events.Count(x => x.Name == ChatEventNames.MessageCreated));
         Assert.Equal(3, _fileStore.Files.Count);
 
-        // Удаление оригинала не трогает копии.
+        // Удаление оригинала не трогает копии (а файл оригинала остается на диске — удаление мягкое).
         As(Bob);
         await _service.DeleteMessageAsync(original.Id, CancellationToken.None);
-        Assert.Equal(2, _fileStore.Files.Count);
+        Assert.Equal(3, _fileStore.Files.Count);
+        As(Alice);
+        foreach (var copy in forwarded)
+        {
+            Assert.NotNull(await _service.OpenAttachmentAsync(copy.Attachments.Single().Id, false, CancellationToken.None));
+        }
 
         // Пересылка пересланного сохраняет автора оригинала.
         As(Carol);
