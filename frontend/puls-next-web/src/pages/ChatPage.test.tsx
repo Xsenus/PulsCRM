@@ -185,6 +185,26 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+/** Открывает контекстное меню сообщения (ПКМ) и возвращает его — оно рисуется в document.body. */
+function openMessageMenu(messageElement: Element) {
+  act(() => {
+    messageElement.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 120, clientY: 120 }));
+  });
+  return document.querySelector('[role="menu"][aria-label="Действия с сообщением"]') as HTMLElement;
+}
+
+function menuItems(menu: Element) {
+  return Array.from(menu.querySelectorAll('[role="menuitem"]')) as HTMLButtonElement[];
+}
+
+function clickMenuItem(menu: Element, label: string) {
+  act(() => {
+    // jsdom не находит атрибуты и текст с эмодзи через CSS-селектор, ищем вручную.
+    menuItems(menu).find((item) => item.textContent?.includes(label) || item.getAttribute('aria-label') === label)!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  });
+}
+
 describe('ChatPage', () => {
   it('shows disabled state when chat is off on the server', () => {
     chatState.value = createChat({ enabled: false, status: { enabled: false, currentUserId: ME, maxAttachmentBytes: 0, maxAttachmentsPerMessage: 0, maxMessageLength: 0 } });
@@ -226,9 +246,8 @@ describe('ChatPage', () => {
     expect(apiMocks.sendChatMessage).not.toHaveBeenCalled();
 
     const secondMessage = container!.querySelectorAll('.chat-message')[1];
-    act(() => {
-      (secondMessage.querySelector('button[aria-label="Ответить"]') as HTMLButtonElement).click();
-    });
+    expect(secondMessage.querySelector('[role="toolbar"]')).toBeNull();
+    clickMenuItem(openMessageMenu(secondMessage), 'Ответить');
     expect(container!.querySelector('.chat-composer-context')?.textContent).toContain('Ответ Борис Петров');
 
     pressKey(textarea, 'Enter');
@@ -285,10 +304,7 @@ describe('ChatPage', () => {
     await flush();
     const textarea = setTextarea('Мой черновик');
     const ownMessage = container!.querySelectorAll('.chat-message')[2];
-    act(() => (ownMessage.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
-    act(() => {
-      Array.from(ownMessage.querySelectorAll('button[role="menuitem"]')).find((button) => button.textContent === 'Изменить')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    clickMenuItem(openMessageMenu(ownMessage), 'Изменить');
 
     expect(container!.querySelector('.chat-composer-context')?.textContent).toContain('Редактирование');
     expect(textarea.value).toBe('Сообщение 3');
@@ -338,8 +354,8 @@ describe('ChatPage', () => {
     render('/chat/10');
     await flush();
     const second = container!.querySelectorAll('.chat-message')[1];
-    act(() => (second.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
-    expect(Array.from(second.querySelectorAll('button[role="menuitem"]')).map((item) => item.textContent)).not.toContain('Закрепить');
+    const firstMenu = openMessageMenu(second);
+    expect(menuItems(firstMenu).some((item) => item.textContent?.includes('Закрепить'))).toBe(false);
     act(() => root?.unmount());
     container?.remove();
 
@@ -347,11 +363,7 @@ describe('ChatPage', () => {
     render('/chat/10');
     await flush();
     const message2 = container!.querySelectorAll('.chat-message')[1];
-    act(() => (message2.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
-    act(() => {
-      Array.from(message2.querySelectorAll('button[role="menuitem"]')).find((item) => item.textContent === 'Закрепить')!
-        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    clickMenuItem(openMessageMenu(message2), 'Закрепить');
     await flush();
     expect(apiMocks.pinChatMessage).toHaveBeenCalledWith(10, 2);
   });
@@ -432,11 +444,7 @@ describe('ChatPage', () => {
     expect(container!.querySelectorAll('.chat-message')[1].querySelector('.chat-bubble-forwarded')?.textContent).toBe('↪ Переслано от Иванов Олег');
 
     const first = container!.querySelectorAll('.chat-message')[0];
-    act(() => (first.querySelector('button[aria-label="Еще"]') as HTMLButtonElement).click());
-    act(() => {
-      Array.from(first.querySelectorAll('button[role="menuitem"]')).find((item) => item.textContent === 'Переслать')!
-        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    clickMenuItem(openMessageMenu(first), 'Переслать');
 
     const options = Array.from(document.querySelectorAll('[aria-label="Куда переслать"] [role="option"]')) as HTMLButtonElement[];
     expect(options.map((item) => item.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Отдел продаж')]));
@@ -491,20 +499,40 @@ describe('ChatPage', () => {
     expect(apiMocks.sendChatMessage).toHaveBeenCalledWith(10, expect.objectContaining({ mentionedUserIds: [PEER] }));
   });
 
+  it('asks for deletion in a dialog instead of the browser confirm', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    apiMocks.deleteChatMessage.mockResolvedValue(message(3, { senderUserId: ME, text: null, isDeleted: true }));
+    render('/chat/10');
+    await flush();
+
+    const ownMessage = container!.querySelectorAll('.chat-message')[2];
+    clickMenuItem(openMessageMenu(ownMessage), 'Удалить');
+    const dialog = document.querySelector('.modal-window') as HTMLElement;
+    expect(dialog.textContent).toContain('Удалить сообщение?');
+    expect(dialog.textContent).toContain('Сообщение 3');
+
+    // «Отмена» ничего не удаляет.
+    act(() => (Array.from(dialog.querySelectorAll('button')).find((item) => item.textContent === 'Отмена') as HTMLButtonElement).click());
+    expect(document.querySelector('.modal-window')).toBeNull();
+    expect(apiMocks.deleteChatMessage).not.toHaveBeenCalled();
+
+    clickMenuItem(openMessageMenu(ownMessage), 'Удалить');
+    act(() => (Array.from(document.querySelectorAll('.modal-window button')).find((item) => item.textContent === 'Удалить') as HTMLButtonElement).click());
+    await flush();
+    expect(apiMocks.deleteChatMessage).toHaveBeenCalledWith(3);
+    expect(document.querySelector('.modal-window')).toBeNull();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(container!.querySelectorAll('.chat-message')[2].textContent).toContain('Сообщение удалено');
+  });
+
   it('toggles a quick reaction', async () => {
     render('/chat/10');
     await flush();
 
     const first = container!.querySelectorAll('.chat-message')[0];
-    act(() => {
-      (first.querySelector('button[aria-label="Реакция"]') as HTMLButtonElement).click();
-    });
-    act(() => {
-      // jsdom не находит атрибуты с эмодзи через CSS-селектор, ищем вручную.
-      Array.from(first.querySelectorAll('.chat-quick-reactions button'))
-        .find((button) => button.getAttribute('aria-label') === 'Реакция 👍')!
-        .dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    });
+    const menu = openMessageMenu(first);
+    clickMenuItem(menu, 'Реакция 👍');
+    expect(document.querySelector('[role="menu"]')).toBeNull();
     await flush();
 
     expect(apiMocks.toggleChatReaction).toHaveBeenCalledWith(1, '👍');

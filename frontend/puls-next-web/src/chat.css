@@ -223,8 +223,8 @@ textarea.chat-input {
   background: #f1f5fb;
 }
 
-/* Контекстное меню диалога (ПКМ): открывается у курсора поверх всего, в том числе плавающего окна. */
-.chat-message-menu.chat-conversation-menu {
+/* Контекстные меню (ПКМ по диалогу или сообщению): у курсора поверх всего, в том числе плавающего окна. */
+.chat-message-menu.chat-context-menu {
   position: fixed;
   z-index: 1300;
   min-width: 210px;
@@ -598,6 +598,8 @@ textarea.chat-input {
 }
 
 .chat-forward-preview {
+  display: grid;
+  gap: 6px;
   margin-bottom: 10px;
   padding: 8px 10px;
   border-left: 3px solid var(--brand);
@@ -605,9 +607,43 @@ textarea.chat-input {
   background: rgba(15, 23, 42, 0.04);
   color: var(--text-muted);
   font-size: 13px;
+}
+
+.chat-forward-caption {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.chat-forward-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chat-mini-thumb {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #e2e8f0 center / cover no-repeat;
+}
+
+.chat-mini-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.chat-mini-thumb-more {
+  width: 56px;
+  height: 56px;
+  color: var(--text);
+  font-weight: 700;
 }
 
 .chat-bubble-text {
@@ -904,98 +940,44 @@ textarea.chat-input {
   color: var(--brand-2);
 }
 
-/* Действия при наведении */
-.chat-message-actions {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 6px);
-  display: none;
-  gap: 2px;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: #ffffff;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
-  z-index: 3;
+/* Действия с сообщением — в контекстном меню (ПКМ или долгое нажатие), а не панелью над каждым сообщением. */
+.chat-message.menu-open .chat-bubble {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35);
 }
 
-/* Невидимый «мостик» между пузырем и панелью, чтобы панель не пропадала при переводе курсора. */
-.chat-message-actions::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -8px;
-  width: 8px;
-}
-
-.chat-message.own .chat-message-actions {
-  left: auto;
-  right: calc(100% + 6px);
-}
-
-.chat-message.own .chat-message-actions::before {
-  left: auto;
-  right: -8px;
-}
-
-.chat-message:hover .chat-message-actions,
-.chat-message:focus-within .chat-message-actions {
-  display: flex;
-}
-
-.chat-message-actions > button {
-  width: 28px;
-  height: 26px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  color: #334155;
-}
-
-.chat-message-actions > button:hover {
-  background: #f1f5fb;
-}
-
-.chat-quick-reactions,
 .chat-message-menu {
-  position: absolute;
-  top: 32px;
-  left: 0;
-  z-index: 4;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: #ffffff;
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
 }
 
-.chat-message.own .chat-quick-reactions,
-.chat-message.own .chat-message-menu {
-  left: auto;
-  right: 0;
-}
-
-.chat-quick-reactions {
+.chat-context-reactions {
   display: flex;
-  padding: 4px;
+  justify-content: space-between;
+  gap: 2px;
+  padding: 2px 2px 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
 }
 
-.chat-quick-reactions button {
+.chat-message-menu .chat-context-reactions button {
   width: 34px;
   height: 34px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
+  padding: 0;
+  text-align: center;
   font-size: 20px;
-  cursor: pointer;
   transition: transform 0.1s ease;
 }
 
-.chat-quick-reactions button:hover {
+.chat-message-menu .chat-context-reactions button:hover,
+.chat-message-menu .chat-context-reactions button:focus-visible {
   transform: scale(1.2);
   background: #f1f5fb;
+}
+
+.chat-message-menu .chat-context-reactions button.mine {
+  background: #e7efff;
 }
 
 .chat-message-menu {
@@ -1884,20 +1866,6 @@ textarea.chat-input {
     max-width: 86%;
   }
 
-  /* Панель — над пузырем и растет внутрь ленты: у чужих от левого края, у своих от правого, иначе у короткого
-     пузыря она вылезает за край ленты и появляется горизонтальная прокрутка. */
-  .chat-message-actions,
-  .chat-message.own .chat-message-actions {
-    top: -16px;
-    left: 4px;
-    right: auto;
-  }
-
-  .chat-message.own .chat-message-actions {
-    left: auto;
-    right: 4px;
-  }
-
   .chat-view-actions .chat-icon-button:not(:last-child) {
     display: none;
   }
@@ -2098,20 +2066,6 @@ textarea.chat-input {
 
 .chat-view-compact .chat-message {
   max-width: 86%;
-}
-
-/* Панель — над пузырем и растет внутрь ленты: у чужих от левого края, у своих от правого, иначе у короткого
-   пузыря она вылезает за край ленты и появляется горизонтальная прокрутка. */
-.chat-view-compact .chat-message-actions,
-.chat-view-compact .chat-message.own .chat-message-actions {
-  top: -16px;
-  left: 4px;
-  right: auto;
-}
-
-.chat-view-compact .chat-message.own .chat-message-actions {
-  left: auto;
-  right: 4px;
 }
 
 .chat-view-compact .chat-composer {

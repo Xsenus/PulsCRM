@@ -21,6 +21,7 @@ import { showToast } from '../../app/toast';
 import { ChatAvatar } from './ChatAvatar';
 import { describeMessageBody } from '../../app/chatFormat';
 import { GROUP_ICONS } from './EmojiPicker';
+import { ChatAttachmentMiniThumb } from './ChatAttachmentView';
 
 function useUserSearch(open: boolean) {
   const [search, setSearch] = useState('');
@@ -104,6 +105,79 @@ function UserPicker({ users, loading, search, onSearch, selected, onToggle, excl
 export const MAX_FORWARD_TARGETS = 10;
 
 /** Выбор диалогов для пересылки сообщения. */
+/** Подтверждение удаления сообщения (вместо системного confirm браузера). */
+export function DeleteMessageDialog({ message, own, onClose, onConfirm }: {
+  /** null — окно закрыто. */
+  message: ChatMessageDto | null;
+  own: boolean;
+  onClose: () => void;
+  onConfirm: (message: ChatMessageDto) => Promise<void>;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  const confirm = async () => {
+    if (!message) {
+      return;
+    }
+
+    setBusy(true);
+    try {
+      await onConfirm(message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={!!message}
+      title="Удалить сообщение?"
+      onClose={onClose}
+      maxWidth={440}
+      actions={(
+        <div className="button-group">
+          <button type="button" className="secondary-button button-inline" onClick={onClose} disabled={busy}>Отмена</button>
+          <button type="button" className="danger-button button-inline" onClick={() => void confirm()} disabled={busy} autoFocus>
+            Удалить
+          </button>
+        </div>
+      )}
+    >
+      {message ? (
+        <div className="chat-delete-dialog">
+          <ForwardPreview message={message} />
+          <p className="chat-muted">
+            {own ? 'Сообщение' : `Сообщение от ${message.senderName}`} пропадет у всех участников чата — вместо него будет
+            пометка «Сообщение удалено».
+          </p>
+        </div>
+      ) : null}
+    </Modal>
+  );
+}
+
+const FORWARD_PREVIEW_IMAGES = 6;
+
+/** Краткий вид сообщения: миниатюры фото (до 6 и «+N») и текст или описание вложений. */
+function ForwardPreview({ message }: { message: ChatMessageDto }) {
+  const images = message.attachments.filter((item) => item.isImage);
+  const shown = images.slice(0, FORWARD_PREVIEW_IMAGES);
+  const rest = images.length - shown.length;
+  const caption = message.text?.trim() || (images.length === message.attachments.length && images.length > 0 ? '' : describeMessageBody(message));
+  return (
+    <div className="chat-forward-preview" aria-label="Сообщение">
+      {shown.length > 0 ? (
+        <div className="chat-forward-images">
+          {shown.map((item) => <ChatAttachmentMiniThumb key={item.id} attachment={item} />)}
+          {rest > 0 ? <span className="chat-mini-thumb chat-mini-thumb-more">+{rest}</span> : null}
+        </div>
+      ) : null}
+      {caption ? <div className="chat-forward-caption">{caption}</div> : null}
+      {!caption && shown.length === 0 ? <div className="chat-forward-caption">Сообщение</div> : null}
+    </div>
+  );
+}
+
 export function ForwardMessageDialog({ message, onClose }: {
   /** null — окно закрыто. */
   message: ChatMessageDto | null;
@@ -182,7 +256,7 @@ export function ForwardMessageDialog({ message, onClose }: {
         </div>
       )}
     >
-      {message ? <div className="chat-forward-preview">{describeMessageBody(message) || 'Сообщение'}</div> : null}
+      {message ? <ForwardPreview message={message} /> : null}
       <div className="chat-user-picker">
         <input
           className="chat-input"

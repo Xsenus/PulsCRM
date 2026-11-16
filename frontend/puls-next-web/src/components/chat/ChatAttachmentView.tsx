@@ -38,6 +38,23 @@ export function useChatImageUrl(attachmentId: number | null, thumbnail = false, 
   return { url, failed };
 }
 
+/**
+ * Маленькая квадратная миниатюра изображения (окно пересылки и т. п.): сразу размытое превью из сообщения,
+ * поверх — уменьшенная копия (или оригинал, если копии нет).
+ */
+export function ChatAttachmentMiniThumb({ attachment, size = 56 }: { attachment: ChatAttachmentDto; size?: number }) {
+  const { url } = useChatImageUrl(attachment.id, !!attachment.hasThumbnail);
+  return (
+    <span
+      className="chat-mini-thumb"
+      style={{ width: size, height: size, backgroundImage: attachment.previewDataUrl ? `url("${attachment.previewDataUrl}")` : undefined }}
+      title={attachment.fileName}
+    >
+      {url ? <img src={url} alt={attachment.fileName} /> : null}
+    </span>
+  );
+}
+
 /** Становится true, когда элемент подходит к видимой области ленты (с запасом), и больше не сбрасывается. */
 function useNearViewport<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);

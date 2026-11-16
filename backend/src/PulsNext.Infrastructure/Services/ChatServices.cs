@@ -917,20 +917,10 @@ public sealed class ChatService(
 
         if (message.DeletedAtUtc is null)
         {
+            // Мягкое удаление: текст, вложения с файлами и реакции остаются в базе (для истории и разбора),
+            // а участникам удаленное не выдается — ни в ленте, ни в поиске, ни по ссылке на файл.
             message.DeletedAtUtc = DateTime.UtcNow;
-            message.Text = null;
-
-            foreach (var attachment in new XPQuery<ChatAttachment>(unitOfWork).Where(x => x.Message == message).ToList())
-            {
-                TryDeleteFile(attachment.RelativePath);
-                TryDeleteFile(attachment.ThumbnailRelativePath);
-                attachment.Delete();
-            }
-
-            foreach (var reaction in new XPQuery<ChatReaction>(unitOfWork).Where(x => x.Message == message).ToList())
-            {
-                reaction.Delete();
-            }
+            message.DeletedByUserId = me;
 
             var wasPinned = message.Conversation!.PinnedMessageId == message.Oid;
             if (wasPinned)

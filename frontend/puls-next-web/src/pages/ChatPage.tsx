@@ -33,7 +33,7 @@ import { getApiErrorMessage } from '../app/apiErrors';
 import { showToast } from '../app/toast';
 import { ChatAvatar } from '../components/chat/ChatAvatar';
 import { ChatAttachmentList } from '../components/chat/ChatAttachmentView';
-import { ChatSettingsDialog, ConversationInfoDialog, ForwardMessageDialog, NewChatDialog } from '../components/chat/ChatDialogs';
+import { ChatSettingsDialog, ConversationInfoDialog, DeleteMessageDialog, ForwardMessageDialog, NewChatDialog } from '../components/chat/ChatDialogs';
 import { EmojiPicker, QUICK_REACTIONS } from '../components/chat/EmojiPicker';
 import { ChatLinkPreview, extractAppLinks, parseAppLink } from '../components/chat/ChatLinkPreview';
 import { prepareChatImageUpload } from '../app/chatImageThumbnail';
@@ -41,6 +41,7 @@ import { createTaskLimiter } from '../app/taskLimiter';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
 import { ChatTicks } from '../components/chat/ChatTicks';
 import { ChatConversationMenu } from '../components/chat/ChatConversationMenu';
+import { ChatContextMenu, getContextMenuPosition, type ChatMenuPosition } from '../components/chat/ChatContextMenu';
 import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
 import { loadChatScrollPosition, saveChatScrollPosition, type ChatScrollPosition } from '../app/chatScrollMemory';
 import { collectMentionedUserIds, findMentionQuery, getMentionCandidates, insertMention, splitMentions } from '../app/chatMentions';
@@ -318,6 +319,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const [atBottom, setAtBottom] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
   const [forwarding, setForwarding] = useState<ChatMessageDto | null>(null);
+  const [deleting, setDeleting] = useState<ChatMessageDto | null>(null);
   const [mention, setMention] = useState<{ start: number; query: string; index: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const conversationSearch = useChatMessageSearch(searchOpen ? searchQuery : '', conversation.id);
@@ -974,15 +976,12 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   };
 
-  const handleDelete = async (message: ChatMessageDto) => {
-    if (!window.confirm('Удалить сообщение у всех участников?')) {
-      return;
-    }
-
+  const confirmDelete = async (message: ChatMessageDto) => {
     try {
       const updated = await deleteChatMessage(message.id);
       setMessages((current) => mergeMessages(current, [updated]));
       chat.applyMessageLocally(updated);
+      setDeleting(null);
       if (editing?.id === message.id) {
         resetComposer();
       }
@@ -1220,7 +1219,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
                   readStatus={message.senderUserId === currentUserId ? getReadStatus(message, conversation.participants, currentUserId) : null}
                   onReply={() => { setEditing(null); setReplyTo(message); textareaRef.current?.focus(); }}
                   onEdit={() => startEdit(message)}
-                  onDelete={() => void handleDelete(message)}
+                  onDelete={() => setDeleting(message)}
                   onReact={(emoji) => void handleReaction(message, emoji)}
                   onReplyClick={(id) => void scrollToMessage(id)}
                   pinState={conversation.canPinMessages && !isSystemMessage(message) && !message.isDeleted
@@ -1404,6 +1403,12 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
       <ConversationInfoDialog open={infoOpen} conversation={conversation} onClose={() => setInfoOpen(false)} onLeft={onBack} />
       <ForwardMessageDialog message={forwarding} onClose={() => setForwarding(null)} />
+      <DeleteMessageDialog
+        message={deleting}
+        own={deleting?.senderUserId === currentUserId}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
@@ -1460,8 +1465,9 @@ function MessageBubble({
   mentionsMe?: boolean;
   currentUserId?: number;
 }) {
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [menuAt, setMenuAt] = useState<ChatMenuPosition | null>(null);
+  const closeMenu = useCallback(() => setMenuAt(null), []);
+  const longPressRef = useRef<number | undefined>(undefined);
   const navigate = useNavigate();
   const bigEmoji = !message.isDeleted && message.attachments.length === 0 && !message.replyTo && isEmojiOnly(message.text);
   const textParts = useMemo(() => (message.text ? splitTextWithLinks(message.text) : []), [message.text]);
@@ -1479,11 +1485,52 @@ function MessageBubble({
     }
   };
 
+  const cancelLongPress = () => window.clearTimeout(longPressRef.current);
+
+  const handleContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (message.isDeleted) {
+      return;
+    }
+
+    // По ссылке и по выделенному тексту остается обычное меню браузера: открыть ссылку, скопировать выделение.
+    const target = event.target as HTMLElement;
+    const selection = window.getSelection();
+    if (target.closest('a') || (selection && !selection.isCollapsed && event.currentTarget.contains(selection.anchorNode))) {
+      return;
+    }
+
+    event.preventDefault();
+    cancelLongPress();
+    setMenuAt(getContextMenuPosition(event));
+  };
+
+  // На телефоне — долгое нажатие (iOS не присылает contextmenu).
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'touch' || message.isDeleted) {
+      return;
+    }
+
+    const point = { x: event.clientX, y: event.clientY };
+    cancelLongPress();
+    longPressRef.current = window.setTimeout(() => setMenuAt(point), 500);
+  };
+
+  useEffect(() => cancelLongPress, []);
+
+  const run = (action: () => void) => () => {
+    setMenuAt(null);
+    action();
+  };
+
   return (
     <div
-      className={`chat-message${own ? ' own' : ''}${isGroupEnd ? ' group-end' : ''}${showAuthor ? ' with-author' : ''}${mentionsMe ? ' mentions-me' : ''}`}
+      className={`chat-message${own ? ' own' : ''}${isGroupEnd ? ' group-end' : ''}${showAuthor ? ' with-author' : ''}${mentionsMe ? ' mentions-me' : ''}${menuAt ? ' menu-open' : ''}`}
       data-message-id={message.id}
-      onMouseLeave={() => { setPickerOpen(false); setMoreOpen(false); }}
+      onContextMenu={handleContextMenu}
+      onPointerDown={handlePointerDown}
+      onPointerUp={cancelLongPress}
+      onPointerMove={(event) => { if (event.pointerType === 'touch') { cancelLongPress(); } }}
+      onPointerCancel={cancelLongPress}
     >
       <div className={`chat-bubble${message.isDeleted ? ' deleted' : ''}${bigEmoji ? ' emoji-only' : ''}`}>
         {showAuthor ? <div className="chat-bubble-author">{message.senderName}</div> : null}
@@ -1574,36 +1621,35 @@ function MessageBubble({
         </div>
       ) : null}
 
-      {!message.isDeleted ? (
-        <div className="chat-message-actions" role="toolbar" aria-label="Действия с сообщением">
-          <button type="button" onClick={() => setPickerOpen((value) => !value)} title="Реакция" aria-label="Реакция">🙂</button>
-          <button type="button" onClick={onReply} title="Ответить" aria-label="Ответить">↩</button>
-          <button type="button" onClick={() => setMoreOpen((value) => !value)} title="Еще" aria-label="Еще">⋯</button>
-          {pickerOpen ? (
-            <div className="chat-quick-reactions">
-              {QUICK_REACTIONS.map((emoji) => (
-                <button key={emoji} type="button" onClick={() => { setPickerOpen(false); onReact(emoji); }} aria-label={`Реакция ${emoji}`}>{emoji}</button>
-              ))}
-            </div>
+      {menuAt && !message.isDeleted ? (
+        <ChatContextMenu position={menuAt} label="Действия с сообщением" className="chat-message-context" onClose={closeMenu}>
+          <div className="chat-context-reactions" role="group" aria-label="Реакции">
+            {QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                role="menuitem"
+                className={message.reactions.some((reaction) => reaction.emoji === emoji && reaction.reactedByMe) ? 'mine' : ''}
+                onClick={run(() => onReact(emoji))}
+                aria-label={`Реакция ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <button type="button" role="menuitem" onClick={run(onReply)}>↩️ Ответить</button>
+          {message.text ? <button type="button" role="menuitem" onClick={run(() => void copy())}>📋 Копировать текст</button> : null}
+          {own ? <button type="button" role="menuitem" onClick={run(onEdit)}>✏️ Изменить</button> : null}
+          {onForward ? <button type="button" role="menuitem" onClick={run(onForward)}>↪️ Переслать</button> : null}
+          {pinState ? (
+            <button type="button" role="menuitem" onClick={run(() => onTogglePin?.())}>
+              {pinState === 'pinned' ? '📌 Открепить' : '📌 Закрепить'}
+            </button>
           ) : null}
-          {moreOpen ? (
-            <div className="chat-message-menu" role="menu">
-              {message.text ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); void copy(); }}>Копировать текст</button> : null}
-              {own ? <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onEdit(); }}>Изменить</button> : null}
-              {!message.isDeleted && onForward ? (
-                <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onForward(); }}>Переслать</button>
-              ) : null}
-              {pinState ? (
-                <button type="button" role="menuitem" onClick={() => { setMoreOpen(false); onTogglePin?.(); }}>
-                  {pinState === 'pinned' ? 'Открепить' : 'Закрепить'}
-                </button>
-              ) : null}
-              {own || canModerate ? (
-                <button type="button" role="menuitem" className="chat-danger-text" onClick={() => { setMoreOpen(false); onDelete(); }}>Удалить</button>
-              ) : null}
-            </div>
+          {own || canModerate ? (
+            <button type="button" role="menuitem" className="chat-danger-text" onClick={run(onDelete)}>🗑️ Удалить</button>
           ) : null}
-        </div>
+        </ChatContextMenu>
       ) : null}
     </div>
   );
