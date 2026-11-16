@@ -9,7 +9,7 @@ namespace PulsNext.Api.Controllers;
 /// Управление кампаниями рассылок, предпросмотром и статистикой отправок.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/campaigns")]
 public sealed class CampaignsController(ICampaignService campaignService, IStatisticsService statisticsService) : ControllerBase
 {

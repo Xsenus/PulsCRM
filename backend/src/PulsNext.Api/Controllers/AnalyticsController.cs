@@ -9,7 +9,7 @@ namespace PulsNext.Api.Controllers;
 /// Аналитические отчеты по данным legacy-системы.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/analytics")]
 public sealed class AnalyticsController(
     IParusLicenseAnalyticsService parusLicenseAnalyticsService,

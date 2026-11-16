@@ -9,7 +9,7 @@ namespace PulsNext.Api.Controllers;
 /// Управление пользователями и сотрудниками CRM.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/employees")]
 public sealed class EmployeesController(IEmployeeService employeeService) : ControllerBase
 {

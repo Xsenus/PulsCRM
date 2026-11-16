@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { AppLoader } from '../components/AppLoader';
 import { ProtectedRoute } from '../components/ProtectedRoute';
+import { RequireAccess } from '../components/RequireAccess';
 import { ToastViewport } from '../components/ToastViewport';
 import { LoginPage } from '../pages/LoginPage';
 
@@ -9,7 +10,7 @@ const AppShell = lazy(() => import('../components/AppShell').then((module) => ({
 const ChatPage = lazy(() => import('../pages/ChatPage').then((module) => ({ default: module.ChatPage })));
 const DashboardPage = lazy(() => import('../pages/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const AnalyticsPage = lazy(() => import('../pages/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })));
-const EmployeesPage = lazy(() => import('../pages/EmployeesPage').then((module) => ({ default: module.EmployeesPage })));
+const EmployeesSection = lazy(() => import('../pages/EmployeesSection').then((module) => ({ default: module.EmployeesSection })));
 const EmployeeEditPage = lazy(() => import('../pages/EmployeeEditPage').then((module) => ({ default: module.EmployeeEditPage })));
 const OrganizationsPage = lazy(() => import('../pages/OrganizationsPage').then((module) => ({ default: module.OrganizationsPage })));
 const OrganizationEditPage = lazy(() => import('../pages/OrganizationEditPage').then((module) => ({ default: module.OrganizationEditPage })));
@@ -37,23 +38,27 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route element={<ShellLayout />}>
+            {/* Разделы для всех сотрудников. */}
             <Route path="/" element={<DashboardPage />} />
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/chat/:conversationId" element={<ChatPage />} />
-            <Route path="/analytics" element={<Navigate to="/analytics/parus-tornado" replace />} />
-            <Route path="/analytics/parus-tornado" element={<AnalyticsPage />} />
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/employees/new" element={<EmployeeEditPage />} />
-            <Route path="/employees/:id/edit" element={<EmployeeEditPage />} />
-            <Route path="/organizations" element={<OrganizationsPage />} />
-            <Route path="/organizations/new" element={<OrganizationEditPage />} />
-            <Route path="/organizations/:id/edit" element={<OrganizationEditPage />} />
-            <Route path="/campaigns" element={<CampaignsPage />} />
-            <Route path="/campaigns/new" element={<CampaignEditPage />} />
-            <Route path="/campaigns/:id" element={<CampaignEditPage />} />
-            <Route path="/dispatch" element={<DispatchPage />} />
-            <Route path="/settings" element={<TransportProfilesPage />} />
-            <Route path="/transport-profiles" element={<Navigate to="/settings" replace />} />
+            <Route path="/employees" element={<EmployeesSection />} />
+            {/* Разделы администрирования: без прав — на дашборд (API проверяет права само). */}
+            <Route element={<RequireAccess level="admin" />}>
+              <Route path="/analytics" element={<Navigate to="/analytics/parus-tornado" replace />} />
+              <Route path="/analytics/parus-tornado" element={<AnalyticsPage />} />
+              <Route path="/employees/new" element={<EmployeeEditPage />} />
+              <Route path="/employees/:id/edit" element={<EmployeeEditPage />} />
+              <Route path="/organizations" element={<OrganizationsPage />} />
+              <Route path="/organizations/new" element={<OrganizationEditPage />} />
+              <Route path="/organizations/:id/edit" element={<OrganizationEditPage />} />
+              <Route path="/campaigns" element={<CampaignsPage />} />
+              <Route path="/campaigns/new" element={<CampaignEditPage />} />
+              <Route path="/campaigns/:id" element={<CampaignEditPage />} />
+              <Route path="/dispatch" element={<DispatchPage />} />
+              <Route path="/settings" element={<TransportProfilesPage />} />
+              <Route path="/transport-profiles" element={<Navigate to="/settings" replace />} />
+            </Route>
             <Route path="/work" element={<Navigate to="/" replace />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

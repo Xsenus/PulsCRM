@@ -146,6 +146,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITransportProfileLimiter, TransportProfileLimiter>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
+        services.AddScoped<IColleagueService, ColleagueService>();
+        services.AddScoped<IAccessService, AccessService>();
+        services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, AdminAuthorizationHandler>();
         services.AddScoped<IOverviewService, OverviewService>();
         services.AddScoped<IParusLicenseAnalyticsService, ParusLicenseAnalyticsService>();
         services.AddScoped<IParusLicenseImportService, ParusLicenseImportService>();

@@ -55,7 +55,8 @@ const employeeColumns: Array<DataTableColumn<EmployeeListItemDto>> = [
   { key: 'comment', title: 'Комментарий', width: 320, minWidth: 240, visible: false, render: (row) => row.comment || EMPTY_VALUE }
 ];
 
-export function EmployeesPage() {
+/** Таблица сотрудников для администраторов; headerActions — например, переключатель «Таблица / Карточки». */
+export function EmployeesPage({ headerActions }: { headerActions?: React.ReactNode } = {}) {
   const writeInChat = useWriteInChat();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -182,7 +183,7 @@ export function EmployeesPage() {
 
   return (
     <div className="page">
-      <PageHeader title="Сотрудники" />
+      <PageHeader title="Сотрудники" actions={headerActions} />
 
       <SearchPanel
         value={search}

@@ -9,7 +9,7 @@ namespace PulsNext.Api.Controllers;
 /// Просмотр рабочих задач, пришедших из legacy-части системы.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/work")]
 public sealed class WorkController(IWorkService workService) : ControllerBase
 {

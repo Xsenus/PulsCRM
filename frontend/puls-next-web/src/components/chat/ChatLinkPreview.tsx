@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCampaign, getEmployee, getOrganization } from '../../app/api';
+import { getCampaign, getOrganization } from '../../app/api';
+import { getColleague } from '../../app/colleagues';
 
 export type AppLinkKind = 'organization' | 'campaign' | 'employee';
 
@@ -81,7 +82,8 @@ function loadPreview(link: AppLink): Promise<PreviewData | null> {
       ? getOrganization(link.id).then((item) => ({ title: item.smallName || item.name, subtitle: [item.inn ? `ИНН ${item.inn}` : '', item.raion ?? ''].filter(Boolean).join(' · ') || undefined }))
       : link.kind === 'campaign'
         ? getCampaign(link.id).then((item) => ({ title: item.name, subtitle: item.subject || undefined }))
-        : getEmployee(link.id).then((item) => ({ title: item.fullName || item.login, subtitle: [item.position, item.userGroup].filter(Boolean).join(' · ') || undefined }));
+        // Справочник коллег доступен всем сотрудникам, а полная карточка — только администраторам.
+        : getColleague(link.id).then((item) => ({ title: item.fullName, subtitle: [item.position, item.department].filter(Boolean).join(' · ') || undefined }));
     promise = request.catch(() => null);
     previewCache.set(link.path, promise);
   }

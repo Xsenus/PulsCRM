@@ -9,7 +9,7 @@ namespace PulsNext.Api.Controllers;
 /// Настройка SMTP-профилей, используемых рассылками.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/transport-profiles")]
 public sealed class TransportProfilesController(ITransportProfileService transportProfileService) : ControllerBase
 {

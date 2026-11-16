@@ -10,7 +10,7 @@ namespace PulsNext.Api.Controllers;
 /// Загрузка и выдача файлов, используемых в рассылках.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/files")]
 public sealed class FilesController(IFileStorageService fileStorageService) : ControllerBase
 {

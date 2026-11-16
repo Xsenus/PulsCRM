@@ -49,13 +49,23 @@ export async function mockLoginUsers(page: Page) {
   });
 }
 
-export async function setupAuthenticatedSession(page: Page) {
+/** Сотрудник без прав администратора (видит только дашборд, чат и сотрудников карточками). */
+export const regularUser = {
+  ...currentUser,
+  id: 5,
+  login: 'employee',
+  fullName: 'Сотрудникова Мария Петровна',
+  isRoot: false,
+  userGroup: 'Бухгалтерия'
+};
+
+export async function setupAuthenticatedSession(page: Page, user: typeof currentUser = currentUser) {
   await page.addInitScript(() => {
     window.localStorage.setItem('puls-next-token', 'playwright-token');
   });
 
   await page.route(/\/api\/auth\/me(?:\?.*)?$/, async (route) => {
-    await fulfillJson(route, currentUser);
+    await fulfillJson(route, user);
   });
 }
 

@@ -8,7 +8,7 @@ namespace PulsNext.Api.Controllers;
 /// Сводная статистика для стартового экрана системы.
 /// </summary>
 [ApiController]
-[Authorize]
+[Authorize(Policy = AccessPolicies.Admin)]
 [Route("api/dashboard")]
 public sealed class DashboardController(IOverviewService overviewService) : ControllerBase
 {
