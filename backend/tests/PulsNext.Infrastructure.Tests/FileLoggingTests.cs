@@ -83,6 +83,32 @@ public sealed class FileLoggingTests : IDisposable
         Assert.Null(service.GetLogFilePath("api-20261116.log/../../secret"));
     }
 
+    [Fact]
+    public void BackupCheckReportsMissingFreshStaleAndFailedBackups()
+    {
+        var now = new DateTime(2026, 11, 16, 10, 0, 0);
+        Assert.Equal("warn", SystemStatusService.CheckBackups(Path.Combine(_directory, "none"), now).Status);
+
+        Directory.CreateDirectory(Path.Combine(_directory, "20261115-023000"));
+        Directory.CreateDirectory(Path.Combine(_directory, "files"));
+        var fresh = SystemStatusService.CheckBackups(_directory, now);
+        Assert.Equal("ok", fresh.Status);
+        Assert.Contains("15.11.2026 02:30", fresh.Detail);
+
+        Assert.Equal("warn", SystemStatusService.CheckBackups(_directory, now.AddDays(2)).Status);
+
+        File.WriteAllLines(Path.Combine(_directory, "backup.log"),
+        [
+            "2026-11-15 02:30:00 === Резервная копия 20261115-023000 ===",
+            "2026-11-15 02:30:05 Готово",
+            "2026-11-16 02:30:00 === Резервная копия 20261116-023000 ===",
+            "2026-11-16 02:30:01 ОШИБКА: pg_dump завершился с кодом 1"
+        ]);
+        var failed = SystemStatusService.CheckBackups(_directory, now);
+        Assert.Equal("error", failed.Status);
+        Assert.Contains("pg_dump завершился с кодом 1", failed.Detail);
+    }
+
     [Theory]
     [InlineData(0, "0 Б")]
     [InlineData(1536, "1.5 КБ")]

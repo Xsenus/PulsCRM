@@ -185,7 +185,9 @@ public static class ServiceCollectionExtensions
             GetKeysDirectory(configuration, contentRootPath).FullName,
             IsChatEnabled(configuration, contentRootPath)
                 ? StoragePathHelper.GetAbsolutePath(contentRootPath, storageRoot, configuration.GetSection(ChatOptions.SectionName).GetValue<string>(nameof(ChatOptions.StoragePath)) ?? "chat")
-                : null);
+                : null,
+            // Папка резервных копий scripts/backup-puls.ps1 (docs/backup.md).
+            configuration.GetValue<string>("Backup:Root") ?? @"C:\PulsCRMBackups");
         services.AddSingleton(systemPaths);
         var recentLog = new RecentLogBuffer();
         services.AddSingleton(recentLog);

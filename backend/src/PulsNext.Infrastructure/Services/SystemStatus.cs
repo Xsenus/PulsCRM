@@ -43,7 +43,7 @@ public sealed class SystemStatusDto
 /// <summary>
 /// Каталоги, о которых знает страница состояния (журнал, вложения чата, загрузки рассылок, ключи).
 /// </summary>
-public sealed record SystemPaths(string StorageRoot, string Logs, string Uploads, string Keys, string? ChatFiles);
+public sealed record SystemPaths(string StorageRoot, string Logs, string Uploads, string Keys, string? ChatFiles, string? BackupRoot = null);
 
 public interface ISystemStatusService
 {
@@ -119,6 +119,8 @@ public sealed class SystemStatusService(
             return ("ok", $"Запись есть: {paths.Keys}.");
         }));
 
+        checks.Add(CheckBackups(paths.BackupRoot, DateTime.Now));
+
         checks.Add(new SystemCheckDto(
             "Ключ подписи входа",
             jwtSigningKey.Generated ? "warn" : "ok",
@@ -175,6 +177,64 @@ public sealed class SystemStatusService(
             RecentProblems = problems
         };
     }
+
+    /// <summary>
+    /// Последняя резервная копия (папки yyyyMMdd-HHmmss из scripts/backup-puls.ps1): старше 36 часов или нет — внимание.
+    /// </summary>
+    public static SystemCheckDto CheckBackups(string? backupRoot, DateTime nowLocal)
+    {
+        const string name = "Резервная копия";
+        if (string.IsNullOrWhiteSpace(backupRoot) || !Directory.Exists(backupRoot))
+        {
+            return new SystemCheckDto(name, "warn", $"Копий нет в {backupRoot ?? "(Backup:Root не задан)"} — настройте по docs/backup.md (scripts/register-backup-task.ps1).", 0);
+        }
+
+        var latest = Directory.EnumerateDirectories(backupRoot)
+            .Select(Path.GetFileName)
+            .Select(x => DateTime.TryParseExact(x, "yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var stamp) ? stamp : (DateTime?)null)
+            .Where(x => x is not null)
+            .Max();
+        if (latest is null)
+        {
+            return new SystemCheckDto(name, "warn", $"В {backupRoot} нет ни одной копии — запустите задачу «Puls Next — резервная копия».", 0);
+        }
+
+        var age = nowLocal - latest.Value;
+        var lastError = ReadLastBackupError(Path.Combine(backupRoot, "backup.log"));
+        var detail = $"Последняя: {latest:dd.MM.yyyy HH:mm} ({FormatAge(age)} назад) в {backupRoot}.";
+        if (lastError is not null)
+        {
+            return new SystemCheckDto(name, "error", $"{detail} Последний запуск с ошибкой: {lastError}", 0);
+        }
+
+        return new SystemCheckDto(name, age > TimeSpan.FromHours(36) ? "warn" : "ok", age > TimeSpan.FromHours(36) ? $"{detail} Копия устарела — проверьте задачу планировщика." : detail, 0);
+    }
+
+    /// <summary>
+    /// Если последний запуск скрипта закончился ошибкой — ее текст (строка «ОШИБКА:» после последнего начала копии).
+    /// </summary>
+    private static string? ReadLastBackupError(string logPath)
+    {
+        try
+        {
+            if (!File.Exists(logPath))
+            {
+                return null;
+            }
+
+            var lines = File.ReadLines(logPath).TakeLast(200).ToList();
+            var start = lines.FindLastIndex(x => x.Contains("=== Резервная копия", StringComparison.Ordinal));
+            var error = lines.Skip(Math.Max(0, start)).LastOrDefault(x => x.Contains("ОШИБКА:", StringComparison.Ordinal));
+            return error?[(error.IndexOf("ОШИБКА:", StringComparison.Ordinal) + "ОШИБКА:".Length)..].Trim();
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
+
+    private static string FormatAge(TimeSpan age)
+        => age.TotalHours < 1 ? $"{Math.Max(0, (int)age.TotalMinutes)} мин" : age.TotalDays < 2 ? $"{(int)age.TotalHours} ч" : $"{(int)age.TotalDays} дн";
 
     public string? GetLogFilePath(string fileName)
     {
