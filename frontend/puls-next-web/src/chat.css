@@ -219,6 +219,17 @@ textarea.chat-input {
   background: #e7efff;
 }
 
+.chat-conversation-item.menu-open:not(.active) {
+  background: #f1f5fb;
+}
+
+/* Контекстное меню диалога (ПКМ): открывается у курсора поверх всего, в том числе плавающего окна. */
+.chat-message-menu.chat-conversation-menu {
+  position: fixed;
+  z-index: 1300;
+  min-width: 210px;
+}
+
 .chat-conversation-body {
   flex: 1;
   min-width: 0;

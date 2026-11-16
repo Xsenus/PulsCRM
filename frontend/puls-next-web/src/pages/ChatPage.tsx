@@ -40,6 +40,7 @@ import { prepareChatImageUpload } from '../app/chatImageThumbnail';
 import { createTaskLimiter } from '../app/taskLimiter';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
 import { ChatTicks } from '../components/chat/ChatTicks';
+import { ChatConversationMenu } from '../components/chat/ChatConversationMenu';
 import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
 import { loadChatScrollPosition, saveChatScrollPosition, type ChatScrollPosition } from '../app/chatScrollMemory';
 import { collectMentionedUserIds, findMentionQuery, getMentionCandidates, insertMention, splitMentions } from '../app/chatMentions';
@@ -151,6 +152,7 @@ export function ChatPage() {
               conversation={conversation}
               active={conversation.id === activeId}
               onClick={() => navigate(`/chat/${conversation.id}`)}
+              onRemoved={conversation.id === activeId ? () => navigate('/chat') : undefined}
             />
           ))}
           {messageSearch.enabled ? (
@@ -197,7 +199,16 @@ export function ChatPage() {
   );
 }
 
-export function ConversationListItem({ conversation, active, onClick }: { conversation: ChatConversationDto; active: boolean; onClick: () => void }) {
+export function ConversationListItem({ conversation, active, onClick, onRemoved }: {
+  conversation: ChatConversationDto;
+  active: boolean;
+  onClick: () => void;
+  /** Диалог убран из списка из контекстного меню (архив, выход из группы). */
+  onRemoved?: () => void;
+}) {
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const closeMenu = useCallback(() => setMenuAt(null), []);
   const { currentUserId, onlineUserIds, typingByConversation } = useChat();
   const isGroup = isGroupConversation(conversation);
   const typing = typingByConversation[conversation.id] ?? [];
@@ -206,7 +217,24 @@ export function ConversationListItem({ conversation, active, onClick }: { conver
   const showDraft = !active && typing.length === 0 && draft.trim().length > 0;
 
   return (
-    <button type="button" className={`chat-conversation-item${active ? ' active' : ''}`} onClick={onClick} aria-current={active ? 'true' : undefined}>
+    <>
+    <button
+      type="button"
+      className={`chat-conversation-item${active ? ' active' : ''}${menuAt ? ' menu-open' : ''}`}
+      onClick={onClick}
+      aria-current={active ? 'true' : undefined}
+      aria-haspopup="menu"
+      onContextMenu={(event) => {
+        event.preventDefault();
+        // С клавиатуры (клавиша меню, Shift+F10) координат нет — открываем у самого диалога.
+        if (event.clientX === 0 && event.clientY === 0) {
+          const rect = event.currentTarget.getBoundingClientRect();
+          setMenuAt({ x: rect.left + 24, y: rect.bottom - 8 });
+        } else {
+          setMenuAt({ x: event.clientX, y: event.clientY });
+        }
+      }}
+    >
       <ChatAvatar name={conversation.title} seed={conversation.peerUserId ?? `g${conversation.id}`} icon={conversation.icon} online={online} group={isGroup} size={44} />
       <span className="chat-conversation-body">
         <span className="chat-conversation-top">
@@ -235,6 +263,19 @@ export function ConversationListItem({ conversation, active, onClick }: { conver
         </span>
       </span>
     </button>
+    {menuAt ? (
+      <ChatConversationMenu
+        conversation={conversation}
+        position={menuAt}
+        onClose={closeMenu}
+        onOpenInfo={() => setInfoOpen(true)}
+        onRemoved={onRemoved}
+      />
+    ) : null}
+    {infoOpen ? (
+      <ConversationInfoDialog open conversation={conversation} onClose={() => setInfoOpen(false)} onLeft={() => onRemoved?.()} />
+    ) : null}
+    </>
   );
 }
 
