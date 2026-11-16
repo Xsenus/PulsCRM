@@ -13,7 +13,6 @@ import {
   updateGroupChat
 } from '../../app/chatApi';
 import { CHAT_SOUNDS, playChatSound } from '../../app/chatSounds';
-import { getDesktopNotificationStatus, requestDesktopNotificationPermission, type DesktopNotificationStatus } from '../../app/desktopNotifications';
 import type { ChatConversationDto, ChatMessageDto, ChatSoundName, ChatUserDto, ChatUserSettingsDto } from '../../app/chatTypes';
 import { isGroupConversation, roleRank } from '../../app/chatTypes';
 import { getApiErrorMessage } from '../../app/apiErrors';
@@ -22,6 +21,7 @@ import { ChatAvatar } from './ChatAvatar';
 import { describeMessageBody } from '../../app/chatFormat';
 import { GROUP_ICONS } from './EmojiPicker';
 import { ChatAttachmentMiniThumb } from './ChatAttachmentView';
+import { DesktopNotificationsSetting } from './DesktopNotificationsSetting';
 
 function useUserSearch(open: boolean) {
   const [search, setSearch] = useState('');
@@ -667,7 +667,7 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
           />
           <span>Показывать текст сообщения в оповещении</span>
         </label>
-        <DesktopNotificationsToggle
+        <DesktopNotificationsSetting
           enabled={!!draft.desktopNotificationsEnabled}
           disabled={!draft.notificationsEnabled}
           onChange={(value) => update({ desktopNotificationsEnabled: value })}
@@ -725,89 +725,5 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
         <div className="chat-muted">Звук и оповещения не срабатывают для диалогов, у которых включен режим «Без звука».</div>
       </div>
     </Modal>
-  );
-}
-
-const DESKTOP_STATUS_TEXT: Record<DesktopNotificationStatus, string> = {
-  granted: 'Браузер разрешил оповещения. Они приходят, даже когда вкладка CRM закрыта (браузер должен быть запущен).',
-  default: 'Браузер спросит разрешение, когда вы включите оповещения.',
-  denied: 'Оповещения запрещены в настройках браузера для этого сайта — разрешите их там (значок замка слева от адреса).',
-  insecure: 'Недоступно: браузер показывает системные оповещения только для сайтов по HTTPS. Оповещения внутри системы и звук работают.',
-  unsupported: 'Этот браузер не поддерживает системные оповещения.'
-};
-
-/**
- * Как включить системные оповещения, пока у CRM нет HTTPS: разрешить адрес в браузере флагом
- * (на одном компьютере) или политикой (на всех сразу). Подробно — docs/chat.md.
- */
-function InsecureOriginHelp() {
-  const origin = window.location.origin;
-  const isEdge = /Edg\//.test(navigator.userAgent);
-  const isYandex = /YaBrowser\//.test(navigator.userAgent);
-  const flagsUrl = `${isEdge ? 'edge' : isYandex ? 'browser' : 'chrome'}://flags/#unsafely-treat-insecure-origin-as-secure`;
-
-  const copy = async (text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast('Скопировано.', 'success', 1500);
-    } catch {
-      showToast('Не удалось скопировать — выделите текст вручную.', 'error');
-    }
-  };
-
-  return (
-    <details className="chat-insecure-help">
-      <summary>Как включить без HTTPS</summary>
-      <p>Пока у CRM нет сертификата, браузеру можно разрешить этот адрес. На каждом компьютере один раз:</p>
-      <ol>
-        <li>
-          Откройте в новой вкладке{' '}
-          <code>{flagsUrl}</code>{' '}
-          <button type="button" className="chat-copy-button" onClick={() => void copy(flagsUrl)}>Копировать</button>
-          {' '}(адрес нужно вставить вручную — по ссылке браузер такие страницы не открывает).
-        </li>
-        <li>
-          В поле впишите <code>{origin}</code>{' '}
-          <button type="button" className="chat-copy-button" onClick={() => void copy(origin)}>Копировать</button>, выберите <b>Enabled</b> и нажмите <b>Relaunch</b>.
-        </li>
-        <li>Вернитесь сюда и включите «Системные оповещения» — браузер спросит разрешение, нажмите «Разрешить».</li>
-      </ol>
-      <p>
-        Администратор может включить это сразу на всех компьютерах политикой браузера
-        «OverrideSecurityRestrictionsOnInsecureOrigin» со значением <code>{origin}</code> — инструкция в документации
-        (docs/chat.md, раздел «Оповещения и звук»). С HTTPS-адресом ничего настраивать не нужно.
-      </p>
-    </details>
-  );
-}
-
-function DesktopNotificationsToggle({ enabled, disabled, onChange }: { enabled: boolean; disabled: boolean; onChange: (value: boolean) => void }) {
-  const [status, setStatus] = useState<DesktopNotificationStatus>(getDesktopNotificationStatus);
-  const unavailable = status === 'insecure' || status === 'unsupported';
-
-  return (
-    <div className="chat-desktop-toggle">
-      <label className="chat-toggle">
-        <input
-          type="checkbox"
-          checked={enabled && !unavailable}
-          disabled={disabled || unavailable}
-          onChange={async (event) => {
-            const value = event.target.checked;
-            if (value && status !== 'granted') {
-              const result = await requestDesktopNotificationPermission();
-              setStatus(result);
-              onChange(result === 'granted');
-              return;
-            }
-
-            onChange(value);
-          }}
-        />
-        <span>Системные оповещения Windows, когда вкладка свернута или закрыта</span>
-      </label>
-      <div className={`chat-muted chat-desktop-status${status === 'denied' || unavailable ? ' warn' : ''}`}>{DESKTOP_STATUS_TEXT[status]}</div>
-      {status === 'insecure' ? <InsecureOriginHelp /> : null}
-    </div>
   );
 }

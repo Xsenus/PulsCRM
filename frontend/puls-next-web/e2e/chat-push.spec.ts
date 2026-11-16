@@ -21,16 +21,31 @@ test('without HTTPS the chat settings explain how to allow system notifications'
 
   await page.getByRole('button', { name: 'Оповещения и звук' }).click();
   const dialog = page.getByRole('dialog', { name: 'Оповещения чата' });
-  await expect(dialog.getByRole('checkbox', { name: /Системные оповещения/ })).toBeDisabled();
-  await expect(dialog).toContainText('только для сайтов по HTTPS');
+  await expect(dialog.getByRole('checkbox', { name: /Системные уведомления/ })).toBeDisabled();
+  await expect(dialog.locator('.notify-status')).toHaveText('Нужна настройка');
+  await expect(dialog.locator('.notify-steps li')).toHaveCount(3);
 
-  const help = dialog.locator('details.chat-insecure-help');
-  await help.locator('summary').click();
-  await expect(help).toContainText('chrome://flags/#unsafely-treat-insecure-origin-as-secure');
+  // Главный путь — файл настройки для Windows с адресом этой CRM для Chrome, Edge и Яндекса.
   const origin = new URL(page.url()).origin;
-  await expect(help).toContainText(origin);
-  await expect(help).toContainText('OverrideSecurityRestrictionsOnInsecureOrigin');
-  await expect(help.getByRole('button', { name: 'Копировать' })).toHaveCount(2);
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    dialog.getByRole('button', { name: 'Скачать настройку для Windows' }).click()
+  ]);
+  expect(download.suggestedFilename()).toBe('puls-crm-uvedomleniya.reg');
+  const bytes = await (await download.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks));
+  expect([bytes[0], bytes[1]]).toEqual([0xff, 0xfe]);
+  const text = bytes.subarray(2).toString('utf16le');
+  expect(text.startsWith('Windows Registry Editor Version 5.00')).toBe(true);
+  for (const key of ['Google\\Chrome', 'Microsoft\\Edge', 'YandexBrowser']) {
+    expect(text).toContain(`[HKEY_CURRENT_USER\\Software\\Policies\\${key}\\OverrideSecurityRestrictionsOnInsecureOrigin]`);
+  }
+  expect(text).toContain(`"1"="${origin}"`);
+
+  // Запасной путь — вручную, две строки с кнопками «Копировать»; заметка для администратора (пользователь демо — админ).
+  await dialog.getByRole('button', { name: /Настроить вручную/ }).click();
+  await expect(dialog.locator('.notify-copy-row code')).toHaveText(['chrome://flags/#unsafely-treat-insecure-origin-as-secure', origin]);
+  await expect(dialog.getByRole('button', { name: 'Копировать' })).toHaveCount(2);
+  await expect(dialog.locator('.notify-admin-note')).toContainText('OverrideSecurityRestrictionsOnInsecureOrigin');
 });
 
 test('the chat service worker shows a push notification only when CRM is not on screen', async ({ page, context, baseURL }) => {
@@ -66,6 +81,8 @@ test('the chat service worker shows a push notification only when CRM is not on 
 
   // Вкладки CRM нет на экране — системное уведомление; новое в том же диалоге заменяет предыдущее.
   await page.goto('about:blank');
+  // Ждем, пока сервис-воркер перестанет видеть вкладку CRM (под нагрузкой это занимает мгновение).
+  await expect.poll(() => worker.evaluate(async () => (await (self as unknown as ServiceWorkerGlobalScope).clients.matchAll({ type: 'window', includeUncontrolled: true })).length)).toBe(0);
   await push({ title: 'Алиса', body: 'Привет', conversationId: 10, url: '/chat/10' });
   await push({ title: 'Алиса', body: 'Ты тут?', conversationId: 10, url: '/chat/10' });
   await expect.poll(notifications).toEqual([{ title: 'Алиса', body: 'Ты тут?', tag: 'puls-chat-10', data: { url: '/chat/10', conversationId: 10 } }]);
