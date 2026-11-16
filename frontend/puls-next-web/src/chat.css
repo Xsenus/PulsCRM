@@ -956,9 +956,23 @@ textarea.chat-input {
   display: flex;
   justify-content: space-between;
   gap: 2px;
-  padding: 2px 2px 6px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--border);
+  padding: 2px;
+}
+
+.chat-message-menu.chat-context-menu:focus {
+  outline: none;
+}
+
+.chat-message-menu.chat-context-menu button:focus-visible {
+  outline: none;
+  background: #eef4ff;
+}
+
+/* Черта между группами пунктов контекстного меню. */
+.chat-menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
 }
 
 .chat-message-menu .chat-context-reactions button {

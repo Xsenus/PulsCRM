@@ -41,7 +41,7 @@ import { createTaskLimiter } from '../app/taskLimiter';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
 import { ChatTicks } from '../components/chat/ChatTicks';
 import { ChatConversationMenu } from '../components/chat/ChatConversationMenu';
-import { ChatContextMenu, getContextMenuPosition, type ChatMenuPosition } from '../components/chat/ChatContextMenu';
+import { ChatContextMenu, ChatMenuGroups, getContextMenuPosition, type ChatMenuPosition } from '../components/chat/ChatContextMenu';
 import { loadChatDraft, saveChatDraft, useChatDraft } from '../app/chatDrafts';
 import { loadChatScrollPosition, saveChatScrollPosition, type ChatScrollPosition } from '../app/chatScrollMemory';
 import { collectMentionedUserIds, findMentionQuery, getMentionCandidates, insertMention, splitMentions } from '../app/chatMentions';
@@ -1623,32 +1623,43 @@ function MessageBubble({
 
       {menuAt && !message.isDeleted ? (
         <ChatContextMenu position={menuAt} label="Действия с сообщением" className="chat-message-context" onClose={closeMenu}>
-          <div className="chat-context-reactions" role="group" aria-label="Реакции">
-            {QUICK_REACTIONS.map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                role="menuitem"
-                className={message.reactions.some((reaction) => reaction.emoji === emoji && reaction.reactedByMe) ? 'mine' : ''}
-                onClick={run(() => onReact(emoji))}
-                aria-label={`Реакция ${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-          <button type="button" role="menuitem" onClick={run(onReply)}>↩️ Ответить</button>
-          {message.text ? <button type="button" role="menuitem" onClick={run(() => void copy())}>📋 Копировать текст</button> : null}
-          {own ? <button type="button" role="menuitem" onClick={run(onEdit)}>✏️ Изменить</button> : null}
-          {onForward ? <button type="button" role="menuitem" onClick={run(onForward)}>↪️ Переслать</button> : null}
-          {pinState ? (
-            <button type="button" role="menuitem" onClick={run(() => onTogglePin?.())}>
-              {pinState === 'pinned' ? '📌 Открепить' : '📌 Закрепить'}
-            </button>
-          ) : null}
-          {own || canModerate ? (
-            <button type="button" role="menuitem" className="chat-danger-text" onClick={run(onDelete)}>🗑️ Удалить</button>
-          ) : null}
+          {/* Группы: реакции | ответ и пересылка | копирование, правка, закреп | удаление. */}
+          <ChatMenuGroups
+            groups={[
+              [
+                <div className="chat-context-reactions" role="group" aria-label="Реакции">
+                  {QUICK_REACTIONS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      role="menuitem"
+                      className={message.reactions.some((reaction) => reaction.emoji === emoji && reaction.reactedByMe) ? 'mine' : ''}
+                      onClick={run(() => onReact(emoji))}
+                      aria-label={`Реакция ${emoji}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              ],
+              [
+                <button type="button" role="menuitem" onClick={run(onReply)}>↩️ Ответить</button>,
+                onForward ? <button type="button" role="menuitem" onClick={run(onForward)}>↪️ Переслать</button> : null
+              ],
+              [
+                message.text ? <button type="button" role="menuitem" onClick={run(() => void copy())}>📋 Копировать текст</button> : null,
+                own ? <button type="button" role="menuitem" onClick={run(onEdit)}>✏️ Изменить</button> : null,
+                pinState ? (
+                  <button type="button" role="menuitem" onClick={run(() => onTogglePin?.())}>
+                    {pinState === 'pinned' ? '📌 Открепить' : '📌 Закрепить'}
+                  </button>
+                ) : null
+              ],
+              [
+                own || canModerate ? <button type="button" role="menuitem" className="chat-danger-text" onClick={run(onDelete)}>🗑️ Удалить</button> : null
+              ]
+            ]}
+          />
         </ChatContextMenu>
       ) : null}
     </div>

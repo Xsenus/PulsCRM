@@ -73,7 +73,9 @@ test('right click on a message opens one menu with reactions and all actions', a
   const menu = page.getByRole('menu', { name: 'Действия с сообщением' });
   await expect(menu.getByRole('group', { name: 'Реакции' }).getByRole('menuitem')).toHaveCount(8);
   // Чужое сообщение: изменить и удалить нельзя.
-  await expect(menu.locator(':scope > [role="menuitem"]')).toHaveText(['↩️ Ответить', '📋 Копировать текст', '↪️ Переслать']);
+  await expect(menu.locator(':scope > [role="menuitem"]')).toHaveText(['↩️ Ответить', '↪️ Переслать', '📋 Копировать текст']);
+  // Группы разделены чертой: реакции | ответить, переслать | копировать (удалять чужое нельзя — без пустой группы).
+  await expect(menu.getByRole('separator')).toHaveCount(2);
 
   await menu.getByRole('menuitem', { name: 'Реакция 👍' }).click();
   await expect(menu).toBeHidden();
@@ -85,6 +87,7 @@ test('right click on a message opens one menu with reactions and all actions', a
   await own.locator('.chat-bubble').click({ button: 'right' });
   await expect(menu.getByRole('menuitem', { name: /Изменить/ })).toBeVisible();
   await expect(menu.getByRole('menuitem', { name: /Удалить/ })).toBeVisible();
+  await expect(menu.getByRole('separator')).toHaveCount(3);
   await menu.getByRole('menuitem', { name: /Ответить/ }).click();
   await expect(page.locator('.chat-composer-context')).toContainText('Ответ');
 
