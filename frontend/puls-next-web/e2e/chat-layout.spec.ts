@@ -104,6 +104,8 @@ test.describe('chat page on a full HD screen', () => {
     await page.goto('/chat/10');
     await expect(page.locator('.chat-message')).toHaveCount(2);
 
+    // Высоту задает класс от маршрута, а не CSS :has() (его нет в старых браузерах — чат был в полэкрана).
+    await expect(page.locator('.content-shell')).toHaveClass(/content-shell-fill/);
     const document = page.locator('html');
     const size = await scrollSize(document);
     expect(size.scrollHeight).toBeLessThanOrEqual(size.clientHeight);

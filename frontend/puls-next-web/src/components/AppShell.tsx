@@ -376,7 +376,8 @@ function AppShellLayout({ children }: { children: React.ReactNode }) {
         ) : null}
       </aside>
 
-      <div className="content-shell">
+      {/* Страница чата растягивается ровно на высоту окна — класс, а не CSS :has(), который не поддерживают старые браузеры. */}
+      <div className={`content-shell${location.pathname === '/chat' || location.pathname.startsWith('/chat/') ? ' content-shell-fill' : ''}`}>
         <header className="topbar">
           <div className="topbar-title">{currentSection}</div>
 
