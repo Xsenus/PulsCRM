@@ -4,7 +4,7 @@ import type { ChatConversationDto, ChatConversationPreferencesRequest } from '..
 import { isGroupConversation } from '../../app/chatTypes';
 import { getApiErrorMessage } from '../../app/apiErrors';
 import { showToast } from '../../app/toast';
-import { ChatContextMenu, ChatMenuGroups, type ChatMenuPosition } from './ChatContextMenu';
+import { ChatContextMenu, ChatMenuGroups, ChatMenuItem, type ChatMenuPosition } from './ChatContextMenu';
 
 /**
  * Действия с диалогом из контекстного меню списка (ПКМ или кнопка «⋯» у диалога):
@@ -69,20 +69,20 @@ export function ChatConversationMenu({ conversation, position, onClose, onOpenIn
       <ChatMenuGroups
         groups={[
           [
-            <button type="button" role="menuitem" onClick={run(() => setPreference({ isPinned: !conversation.isPinned }))}>
-              {conversation.isPinned ? '📌 Открепить' : '📌 Закрепить вверху'}
-            </button>,
-            <button type="button" role="menuitem" onClick={run(() => setPreference({ isMuted: !conversation.isMuted }))}>
-              {conversation.isMuted ? '🔔 Включить звук' : '🔕 Без звука'}
-            </button>,
-            conversation.unreadCount > 0 ? <button type="button" role="menuitem" onClick={run(markRead)}>✓ Отметить прочитанным</button> : null
+            <ChatMenuItem icon="📌" onClick={run(() => setPreference({ isPinned: !conversation.isPinned }))}>
+              {conversation.isPinned ? 'Открепить' : 'Закрепить вверху'}
+            </ChatMenuItem>,
+            <ChatMenuItem icon={conversation.isMuted ? '🔔' : '🔕'} onClick={run(() => setPreference({ isMuted: !conversation.isMuted }))}>
+              {conversation.isMuted ? 'Включить звук' : 'Без звука'}
+            </ChatMenuItem>,
+            conversation.unreadCount > 0 ? <ChatMenuItem icon="✓" onClick={run(markRead)}>Отметить прочитанным</ChatMenuItem> : null
           ],
           [
-            <button type="button" role="menuitem" onClick={run(onOpenInfo)}>
-              {isGroup ? '⚙️ Настройки группы' : 'ⓘ О собеседнике'}
-            </button>
+            <ChatMenuItem icon={isGroup ? '⚙️' : 'ⓘ'} onClick={run(onOpenInfo)}>
+              {isGroup ? 'Настройки группы' : 'О собеседнике'}
+            </ChatMenuItem>
           ],
-          [<button type="button" role="menuitem" onClick={run(() => setPreference({ isArchived: true }))}>🗄️ В архив</button>]
+          [<ChatMenuItem icon="🗄️" onClick={run(() => setPreference({ isArchived: true }))}>В архив</ChatMenuItem>]
         ]}
       />
     </ChatContextMenu>

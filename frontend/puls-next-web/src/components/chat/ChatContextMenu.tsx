@@ -21,6 +21,21 @@ export function getContextMenuPosition(event: { clientX: number; clientY: number
   return { x: event.clientX, y: event.clientY };
 }
 
+/** Пункт контекстного меню: иконка в своей колонке и подпись. */
+export function ChatMenuItem({ icon, danger = false, onClick, children }: {
+  icon: string;
+  danger?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button type="button" role="menuitem" className={`chat-menu-item${danger ? ' danger' : ''}`} onClick={onClick}>
+      <span className="chat-menu-icon" aria-hidden="true">{icon}</span>
+      <span className="chat-menu-label">{children}</span>
+    </button>
+  );
+}
+
 /**
  * Пункты меню по группам с чертой между ними. Пустые пункты (false/null) и пустые группы пропускаются,
  * поэтому лишних или двойных разделителей не бывает.

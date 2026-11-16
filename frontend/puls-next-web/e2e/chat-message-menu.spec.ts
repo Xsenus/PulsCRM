@@ -73,8 +73,10 @@ test('right click on a message opens one menu with reactions and all actions', a
   const menu = page.getByRole('menu', { name: 'Действия с сообщением' });
   await expect(menu.getByRole('group', { name: 'Реакции' }).getByRole('menuitem')).toHaveCount(8);
   // Чужое сообщение: изменить и удалить нельзя.
-  await expect(menu.locator(':scope > [role="menuitem"]')).toHaveText(['↩️ Ответить', '↪️ Переслать', '📋 Копировать текст']);
-  // Группы разделены чертой: реакции | ответить, переслать | копировать (удалять чужое нельзя — без пустой группы).
+  await expect(menu.locator('.chat-menu-label')).toHaveText(['Ответить', 'Переслать', 'Копировать текст']);
+  // Реакции — внизу, последней группой.
+  await expect(menu.locator(':scope > *').last()).toHaveAttribute('aria-label', 'Реакции');
+  // Группы разделены чертой: ответить, переслать | копировать | реакции (удалять чужое нельзя — без пустой группы).
   await expect(menu.getByRole('separator')).toHaveCount(2);
 
   await menu.getByRole('menuitem', { name: 'Реакция 👍' }).click();

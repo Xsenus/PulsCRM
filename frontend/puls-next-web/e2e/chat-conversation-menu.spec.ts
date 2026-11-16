@@ -71,7 +71,7 @@ test('right click on a chat opens its settings menu', async ({ page }) => {
   await anna.click({ button: 'right' });
 
   const menu = page.getByRole('menu', { name: 'Действия с чатом «Петрова Анна»' });
-  await expect(menu.getByRole('menuitem')).toHaveText(['📌 Закрепить вверху', '🔕 Без звука', '✓ Отметить прочитанным', 'ⓘ О собеседнике', '🗄️ В архив']);
+  await expect(menu.locator('.chat-menu-label')).toHaveText(['Закрепить вверху', 'Без звука', 'Отметить прочитанным', 'О собеседнике', 'В архив']);
   // Группы: настройки диалога | карточка | архив.
   await expect(menu.getByRole('separator')).toHaveCount(2);
   // С клавиатуры: ↓ — первый пункт, ↑ с первого — последний.
