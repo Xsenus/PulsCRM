@@ -871,6 +871,15 @@ select {
   color: #b91c1c;
 }
 
+.danger-button:hover:not(:disabled) {
+  background: #ffe4e6;
+}
+
+.danger-button:focus-visible {
+  outline: 2px solid rgba(185, 28, 28, 0.35);
+  outline-offset: 2px;
+}
+
 .status-badge {
   width: fit-content;
   min-height: 26px;

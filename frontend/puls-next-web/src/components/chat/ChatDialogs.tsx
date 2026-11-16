@@ -137,7 +137,7 @@ export function DeleteMessageDialog({ message, own, onClose, onConfirm }: {
       actions={(
         <div className="button-group">
           <button type="button" className="secondary-button button-inline" onClick={onClose} disabled={busy}>Отмена</button>
-          <button type="button" className="danger-button button-inline" onClick={() => void confirm()} disabled={busy} autoFocus>
+          <button type="button" className="secondary-button button-inline danger-button" onClick={() => void confirm()} disabled={busy} autoFocus>
             Удалить
           </button>
         </div>
@@ -587,7 +587,7 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
 
           <button
             type="button"
-            className="danger-button button-inline chat-leave-button"
+            className="secondary-button button-inline danger-button chat-leave-button"
             disabled={busy}
             onClick={() => {
               if (!window.confirm('Покинуть чат? Вернуть вас сможет администратор.')) {
