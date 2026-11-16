@@ -150,6 +150,14 @@ public static class ServiceCollectionExtensions
             .PersistKeysToFileSystem(GetKeysDirectory(configuration, contentRootPath));
 
         services.AddSingleton<IDispatchChannel, DispatchChannel>();
+        // Ключ подписи входа: заглушка из конфига заменяется сохраненным случайным ключом.
+        var jwtSigningKey = JwtSigningKey.Resolve(
+            configuration.GetSection(JwtOptions.SectionName).GetValue<string>(nameof(JwtOptions.SigningKey)),
+            GetKeysDirectory(configuration, contentRootPath).FullName);
+        services.AddSingleton(jwtSigningKey);
+        services.PostConfigure<JwtOptions>(options => options.SigningKey = jwtSigningKey.Key);
+        services.AddHostedService<JwtSigningKeyNoticeHostedService>();
+        services.AddSingleton<LoginThrottle>();
         services.AddSingleton<IJwtTokenFactory, JwtTokenFactory>();
         services.AddSingleton<ISecretProtector, DataProtectionSecretProtector>();
         services.AddSingleton<IScheduleCalculator, ScheduleCalculator>();

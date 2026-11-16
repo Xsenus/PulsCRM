@@ -20,6 +20,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     /// </remarks>
     [HttpPost("login")]
     [AllowAnonymous]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting(LoginRateLimit.PolicyName)]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status401Unauthorized)]

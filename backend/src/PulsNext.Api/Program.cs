@@ -1,4 +1,6 @@
 using System.Text;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
@@ -83,7 +85,9 @@ builder.Services.AddCors(options =>
 });
 
 var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
-var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSection.SigningKey));
+// Тот же ключ, которым подписывает токены JwtTokenFactory (заглушка из конфига заменена сохраненным ключом).
+var resolvedSigningKey = (JwtSigningKey)builder.Services.Single(x => x.ServiceType == typeof(JwtSigningKey)).ImplementationInstance!;
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(resolvedSigningKey.Key));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -124,7 +128,32 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AccessPolicies.Admin, policy => policy.RequireAuthenticatedUser().AddRequirements(new AdminRequirement()));
 });
 
+// Защита от подбора пароля по сети: не больше 20 попыток входа в минуту с одного адреса
+// (вдобавок к блокировке пары «логин + адрес» после 5 неудач в LoginThrottle).
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(LoginRateLimit.PolicyName, context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = LoginRateLimit.PermitsPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new ApiErrorResponse { Message = "Слишком много попыток входа. Подождите минуту." }, cancellationToken);
+    };
+});
+
 var app = builder.Build();
+
+// Заголовки безопасности для ответов API: без угадывания типов, без встраивания во фреймы, без утечки адресов.
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "no-referrer";
+    await next();
+});
 
 app.UseExceptionHandler(handlerApp =>
 {
@@ -136,28 +165,41 @@ app.UseExceptionHandler(handlerApp =>
             UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
             KeyNotFoundException => StatusCodes.Status404NotFound,
             System.ComponentModel.DataAnnotations.ValidationException => StatusCodes.Status400BadRequest,
+            LoginThrottledException => StatusCodes.Status429TooManyRequests,
             _ => StatusCodes.Status500InternalServerError
         };
+
+        if (error is LoginThrottledException throttled)
+        {
+            context.Response.Headers.RetryAfter = ((int)Math.Ceiling(throttled.RetryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
 
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
 
         await context.Response.WriteAsJsonAsync(new ApiErrorResponse
         {
-            Message = error?.Message ?? "Непредвиденная ошибка сервера."
+            Message = ApiErrorMessages.ForClient(error, context.TraceIdentifier, context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("PulsNext.Api.Errors"))
         });
     });
 });
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+// Описание API (Swagger) — в разработке всегда, на production только при Swagger:Enabled=true:
+// иначе полный список методов виден любому в сети.
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
 {
-    options.StylesPath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui.css");
-    options.ScriptBundlePath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui-bundle.js");
-    options.ScriptPresetsPath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui-standalone-preset.js");
-    options.IndexStream = SwaggerUiCacheBusting.CreateVersionedIndexStream;
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.StylesPath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui.css");
+        options.ScriptBundlePath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui-bundle.js");
+        options.ScriptPresetsPath = SwaggerUiCacheBusting.AppendVersion("./swagger-ui-standalone-preset.js");
+        options.IndexStream = SwaggerUiCacheBusting.CreateVersionedIndexStream;
+    });
+}
+
 app.UseCors("web");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
