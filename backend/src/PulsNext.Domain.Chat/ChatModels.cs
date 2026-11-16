@@ -14,8 +14,96 @@ public static class ChatPersistentTypes
         typeof(ChatMessage),
         typeof(ChatAttachment),
         typeof(ChatReaction),
-        typeof(ChatUserSettings)
+        typeof(ChatUserSettings),
+        typeof(ChatPushSubscription)
     };
+}
+
+/// <summary>
+/// Подписка браузера на Web Push (одно устройство/браузер сотрудника): по ней сервер присылает системное
+/// уведомление о новом сообщении, даже когда вкладка CRM закрыта. Адрес выдает сервис push браузера.
+/// </summary>
+[Persistent("ChatPushSubscription")]
+public class ChatPushSubscription(Session session) : XPObject(session)
+{
+    private int _userId;
+    private string? _endpoint;
+    private string? _p256dh;
+    private string? _auth;
+    private string? _userAgent;
+    private DateTime _createdAtUtc;
+    private DateTime _updatedAtUtc;
+    private DateTime? _lastSentAtUtc;
+
+    public ChatPushSubscription() : this(Session.DefaultSession) { }
+
+    /// <summary>
+    /// Legacy-id сотрудника.
+    /// </summary>
+    [Indexed]
+    public int UserId
+    {
+        get => _userId;
+        set => SetPropertyValue(nameof(UserId), ref _userId, value);
+    }
+
+    /// <summary>
+    /// Адрес подписки в сервисе push (уникален для браузера).
+    /// </summary>
+    [Size(SizeAttribute.Unlimited)]
+    public string? Endpoint
+    {
+        get => _endpoint;
+        set => SetPropertyValue(nameof(Endpoint), ref _endpoint, value);
+    }
+
+    /// <summary>
+    /// Открытый ключ браузера (base64url) для шифрования содержимого.
+    /// </summary>
+    [Size(256)]
+    public string? P256dh
+    {
+        get => _p256dh;
+        set => SetPropertyValue(nameof(P256dh), ref _p256dh, value);
+    }
+
+    /// <summary>
+    /// Секрет подписки (base64url).
+    /// </summary>
+    [Size(64)]
+    public string? Auth
+    {
+        get => _auth;
+        set => SetPropertyValue(nameof(Auth), ref _auth, value);
+    }
+
+    [Size(512)]
+    public string? UserAgent
+    {
+        get => _userAgent;
+        set => SetPropertyValue(nameof(UserAgent), ref _userAgent, value);
+    }
+
+    public DateTime CreatedAtUtc
+    {
+        get => _createdAtUtc;
+        set => SetPropertyValue(nameof(CreatedAtUtc), ref _createdAtUtc, value);
+    }
+
+    public DateTime UpdatedAtUtc
+    {
+        get => _updatedAtUtc;
+        set => SetPropertyValue(nameof(UpdatedAtUtc), ref _updatedAtUtc, value);
+    }
+
+    /// <summary>
+    /// Когда последний раз успешно отправлено уведомление.
+    /// </summary>
+    public DateTime? LastSentAtUtc
+    {
+        get => _lastSentAtUtc;
+        set => SetPropertyValue(nameof(LastSentAtUtc), ref _lastSentAtUtc, value);
+    }
 }
 
 /// <summary>

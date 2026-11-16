@@ -130,6 +130,16 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IChatFileStore, DiskChatFileStore>();
             services.TryAddSingleton<IChatEventPublisher, NullChatEventPublisher>();
             services.AddScoped<IChatService, ChatService>();
+            // Web Push: уведомления о сообщениях в браузер, даже когда вкладка CRM закрыта.
+            services.AddSingleton<ChatPushQueue>();
+            services.AddSingleton<IChatPushQueue>(provider => provider.GetRequiredService<ChatPushQueue>());
+            services.AddSingleton<IWebPushKeyProvider>(provider => new WebPushKeyProvider(
+                provider.GetRequiredService<IOptions<ChatOptions>>(),
+                GetKeysDirectory(configuration, contentRootPath).FullName));
+            services.AddHttpClient(HttpWebPushSender.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
+            services.AddSingleton<IWebPushSender, HttpWebPushSender>();
+            services.AddScoped<ChatPushDispatcher>();
+            services.AddHostedService<ChatPushHostedService>();
             services.AddScoped<IChatAttachmentCleaner, ChatAttachmentCleaner>();
             services.AddHostedService<ChatAttachmentCleanupHostedService>();
             services.AddScoped<IChatDatabaseEncodingReader, PostgresChatDatabaseEncodingReader>();

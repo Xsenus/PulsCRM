@@ -21,11 +21,12 @@ public sealed class ChatServiceTests : IDisposable
     private readonly FakeDirectory _directory = new();
     private readonly RecordingPublisher _publisher = new();
     private readonly MemoryFileStore _fileStore = new();
+    private readonly RecordingPushQueue _pushQueue = new();
     private readonly ChatService _service;
 
     public ChatServiceTests()
     {
-        _service = new ChatService(_unitOfWork, _currentUser, _directory, _publisher, _fileStore, Microsoft.Extensions.Options.Options.Create(new ChatOptions()));
+        _service = new ChatService(_unitOfWork, _currentUser, _directory, _publisher, _fileStore, Microsoft.Extensions.Options.Options.Create(new ChatOptions()), _pushQueue);
     }
 
     public void Dispose() => _unitOfWork.Dispose();
@@ -867,6 +868,154 @@ public sealed class ChatServiceTests : IDisposable
         As(owner.UserId);
         var renamed = await _service.UpdateGroupAsync(group.Id, new ChatUpdateGroupRequest { Title = "Отдел продаж" }, CancellationToken.None);
         Assert.Equal("Отдел продаж", renamed.Title);
+    }
+
+    // Ключи из примера RFC 8291: настоящий открытый ключ P-256 и 16-байтовый секрет.
+    private const string PushP256dh = "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4";
+    private const string PushAuth = "BTBZMqHH6r4Tts7J_aSIgg";
+
+    private static ChatPushSubscriptionRequest PushRequest(string endpoint)
+        => new() { Endpoint = endpoint, Keys = new ChatPushSubscriptionKeys { P256dh = PushP256dh, Auth = PushAuth } };
+
+    private async Task EnableDesktop(int userId, bool showPreview = true)
+    {
+        As(userId);
+        await _service.UpdateSettingsAsync(new ChatUserSettingsDto
+        {
+            NotificationsEnabled = true,
+            SoundEnabled = true,
+            SoundName = ChatSoundNames.All.First(),
+            SoundVolume = 70,
+            ShowMessagePreview = showPreview,
+            DesktopNotificationsEnabled = true
+        }, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task PushSubscription_IsSavedPerBrowserAndMovesToTheUserWhoLoggedIn()
+    {
+        As(Alice);
+        await _service.SavePushSubscriptionAsync(PushRequest("https://fcm.googleapis.com/fcm/send/one"), "Chrome", CancellationToken.None);
+        await _service.SavePushSubscriptionAsync(PushRequest("https://fcm.googleapis.com/fcm/send/one"), "Chrome", CancellationToken.None);
+        var stored = Assert.Single(new XPQuery<ChatPushSubscription>(_unitOfWork));
+        Assert.Equal(Alice, stored.UserId);
+        Assert.Equal(PushP256dh, stored.P256dh);
+
+        // В том же браузере вошел другой сотрудник — подписка теперь его.
+        As(Bob);
+        await _service.SavePushSubscriptionAsync(PushRequest("https://fcm.googleapis.com/fcm/send/one"), "Chrome", CancellationToken.None);
+        Assert.Equal(Bob, Assert.Single(new XPQuery<ChatPushSubscription>(_unitOfWork)).UserId);
+
+        // Удалить можно только свою подписку.
+        As(Alice);
+        await _service.DeletePushSubscriptionAsync("https://fcm.googleapis.com/fcm/send/one", CancellationToken.None);
+        Assert.Single(new XPQuery<ChatPushSubscription>(_unitOfWork));
+        As(Bob);
+        await _service.DeletePushSubscriptionAsync("https://fcm.googleapis.com/fcm/send/one", CancellationToken.None);
+        Assert.Empty(new XPQuery<ChatPushSubscription>(_unitOfWork));
+    }
+
+    [Theory]
+    [InlineData("http://fcm.googleapis.com/insecure", PushP256dh, PushAuth)]
+    [InlineData("not a url", PushP256dh, PushAuth)]
+    [InlineData("https://fcm.googleapis.com/x", "AAAA", PushAuth)]
+    [InlineData("https://fcm.googleapis.com/x", PushP256dh, "AAAA")]
+    public async Task PushSubscription_RejectsBadEndpointOrKeys(string endpoint, string p256dh, string auth)
+    {
+        As(Alice);
+        await Assert.ThrowsAsync<ValidationException>(() => _service.SavePushSubscriptionAsync(
+            new ChatPushSubscriptionRequest { Endpoint = endpoint, Keys = new ChatPushSubscriptionKeys { P256dh = p256dh, Auth = auth } },
+            null,
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task NewMessage_QueuesPushOnlyForRecipientsWithDesktopNotifications()
+    {
+        await EnableDesktop(Bob);
+        As(Carol);
+        await _service.UpdateSettingsAsync(new ChatUserSettingsDto { NotificationsEnabled = true, SoundName = ChatSoundNames.All.First(), SoundVolume = 50, DesktopNotificationsEnabled = false }, CancellationToken.None);
+        await EnableDesktop(Alice);
+
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob, Carol] }, CancellationToken.None);
+        _pushQueue.Jobs.Clear();
+        await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "Совещание в 15:00" }, CancellationToken.None);
+
+        // Автору не шлем; Вере — нет, у нее системные оповещения выключены.
+        var job = Assert.Single(_pushQueue.Jobs);
+        Assert.Equal(Bob, job.UserId);
+        Assert.Equal("Отдел", job.Payload.Title);
+        Assert.Equal("Алиса: Совещание в 15:00", job.Payload.Body);
+        Assert.Equal(group.Id, job.Payload.ConversationId);
+        Assert.Equal($"/chat/{group.Id}", job.Payload.Url);
+    }
+
+    [Fact]
+    public async Task NewMessage_RespectsMutedChatsMentionsAndHiddenPreview()
+    {
+        await EnableDesktop(Bob, showPreview: false);
+        As(Alice);
+        var direct = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Отдел", MemberUserIds = [Bob] }, CancellationToken.None);
+        As(Bob);
+        await _service.UpdatePreferencesAsync(group.Id, new ChatConversationPreferencesRequest { IsMuted = true }, CancellationToken.None);
+
+        As(Alice);
+        _pushQueue.Jobs.Clear();
+        await _service.SendMessageAsync(direct.Id, new ChatSendMessageRequest { Text = "Секрет" }, CancellationToken.None);
+        var personal = Assert.Single(_pushQueue.Jobs);
+        Assert.Equal("Алиса", personal.Payload.Title);
+        Assert.Equal("Новое сообщение", personal.Payload.Body);
+
+        // Чат «без звука»: без упоминания — ничего, с упоминанием — уведомление.
+        _pushQueue.Jobs.Clear();
+        await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "Всем привет" }, CancellationToken.None);
+        Assert.Empty(_pushQueue.Jobs);
+        await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "@борис глянь", MentionedUserIds = [Bob] }, CancellationToken.None);
+        Assert.Equal("Алиса: Вас упомянули: Новое сообщение", Assert.Single(_pushQueue.Jobs).Payload.Body);
+    }
+
+    [Fact]
+    public async Task PushDispatcher_SendsToEveryBrowserAndDropsGoneSubscriptions()
+    {
+        As(Bob);
+        await _service.SavePushSubscriptionAsync(PushRequest("https://fcm.googleapis.com/fcm/send/work"), null, CancellationToken.None);
+        await _service.SavePushSubscriptionAsync(PushRequest("https://updates.push.services.mozilla.com/old"), null, CancellationToken.None);
+        As(Carol);
+        await _service.SavePushSubscriptionAsync(PushRequest("https://fcm.googleapis.com/fcm/send/carol"), null, CancellationToken.None);
+
+        var sender = new FakePushSender(endpoint => endpoint.Contains("old") ? WebPushSendResult.Gone : WebPushSendResult.Sent);
+        await new ChatPushDispatcher(_unitOfWork, sender).DispatchAsync(
+            new ChatPushJob(Bob, new ChatPushPayload("Алиса", "Привет", 10, "/chat/10")),
+            CancellationToken.None);
+
+        Assert.Equal(["https://fcm.googleapis.com/fcm/send/work", "https://updates.push.services.mozilla.com/old"], sender.Sent.Select(x => x.Endpoint).Order());
+        using var payload = System.Text.Json.JsonDocument.Parse(sender.Sent[0].Payload);
+        Assert.Equal("Привет", payload.RootElement.GetProperty("body").GetString());
+        Assert.Equal(10, payload.RootElement.GetProperty("conversationId").GetInt32());
+
+        var left = new XPQuery<ChatPushSubscription>(_unitOfWork).ToList();
+        Assert.Equal(["https://fcm.googleapis.com/fcm/send/carol", "https://fcm.googleapis.com/fcm/send/work"], left.Select(x => x.Endpoint).Order());
+        Assert.NotNull(left.Single(x => x.Endpoint!.EndsWith("work")).LastSentAtUtc);
+    }
+
+    private sealed class RecordingPushQueue : IChatPushQueue
+    {
+        public List<ChatPushJob> Jobs { get; } = new();
+
+        public void Enqueue(IEnumerable<ChatPushJob> jobs) => Jobs.AddRange(jobs);
+    }
+
+    private sealed class FakePushSender(Func<string, WebPushSendResult> result) : IWebPushSender
+    {
+        public List<(string Endpoint, string Payload)> Sent { get; } = new();
+
+        public Task<WebPushSendResult> SendAsync(ChatPushSubscription subscription, byte[] payload, CancellationToken cancellationToken)
+        {
+            Sent.Add((subscription.Endpoint!, Encoding.UTF8.GetString(payload)));
+            return Task.FromResult(result(subscription.Endpoint!));
+        }
     }
 
     private void As(int userId) => _currentUser.UserId = userId;

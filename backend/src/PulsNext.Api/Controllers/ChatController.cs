@@ -66,6 +66,36 @@ public sealed class ChatStatusController(ChatFeature feature, IOptions<ChatOptio
 public sealed class ChatController(IChatService chatService) : ControllerBase
 {
     /// <summary>
+    /// Открытый ключ VAPID для подписки браузера на Web Push (applicationServerKey).
+    /// </summary>
+    [HttpGet("push/public-key")]
+    [ProducesResponseType(typeof(ChatPushPublicKeyDto), StatusCodes.Status200OK)]
+    public ActionResult<ChatPushPublicKeyDto> GetPushPublicKey([FromServices] IWebPushKeyProvider keyProvider)
+        => Ok(new ChatPushPublicKeyDto { PublicKey = keyProvider.GetKeys().PublicKey });
+
+    /// <summary>
+    /// Сохраняет подписку этого браузера на системные уведомления о сообщениях.
+    /// </summary>
+    [HttpPost("push/subscriptions")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> SavePushSubscription([FromBody] ChatPushSubscriptionRequest request, CancellationToken cancellationToken)
+    {
+        await chatService.SavePushSubscriptionAsync(request, Request.Headers.UserAgent.ToString(), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Удаляет подписку этого браузера (системные уведомления выключены).
+    /// </summary>
+    [HttpDelete("push/subscriptions")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeletePushSubscription([FromBody] ChatPushSubscriptionRequest request, CancellationToken cancellationToken)
+    {
+        await chatService.DeletePushSubscriptionAsync(request.Endpoint, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Поиск сотрудников, которым можно написать.
     /// </summary>
     [HttpGet("users")]

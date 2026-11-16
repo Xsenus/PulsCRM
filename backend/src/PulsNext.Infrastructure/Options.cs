@@ -85,4 +85,17 @@ public sealed class ChatOptions
     /// Как часто запускается очистка неотправленных вложений, минут.
     /// </summary>
     public int PendingAttachmentCleanupIntervalMinutes { get; set; } = 360;
+
+    /// <summary>
+    /// Контакт для сервисов push (VAPID «sub»): mailto: или https:. Сервисы могут написать сюда при проблемах.
+    /// </summary>
+    public string WebPushSubject { get; set; } = "mailto:admin@puls-next.local";
+
+    /// <summary>
+    /// Ключи VAPID (base64url). Если не заданы — создаются автоматически и хранятся в каталоге ключей
+    /// (Storage:KeysPath/webpush-vapid.json). Менять нельзя: подписки браузеров привязаны к открытому ключу.
+    /// </summary>
+    public string? WebPushPublicKey { get; set; }
+
+    public string? WebPushPrivateKey { get; set; }
 }
