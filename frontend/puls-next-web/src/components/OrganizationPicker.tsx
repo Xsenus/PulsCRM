@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { getOrganizationRaions, getOrganizations } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
@@ -52,7 +52,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
     setDraftSelection(Object.fromEntries(value.map((item) => [item.id, item])));
   }, [modalOpen, value]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [organizationsResponse, raionsResponse] = await Promise.all([
@@ -77,7 +77,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedSearch, onlyWithEmail, page, pageSize, selectedRaionId]);
 
   useEffect(() => {
     if (!modalOpen) {
@@ -87,7 +87,7 @@ export function OrganizationPicker({ value, onChange }: OrganizationPickerProps)
     void loadData().catch((error) => {
       showToast(getApiErrorMessage(error, 'Не удалось загрузить справочник организаций.'), 'error', 4000);
     });
-  }, [appliedSearch, modalOpen, onlyWithEmail, page, pageSize, selectedRaionId]);
+  }, [loadData, modalOpen]);
 
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));

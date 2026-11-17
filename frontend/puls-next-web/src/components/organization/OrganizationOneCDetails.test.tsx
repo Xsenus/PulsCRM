@@ -96,8 +96,8 @@ describe('OrganizationOneCDetails', () => {
     ]);
     expect(view.textContent).toContain('0,00');
     expect(view.textContent).toContain('Комментарий ИТС');
-    expect(view.querySelector('a[href=\"tel:+73831112233\"]')?.textContent).toBe('+7 (383) 111-22-33');
-    expect(view.querySelector('a[href=\"mailto:onec@example.test\"]')?.textContent).toBe('onec@example.test');
+    expect(view.querySelector('a[href="tel:+73831112233"]')?.textContent).toBe('+7 (383) 111-22-33');
+    expect(view.querySelector('a[href="mailto:onec@example.test"]')?.textContent).toBe('onec@example.test');
   });
 
   it('keeps false booleans and zero amount visible', () => {

@@ -70,9 +70,9 @@ describe('OrganizationSiteDetails', () => {
     expect(lists[0].querySelectorAll('[role="listitem"]')).toHaveLength(14);
     expect(lists[1].querySelectorAll('[role="listitem"]')).toHaveLength(1);
     expect(Array.from(view.querySelectorAll('.detail-card'))).toHaveLength(14);
-    expect(view.querySelector('a[href=\"https://example.test\"]')?.textContent).toBe('example.test');
-    expect(view.querySelector('a[href=\"tel:+79130000000\"]')?.textContent).toBe('+7 913 000-00-00');
-    expect(view.querySelector('a[href=\"mailto:site@example.test\"]')?.textContent).toBe('site@example.test');
+    expect(view.querySelector('a[href="https://example.test"]')?.textContent).toBe('example.test');
+    expect(view.querySelector('a[href="tel:+79130000000"]')?.textContent).toBe('+7 913 000-00-00');
+    expect(view.querySelector('a[href="mailto:site@example.test"]')?.textContent).toBe('site@example.test');
     expect(view.textContent).toContain('Домен делегирован');
     expect(view.querySelector('.organization-status-pill')?.getAttribute('role')).toBe('status');
     expect(Array.from(view.querySelectorAll('time')).map((time) => time.getAttribute('dateTime'))).toEqual([

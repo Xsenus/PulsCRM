@@ -42,7 +42,7 @@ import type {
 } from './types';
 import { getApiErrorStatus, throwApiError } from './apiErrors';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 const TOKEN_KEY = 'puls-next-token';
 
 export const api = axios.create({

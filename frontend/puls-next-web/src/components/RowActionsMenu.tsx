@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { ActionIcon } from './ActionIcon';
 
 export interface RowActionItem {
@@ -34,19 +34,19 @@ export function RowActionsMenu({
   const [initialFocusTarget, setInitialFocusTarget] = useState<InitialFocusTarget>('first');
   actionRefs.current = actionRefs.current.slice(0, actions.length);
 
-  const focusAction = (index: number) => {
+  const focusAction = useCallback((index: number) => {
     const enabledActions = actionRefs.current.filter((button): button is HTMLButtonElement => !!button && !button.disabled);
     enabledActions[index]?.focus();
-  };
+  }, []);
 
-  const focusFirstAction = () => {
+  const focusFirstAction = useCallback(() => {
     focusAction(0);
-  };
+  }, [focusAction]);
 
-  const focusLastAction = () => {
+  const focusLastAction = useCallback(() => {
     const enabledActions = actionRefs.current.filter((button): button is HTMLButtonElement => !!button && !button.disabled);
     enabledActions[enabledActions.length - 1]?.focus();
-  };
+  }, []);
 
   const openMenu = (focusTarget: InitialFocusTarget = 'first') => {
     setInitialFocusTarget(focusTarget);
@@ -122,7 +122,7 @@ export function RowActionsMenu({
       window.removeEventListener('resize', handleViewportChange);
       window.removeEventListener('scroll', handleViewportChange, true);
     };
-  }, [initialFocusTarget, open]);
+  }, [focusFirstAction, focusLastAction, initialFocusTarget, open]);
 
   const handleMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Escape'].includes(event.key)) {

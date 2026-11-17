@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteEmployee, getEmployees } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
@@ -76,26 +76,25 @@ export function EmployeesPage({ headerActions }: { headerActions?: React.ReactNo
   const [deleteTarget, setDeleteTarget] = useState<EmployeeListItemDto | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getEmployees(appliedSearch, (page - 1) * pageSize, pageSize);
       setRows(result.items);
       setTotalCount(result.totalCount);
 
-      if (result.items.every((item) => item.id !== selectedRowId)) {
-        setSelectedRowId(result.items[0]?.id);
-      }
+      // Выбранная строка сохраняется, если она есть на новой странице, иначе выбирается первая.
+      setSelectedRowId((current) => (result.items.some((item) => item.id === current) ? current : result.items[0]?.id));
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedSearch, page, pageSize]);
 
   useEffect(() => {
     void load().catch((error) => {
       showToast(getApiErrorMessage(error), 'error');
     });
-  }, [appliedSearch, page, pageSize]);
+  }, [load]);
 
   useEffect(() => {
     setPageSize(loadStoredPageSize(pageSizeStorageKey));

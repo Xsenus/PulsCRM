@@ -68,8 +68,9 @@
 
 Фронтенд (React + Vite, в `frontend/puls-next-web`, lock-файл `package-lock.json`):
 - `npm ci`
+- `npm run lint` (ESLint: правила TypeScript и хуков React, конфиг `eslint.config.js`)
 - `npm test` (vitest)
 - `npm audit --audit-level=moderate`
 - `npm run build` (`tsc -b` — проверка типов — и `vite build`)
 
-Линтеров и форматтеров (ESLint, `dotnet format`) в проекте нет — новые инструменты без согласования не добавляй. E2E-тесты (`npm run test:e2e`, Playwright) идут в CI отдельной джобой «E2E (Playwright)»; локально запускай их, если менял сценарии, которые они покрывают.
+Для фронтенда есть ESLint (`npm run lint`, в CI и перед деплоем); форматтеров и `dotnet format` нет — новые инструменты без согласования не добавляй. E2E-тесты (`npm run test:e2e`, Playwright) идут в CI отдельной джобой «E2E (Playwright)»; локально запускай их, если менял сценарии, которые они покрывают.

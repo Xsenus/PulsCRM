@@ -20,7 +20,7 @@ import type {
 } from './chatTypes';
 import { isSystemMessage } from './chatTypes';
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 const TYPING_TTL_MS = 6000;
 const POLL_INTERVAL_MS = 30000;
 const DOCK_STATE_KEY = 'puls-chat-dock';
@@ -419,7 +419,7 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     if (fromOther && !isVisibleHere) {
       notify(message, updated);
     }
-  }, [currentUserId, emit, notify, upsertConversation]);
+  }, [currentUserId, emit, notify, queueDelivered, upsertConversation]);
 
   useEffect(() => {
     setConversations([]);
@@ -594,7 +594,7 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
     }
 
     const connection = connectionRef.current;
-    const ids = Array.from(new Set(conversations.flatMap((item) => item.participants.map((participant) => participant.userId))));
+    const ids = Array.from(new Set(conversationsRef.current.flatMap((item) => item.participants.map((participant) => participant.userId))));
     if (!connection || ids.length === 0) {
       return;
     }

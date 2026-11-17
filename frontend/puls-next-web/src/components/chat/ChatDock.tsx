@@ -64,14 +64,15 @@ export function ChatDock() {
 
   // Открытый в окне диалог считается «просматриваемым»: по нему не всплывают оповещения и он отмечается прочитанным.
   const setActive = chat?.setActiveConversationId;
+  const conversationId = conversation?.id;
   useEffect(() => {
-    if (!setActive || !showThread || !conversation) {
+    if (!setActive || !showThread || !conversationId) {
       return;
     }
 
-    setActive(conversation.id);
+    setActive(conversationId);
     return () => setActive(null);
-  }, [conversation?.id, setActive, showThread]);
+  }, [conversationId, setActive, showThread]);
 
   const filtered = useMemo(() => {
     const items = chat?.conversations ?? [];

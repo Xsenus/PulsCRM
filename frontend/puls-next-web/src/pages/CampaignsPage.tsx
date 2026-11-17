@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { changeCampaignStatus, deleteCampaign, getCampaigns, runCampaign } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
@@ -68,7 +68,7 @@ export function CampaignsPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [actionBusyId, setActionBusyId] = useState<number | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getCampaigns(appliedSearch, appliedStatus, (page - 1) * pageSize, pageSize);
@@ -81,13 +81,13 @@ export function CampaignsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedSearch, appliedStatus, page, pageSize]);
 
   useEffect(() => {
     void load().catch((error) => {
       showToast(getApiErrorMessage(error, 'Не удалось загрузить список кампаний.'), 'error', 4000);
     });
-  }, [appliedSearch, appliedStatus, page, pageSize]);
+  }, [load]);
 
   useEffect(() => {
     setPageSize(loadStoredPageSize(pageSizeStorageKey));

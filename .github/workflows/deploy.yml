@@ -51,6 +51,10 @@ jobs:
         working-directory: ${{ env.FRONTEND_PATH }}
         run: npm ci
 
+      - name: Lint frontend
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm run lint
+
       - name: Test frontend
         working-directory: ${{ env.FRONTEND_PATH }}
         run: npm test
