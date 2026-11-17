@@ -329,6 +329,18 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  // Куда поставить курсор после программной правки текста. Ставится в том же коммите, что и новый текст
+  // (а не по таймеру), иначе символы, набранные до срабатывания таймера, оказались бы не на своем месте.
+  const [caretRequest, setCaretRequest] = useState<{ caret: number } | null>(null);
+  useLayoutEffect(() => {
+    const element = textareaRef.current;
+    if (!caretRequest || !element) {
+      return;
+    }
+
+    element.focus();
+    element.setSelectionRange(caretRequest.caret, caretRequest.caret);
+  }, [caretRequest]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const nearBottomRef = useRef(true);
   const preserveScrollRef = useRef<{ height: number; top: number } | null>(null);
@@ -882,10 +894,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
     const next = insertMention(text, mention.start, caret, participant.displayName);
     setText(next.text);
     setMention(null);
-    window.setTimeout(() => {
-      element.focus();
-      element.setSelectionRange(next.caret, next.caret);
-    }, 0);
+    setCaretRequest({ caret: next.caret });
   };
 
   const participantNames = useMemo(
@@ -901,11 +910,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
     setEditing(message);
     setText(message.text ?? '');
-    window.setTimeout(() => {
-      const element = textareaRef.current;
-      element?.focus();
-      element?.setSelectionRange(element.value.length, element.value.length);
-    }, 0);
+    setCaretRequest({ caret: (message.text ?? '').length });
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1377,10 +1382,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
                     const end = element?.selectionEnd ?? text.length;
                     const next = `${text.slice(0, start)}${emoji}${text.slice(end)}`;
                     setText(next);
-                    window.setTimeout(() => {
-                      element?.focus();
-                      element?.setSelectionRange(start + emoji.length, start + emoji.length);
-                    }, 0);
+                    setCaretRequest({ caret: start + emoji.length });
                   }}
                 />
               ) : null}

@@ -24,6 +24,9 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
+        // Полный Chromium в новом headless-режиме, а не chrome-headless-shell: в последнем выданное тестом
+        // разрешение на уведомления не действует в сервис-воркере (проверка Web Push).
+        channel: 'chromium',
         viewport: { width: 1366, height: 768 }
       }
     }
