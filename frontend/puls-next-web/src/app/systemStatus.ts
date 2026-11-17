@@ -8,6 +8,10 @@ export interface SystemCheckDto {
   status: CheckStatus;
   detail: string;
   durationMs: number;
+  /** Что сделать (для замечаний). */
+  hint?: string | null;
+  /** Готовая команда для сервера, если есть. */
+  command?: string | null;
 }
 
 export interface StorageUsageDto {
