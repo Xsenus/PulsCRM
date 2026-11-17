@@ -88,3 +88,43 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+  e2e:
+    name: E2E (Playwright)
+    # Образ закреплен: Playwright ставит браузеры и системные зависимости только на поддерживаемые версии
+    # Ubuntu (ubuntu-latest уже 26.04, которую Playwright 1.60 не поддерживает).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        working-directory: ${{ env.FRONTEND_PATH }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      # Интерфейс в браузере с подмененным API (без сервера и баз): чат, роли, раскладка, уведомления.
+      - name: Run end-to-end tests
+        run: npm run test:e2e -- --trace off
+
+      - name: Upload Playwright results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: ${{ env.FRONTEND_PATH }}/test-results
+          retention-days: 7

@@ -174,6 +174,26 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<IStorageDiagnosticsService, StorageDiagnosticsService>();
+
+        // Журнал в файлы (Storage:RootPath/logs, файл на день) и страница «Состояние системы».
+        var storageSection = configuration.GetSection(StorageOptions.SectionName);
+        var storageRoot = StoragePathHelper.GetAbsolutePath(contentRootPath, storageSection.GetValue<string>(nameof(StorageOptions.RootPath)) ?? "../../../storage", ".");
+        var systemPaths = new SystemPaths(
+            storageRoot,
+            Path.Combine(storageRoot, "logs"),
+            StoragePathHelper.GetAbsolutePath(contentRootPath, storageRoot, storageSection.GetValue<string>(nameof(StorageOptions.UploadsPath)) ?? "uploads"),
+            GetKeysDirectory(configuration, contentRootPath).FullName,
+            IsChatEnabled(configuration, contentRootPath)
+                ? StoragePathHelper.GetAbsolutePath(contentRootPath, storageRoot, configuration.GetSection(ChatOptions.SectionName).GetValue<string>(nameof(ChatOptions.StoragePath)) ?? "chat")
+                : null,
+            // Папка резервных копий scripts/backup-puls.ps1 (docs/backup.md).
+            configuration.GetValue<string>("Backup:Root") ?? @"C:\PulsCRMBackups");
+        services.AddSingleton(systemPaths);
+        var recentLog = new RecentLogBuffer();
+        services.AddSingleton(recentLog);
+        var fileLogLevel = configuration.GetValue("Logging:File:MinLevel", LogLevel.Information);
+        services.AddSingleton<ILoggerProvider>(_ => new FileLoggerProvider(systemPaths.Logs, fileLogLevel, recentLog));
+        services.AddScoped<ISystemStatusService, SystemStatusService>();
         services.AddScoped<ITransportProfileService, TransportProfileService>();
         services.AddScoped<ICampaignService, CampaignService>();
         services.AddScoped<IRecipientResolver, RecipientResolver>();

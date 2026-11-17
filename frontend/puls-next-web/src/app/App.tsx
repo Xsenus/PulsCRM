@@ -17,6 +17,7 @@ const OrganizationEditPage = lazy(() => import('../pages/OrganizationEditPage').
 const CampaignsPage = lazy(() => import('../pages/CampaignsPage').then((module) => ({ default: module.CampaignsPage })));
 const CampaignEditPage = lazy(() => import('../pages/CampaignEditPage').then((module) => ({ default: module.CampaignEditPage })));
 const DispatchPage = lazy(() => import('../pages/DispatchPage').then((module) => ({ default: module.DispatchPage })));
+const SystemStatusPage = lazy(() => import('../pages/SystemStatusPage').then((module) => ({ default: module.SystemStatusPage })));
 const TransportProfilesPage = lazy(() => import('../pages/TransportProfilesPage').then((module) => ({ default: module.TransportProfilesPage })));
 
 function ShellLayout() {
@@ -58,6 +59,7 @@ export function App() {
               <Route path="/dispatch" element={<DispatchPage />} />
               <Route path="/settings" element={<TransportProfilesPage />} />
               <Route path="/transport-profiles" element={<Navigate to="/settings" replace />} />
+              <Route path="/system" element={<SystemStatusPage />} />
             </Route>
             <Route path="/work" element={<Navigate to="/" replace />} />
           </Route>

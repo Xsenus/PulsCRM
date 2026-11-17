@@ -464,7 +464,7 @@ public sealed class OrganizationService(
     {
         var term = TextHelper.NullIfWhiteSpace(search);
         var query = ApplyOrganizationFilters(new XPQuery<LegacyOrg>(legacyUnitOfWork), term, []);
-        var source = hasEmail ? query.ToList().Where(OrganizationHasEmail) : query.AsEnumerable();
+        var source = hasEmail ? LoadOrganizationsWithEmail(query) : query.AsEnumerable();
         var items = source
             .GroupBy(x => new
             {
@@ -492,11 +492,9 @@ public sealed class OrganizationService(
             .ToList();
     }
 
-    private static List<LegacyOrg> GetEmailFilteredOrganizationsPage(IQueryable<LegacyOrg> query, int skip, int take, out int totalCount)
+    private List<LegacyOrg> GetEmailFilteredOrganizationsPage(IQueryable<LegacyOrg> query, int skip, int take, out int totalCount)
     {
-        var filtered = query
-            .ToList()
-            .Where(OrganizationHasEmail)
+        var filtered = LoadOrganizationsWithEmail(query)
             .OrderBy(x => x.Name)
             .ThenBy(x => x.Oid)
             .ToList();
@@ -506,6 +504,31 @@ public sealed class OrganizationService(
             .Skip(Math.Max(0, skip))
             .Take(NormalizeTake(take))
             .ToList();
+    }
+
+    /// <summary>
+    /// Организации с хотя бы одним корректным e-mail. Сначала SQL отбирает тех, у кого любое поле e-mail не пустое
+    /// (раньше в память грузились все организации), затем контакты отобранных подгружаются одним запросом
+    /// (раньше — запрос на каждую организацию), и точная проверка формата делается как прежде.
+    /// </summary>
+    private IEnumerable<LegacyOrg> LoadOrganizationsWithEmail(IQueryable<LegacyOrg> query)
+    {
+        var candidates = query
+            .Where(x =>
+                (x.OrgInfo != null && x.OrgInfo.Email != null && x.OrgInfo.Email != "")
+                || (x.OrgInfoOther != null
+                    && ((x.OrgInfoOther.RukEmail != null && x.OrgInfoOther.RukEmail != "")
+                        || (x.OrgInfoOther.ZpEmail != null && x.OrgInfoOther.ZpEmail != "")
+                        || (x.OrgInfoOther.F1cEmail != null && x.OrgInfoOther.F1cEmail != "")
+                        || (x.OrgInfoOther.SiteEmail != null && x.OrgInfoOther.SiteEmail != "")))
+                || x.Contacts.Any(c => c.Email != null && c.Email != ""))
+            .ToList();
+        if (candidates.Count > 0)
+        {
+            legacyUnitOfWork.PreFetch(candidates, nameof(LegacyOrg.Contacts));
+        }
+
+        return candidates.Where(OrganizationHasEmail);
     }
 
     private static bool OrganizationHasEmail(LegacyOrg organization)
