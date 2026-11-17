@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { fetchChatAttachmentBlob } from '../../app/chatApi';
 import { acquireChatImage } from '../../app/chatImageLoader';
 import { albumRatio, computeAlbumLayout } from '../../app/chatAlbumLayout';
+import { ChatVoicePlayer } from './ChatVoice';
 
 /** Картинки начинают грузиться за столько пикселей до появления на экране. */
 const PRELOAD_MARGIN_PX = 600;
@@ -169,7 +170,8 @@ function ChatImageThumb({ attachment, single, tile, onOpen }: {
 export function ChatAttachmentList({ attachments }: { attachments: ChatAttachmentDto[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const images = attachments.filter((item) => item.isImage);
-  const files = attachments.filter((item) => !item.isImage);
+  const audios = attachments.filter((item) => !item.isImage && item.isAudio);
+  const files = attachments.filter((item) => !item.isImage && !item.isAudio);
 
   return (
     <div className="chat-attachments">
@@ -179,6 +181,7 @@ export function ChatAttachmentList({ attachments }: { attachments: ChatAttachmen
         </div>
       ) : null}
       {images.length > 1 ? <ChatPhotoAlbum images={images} onOpen={setOpenIndex} /> : null}
+      {audios.map((attachment) => <ChatVoicePlayer key={attachment.id} attachment={attachment} />)}
       {files.map((attachment) => (
         <button key={attachment.id} type="button" className="chat-file-card" onClick={() => void downloadChatAttachment(attachment)} title="Скачать">
           <FileIcon fileName={attachment.fileName} />

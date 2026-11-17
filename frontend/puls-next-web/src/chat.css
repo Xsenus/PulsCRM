@@ -2507,3 +2507,142 @@ textarea.chat-input {
   font-size: 12px;
   line-height: 1.45;
 }
+
+/* Голосовые сообщения */
+.chat-voice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(320px, 100%);
+  min-width: 220px;
+  padding: 6px 8px 6px 6px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.chat-voice-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chat-voice-toggle:disabled {
+  cursor: progress;
+}
+
+.chat-voice-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: chat-voice-spin 0.8s linear infinite;
+}
+
+@keyframes chat-voice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.chat-voice-track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.18);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.chat-voice-progress {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--brand);
+  transition: width 0.15s linear;
+}
+
+.chat-voice-time {
+  flex: none;
+  min-width: 34px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.chat-voice-download {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.chat-voice-download:hover {
+  background: rgba(15, 23, 42, 0.07);
+  color: var(--text);
+}
+
+.chat-message.own .chat-voice {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.chat-voice-recording {
+  align-items: center;
+}
+
+.chat-voice-recording-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: chat-voice-pulse 1s ease-in-out infinite;
+}
+
+@keyframes chat-voice-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.chat-voice-recording-time {
+  flex: none;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-voice-recording-hint {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-mic-button {
+  font-size: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-voice-recording-dot,
+  .chat-voice-spinner {
+    animation: none;
+  }
+}

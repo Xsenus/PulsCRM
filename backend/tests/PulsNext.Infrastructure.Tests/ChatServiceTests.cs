@@ -264,6 +264,49 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UploadAttachment_KeepsVoiceDurationOnlyForAudio()
+    {
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+
+        var voice = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream([1, 2, 3, 4]),
+            FileName = "Голосовое сообщение.webm",
+            ContentType = "audio/webm;codecs=opus",
+            DurationMs = 12_345
+        }, CancellationToken.None);
+        Assert.True(voice.IsAudio);
+        Assert.False(voice.IsImage);
+        Assert.Equal("audio/webm", voice.ContentType);
+        Assert.Equal(12_345, voice.DurationMs);
+
+        // Длительность у не-аудио и неправдоподобная длительность не сохраняются.
+        var document = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream([1, 2, 3]),
+            FileName = "отчет.pdf",
+            ContentType = "application/pdf",
+            DurationMs = 5000
+        }, CancellationToken.None);
+        Assert.False(document.IsAudio);
+        Assert.Null(document.DurationMs);
+
+        var tooLong = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream([1, 2, 3]),
+            FileName = "запись.ogg",
+            DurationMs = int.MaxValue
+        }, CancellationToken.None);
+        Assert.Equal("audio/ogg", tooLong.ContentType);
+        Assert.True(tooLong.IsAudio);
+        Assert.Null(tooLong.DurationMs);
+
+        var sent = await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { AttachmentIds = [voice.Id] }, CancellationToken.None);
+        Assert.Equal(12_345, Assert.Single(sent.Attachments).DurationMs);
+    }
+
+    [Fact]
     public async Task UploadAttachment_StoresThumbnailAndServesItSeparately()
     {
         As(Alice);
@@ -949,6 +992,25 @@ public sealed class ChatServiceTests : IDisposable
         Assert.Equal("Алиса: Совещание в 15:00", job.Payload.Body);
         Assert.Equal(group.Id, job.Payload.ConversationId);
         Assert.Equal($"/chat/{group.Id}", job.Payload.Url);
+    }
+
+    [Fact]
+    public async Task VoiceMessage_IsDescribedInPush()
+    {
+        await EnableDesktop(Bob);
+        As(Alice);
+        var conversation = await _service.OpenDirectAsync(Bob, CancellationToken.None);
+        var voice = await _service.UploadAttachmentAsync(conversation.Id, new ChatAttachmentUploadCommand
+        {
+            Content = new MemoryStream([1, 2, 3]),
+            FileName = "Голосовое сообщение.webm",
+            ContentType = "audio/webm",
+            DurationMs = 3000
+        }, CancellationToken.None);
+        _pushQueue.Jobs.Clear();
+        await _service.SendMessageAsync(conversation.Id, new ChatSendMessageRequest { AttachmentIds = [voice.Id] }, CancellationToken.None);
+
+        Assert.Equal("🎤 Голосовое сообщение", Assert.Single(_pushQueue.Jobs).Payload.Body);
     }
 
     [Fact]

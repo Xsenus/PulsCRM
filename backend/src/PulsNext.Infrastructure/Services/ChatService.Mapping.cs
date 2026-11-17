@@ -205,6 +205,8 @@ public sealed partial class ChatService
             PreviewDataUrl = attachment.PreviewDataUrl,
             Width = attachment.ImageWidth > 0 && attachment.ImageHeight > 0 ? attachment.ImageWidth : null,
             Height = attachment.ImageWidth > 0 && attachment.ImageHeight > 0 ? attachment.ImageHeight : null,
+            IsAudio = IsAudioContentType(attachment.ContentType),
+            DurationMs = attachment.AudioDurationMs > 0 ? attachment.AudioDurationMs : null,
             UploadedAtUtc = ForceUtc(attachment.UploadedAtUtc)
         };
 

@@ -23,6 +23,8 @@ export interface ChatImageUploadExtras {
   preview?: string;
   width?: number;
   height?: number;
+  /** Длительность аудио (голосового сообщения) в миллисекундах. */
+  durationMs?: number;
 }
 
 /** Размер копии с сохранением пропорций; оригинал не увеличивается. */

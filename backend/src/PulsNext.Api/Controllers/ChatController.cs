@@ -313,7 +313,8 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
             Thumbnail = thumbnail,
             PreviewDataUrl = request.Preview,
             Width = request.Width,
-            Height = request.Height
+            Height = request.Height,
+            DurationMs = request.DurationMs
         }, cancellationToken));
     }
 

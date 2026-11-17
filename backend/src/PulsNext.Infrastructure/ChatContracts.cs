@@ -142,6 +142,16 @@ public sealed class ChatAttachmentDto
     public int? Width { get; set; }
     public int? Height { get; set; }
 
+    /// <summary>
+    /// Аудио (голосовое сообщение или звуковой файл) — показывать проигрыватель.
+    /// </summary>
+    public bool IsAudio { get; set; }
+
+    /// <summary>
+    /// Длительность аудио в миллисекундах, если известна.
+    /// </summary>
+    public int? DurationMs { get; set; }
+
     public DateTime UploadedAtUtc { get; set; }
 }
 
@@ -385,6 +395,11 @@ public sealed class ChatAttachmentUploadCommand
     /// </summary>
     public int? Width { get; init; }
     public int? Height { get; init; }
+
+    /// <summary>
+    /// Длительность аудио в миллисекундах (голосовое сообщение), необязательно.
+    /// </summary>
+    public int? DurationMs { get; init; }
 }
 
 /// <summary>

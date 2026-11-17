@@ -56,9 +56,18 @@ public sealed partial class ChatService
         return normalized;
     }
 
+    /// <summary>
+    /// Предел длительности голосового сообщения (браузер останавливает запись раньше).
+    /// </summary>
+    private const int MaxAudioDurationMs = 30 * 60 * 1000;
+
+    private static bool IsAudioContentType(string? contentType)
+        => contentType?.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) == true;
+
     private static string NormalizeContentType(string? contentType, string extension)
     {
-        var normalized = TextHelper.NullIfWhiteSpace(contentType)?.ToLowerInvariant();
+        // Параметры типа («audio/webm;codecs=opus») не храним: нужен сам тип.
+        var normalized = TextHelper.NullIfWhiteSpace(contentType?.Split(';')[0])?.ToLowerInvariant();
         if (normalized is not null && normalized != "application/octet-stream" && normalized.Length <= 256)
         {
             return normalized;
@@ -73,6 +82,11 @@ public sealed partial class ChatService
             ".bmp" => "image/bmp",
             ".pdf" => "application/pdf",
             ".txt" => "text/plain",
+            ".webm" => "audio/webm",
+            ".ogg" or ".oga" or ".opus" => "audio/ogg",
+            ".m4a" => "audio/mp4",
+            ".mp3" => "audio/mpeg",
+            ".wav" => "audio/wav",
             _ => "application/octet-stream"
         };
     }

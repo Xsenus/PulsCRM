@@ -19,6 +19,9 @@ import '../../chat.css';
 import { MessageBubble } from './MessageBubble';
 import { formatStatus } from '../../app/profile';
 import { useColleagueStatus } from '../../app/useColleagueStatus';
+import { extractClipboardFiles, isTextInputTarget } from '../../app/clipboardFiles';
+import { getVoiceSupport, useVoiceRecorder, type RecordedVoice } from '../../app/voiceRecorder';
+import { ChatVoiceRecorderBar } from './ChatVoice';
 
 const PAGE_SIZE = 50;
 /** Переход к старому сообщению догружает историю крупными страницами, но не бесконечно. */
@@ -91,6 +94,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
     element.setSelectionRange(caretRequest.caret, caretRequest.caret);
   }, [caretRequest]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const viewRef = useRef<HTMLDivElement | null>(null);
   const nearBottomRef = useRef(true);
   const preserveScrollRef = useRef<{ height: number; top: number } | null>(null);
   const scrollToBottomRef = useRef<'instant' | 'smooth' | null>(null);
@@ -563,6 +567,57 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
   };
 
+  // Скриншот можно вставить (Ctrl+V), даже если курсор не в поле ввода: окно диалога открыто и фокус не в другом поле.
+  const pasteFilesRef = useRef<(files: File[]) => void>(() => undefined);
+  pasteFilesRef.current = (files) => {
+    if (!editing && !peerInactive) {
+      addFiles(files);
+    }
+  };
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const active = document.activeElement;
+      const root = viewRef.current;
+      if (event.defaultPrevented || !root || isTextInputTarget(active) || (active && active !== document.body && !root.contains(active))) {
+        return;
+      }
+
+      const files = extractClipboardFiles(event.clipboardData);
+      if (files.length > 0) {
+        event.preventDefault();
+        pasteFilesRef.current(files);
+      }
+    };
+
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, []);
+
+  /** Голосовое сообщение уходит сразу после записи — отдельным сообщением (с ответом, если он выбран). */
+  const sendVoice = async ({ file, durationMs }: RecordedVoice) => {
+    setSending(true);
+    try {
+      const attachment = await uploadChatAttachment(conversation.id, file, undefined, { durationMs });
+      const message = await sendChatMessage(conversation.id, {
+        replyToMessageId: replyTo?.id,
+        attachmentIds: [attachment.id],
+        clientMessageId: createClientMessageId()
+      });
+      scrollToBottomRef.current = 'smooth';
+      setMessages((current) => mergeMessages(current, [message]));
+      chat.applyMessageLocally(message);
+      lastMarkedRef.current = Math.max(lastMarkedRef.current, message.id);
+      setReplyTo(null);
+    } catch (error) {
+      showToast(getApiErrorMessage(error, 'Не удалось отправить голосовое сообщение.'), 'error');
+    } finally {
+      setSending(false);
+    }
+  };
+  const voice = useVoiceRecorder((recorded) => void sendVoice(recorded), (message) => showToast(message, 'warning', 6000));
+  const voiceSupport = getVoiceSupport();
+  const showMic = !editing && !text.trim() && uploads.length === 0 && voiceSupport !== 'unsupported';
+
   const finishEditing = () => {
     setText(stashedDraftRef.current);
     stashedDraftRef.current = '';
@@ -783,6 +838,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
   return (
     <div
+      ref={viewRef}
       className={`chat-view${compact ? ' chat-view-compact' : ''}${dragOver ? ' chat-view-drag' : ''}`}
       onDragOver={(event) => {
         if (event.dataTransfer.types.includes('Files')) {
@@ -1049,6 +1105,8 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
         {peerInactive ? (
           <div className="chat-muted chat-composer-disabled">Сотрудник уволен — отправить сообщение нельзя.</div>
+        ) : voice.recording ? (
+          <ChatVoiceRecorderBar elapsedMs={voice.elapsedMs} onCancel={voice.cancel} onSend={voice.finish} />
         ) : (
           <div className="chat-composer-row">
             {mention && mentionCandidates.length > 0 ? (
@@ -1113,9 +1171,15 @@ export function ConversationView({ conversation, onBack, compact = false, header
               aria-autocomplete={isGroup ? 'list' : undefined}
               aria-expanded={isGroup ? mentionCandidates.length > 0 : undefined}
               onPaste={(event) => {
-                const files = Array.from(event.clipboardData.files);
-                if (files.length > 0 && !editing) {
-                  event.preventDefault();
+                const files = extractClipboardFiles(event.clipboardData);
+                if (files.length === 0) {
+                  return;
+                }
+
+                event.preventDefault();
+                if (editing) {
+                  showToast('Во время правки сообщения файлы не добавляются.', 'info');
+                } else {
                   addFiles(files);
                 }
               }}
@@ -1140,16 +1204,29 @@ export function ConversationView({ conversation, onBack, compact = false, header
                 />
               ) : null}
             </div>
-            <button
-              type="button"
-              className="chat-send-button"
-              onClick={() => void submit()}
-              disabled={!canSend}
-              title={editing ? 'Сохранить (Enter)' : 'Отправить (Enter)'}
-              aria-label={editing ? 'Сохранить' : 'Отправить'}
-            >
-              {editing ? '✓' : '➤'}
-            </button>
+            {showMic ? (
+              <button
+                type="button"
+                className="chat-send-button chat-mic-button"
+                onClick={() => void voice.start()}
+                disabled={sending}
+                title={voiceSupport === 'insecure' ? 'Голосовое сообщение (нужна настройка браузера)' : 'Записать голосовое сообщение'}
+                aria-label="Записать голосовое сообщение"
+              >
+                🎤
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="chat-send-button"
+                onClick={() => void submit()}
+                disabled={!canSend}
+                title={editing ? 'Сохранить (Enter)' : 'Отправить (Enter)'}
+                aria-label={editing ? 'Сохранить' : 'Отправить'}
+              >
+                {editing ? '✓' : '➤'}
+              </button>
+            )}
           </div>
         )}
       </footer>

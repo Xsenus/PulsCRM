@@ -27,6 +27,8 @@ export default defineConfig({
         // Полный Chromium в новом headless-режиме, а не chrome-headless-shell: в последнем выданное тестом
         // разрешение на уведомления не действует в сервис-воркере (проверка Web Push).
         channel: 'chromium',
+        // Поддельный микрофон для теста голосовых сообщений (без устройства и без вопроса о разрешении).
+        launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
         viewport: { width: 1366, height: 768 }
       }
     }

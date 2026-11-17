@@ -46,6 +46,11 @@ public sealed partial class ChatService
             UploadedAtUtc = now
         };
 
+        if (IsAudioContentType(contentType) && command.DurationMs is > 0 and <= MaxAudioDurationMs)
+        {
+            attachment.AudioDurationMs = command.DurationMs.Value;
+        }
+
         if (isImage)
         {
             attachment.PreviewDataUrl = NormalizePreviewDataUrl(command.PreviewDataUrl);
