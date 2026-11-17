@@ -161,8 +161,13 @@ const DESKTOP_STATUS: Record<DesktopNotificationStatus, { label: string; tone: '
   unsupported: { label: 'Недоступно', tone: 'neutral' }
 };
 
-function DesktopNotificationsRow({ enabled, disabled, onChange }: { enabled: boolean; disabled: boolean; onChange: (value: boolean) => void }) {
-  const [status, setStatus] = useState<DesktopNotificationStatus>(getDesktopNotificationStatus);
+function DesktopNotificationsRow({ enabled, disabled, status, onStatus, onChange }: {
+  enabled: boolean;
+  disabled: boolean;
+  status: DesktopNotificationStatus;
+  onStatus: (status: DesktopNotificationStatus) => void;
+  onChange: (value: boolean) => void;
+}) {
   const unavailable = status === 'insecure' || status === 'unsupported';
   const badge = DESKTOP_STATUS[status];
 
@@ -183,7 +188,7 @@ function DesktopNotificationsRow({ enabled, disabled, onChange }: { enabled: boo
             onChange={async (value) => {
               if (value && status !== 'granted') {
                 const result = await requestDesktopNotificationPermission();
-                setStatus(result);
+                onStatus(result);
                 onChange(result === 'granted');
                 return;
               }
@@ -193,15 +198,56 @@ function DesktopNotificationsRow({ enabled, disabled, onChange }: { enabled: boo
           />
         </>
       )}
-    >
-      {status === 'insecure' && !disabled ? <BrowserSetup /> : null}
-      {status === 'denied' && !disabled ? (
-        <p className="settings-row-note">Уведомления запрещены в браузере: нажмите на значок слева от адреса сайта → «Уведомления» → «Разрешить» и обновите страницу.</p>
-      ) : null}
-      {status === 'unsupported' && !disabled ? (
-        <p className="settings-row-note">Этот браузер не умеет показывать уведомления — откройте CRM в Chrome, Edge или Яндекс.Браузере.</p>
-      ) : null}
-    </SettingRow>
+    />
+  );
+}
+
+/** Правая колонка: помощь, если браузер не дает уведомления Windows (без HTTPS, запрещены, не поддерживаются). */
+function DesktopHelp({ status }: { status: DesktopNotificationStatus }) {
+  if (status === 'insecure') {
+    return <BrowserSetup />;
+  }
+
+  if (status === 'denied' || status === 'unsupported') {
+    return (
+      <div className="settings-setup" role="region" aria-label="Настройка браузера">
+        <div className="settings-setup-title">{status === 'denied' ? 'Уведомления запрещены в браузере' : 'Браузер не умеет показывать уведомления'}</div>
+        <p className="settings-setup-text">
+          {status === 'denied'
+            ? 'Нажмите на значок слева от адреса сайта → «Уведомления» → «Разрешить» и обновите страницу.'
+            : 'Откройте CRM в Chrome, Edge или Яндекс.Браузере.'}
+        </p>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+/** Пример оповещения с текущими настройками: как его увидят на экране. */
+function NotificationPreview({ draft }: { draft: ChatUserSettingsDto }) {
+  return (
+    <section className="settings-preview" aria-label="Пример оповещения">
+      <div className="settings-preview-title">Так будет выглядеть оповещение</div>
+      {draft.notificationsEnabled ? (
+        <div className="settings-preview-toast">
+          <span className="settings-preview-avatar" aria-hidden="true">АП</span>
+          <span className="settings-preview-text">
+            <span className="settings-preview-name">Петрова Анна</span>
+            <span className="settings-preview-message">{draft.showMessagePreview ? 'Добрый день! Посмотрите, пожалуйста, отчет по лицензиям.' : 'Новое сообщение'}</span>
+          </span>
+          <span className="settings-preview-time">сейчас</span>
+        </div>
+      ) : (
+        <div className="settings-preview-off">Оповещения выключены — новые сообщения будут видны только в чате.</div>
+      )}
+      <div className="settings-preview-meta">
+        <span>{draft.soundEnabled ? `🔊 ${CHAT_SOUNDS.find((sound) => sound.name === draft.soundName)?.label ?? 'Звук'}, ${draft.soundVolume}%` : '🔇 Без звука'}</span>
+        {draft.soundEnabled ? (
+          <button type="button" className="settings-preview-play" onClick={() => void playChatSound(draft.soundName, draft.soundVolume)}>▶ Прослушать</button>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -219,6 +265,7 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
   const { settings, saveSettings } = useChat();
   const [draft, setDraft] = useState<ChatUserSettingsDto>(settings);
   const [saving, setSaving] = useState(false);
+  const [desktopStatus, setDesktopStatus] = useState<DesktopNotificationStatus>(getDesktopNotificationStatus);
   const volumeId = useId();
 
   useEffect(() => {
@@ -248,7 +295,7 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
       open={open}
       title="Уведомления"
       onClose={onClose}
-      maxWidth={540}
+      maxWidth={920}
       actions={(
         <div className="button-group">
           <button type="button" className="secondary-button button-inline" onClick={onClose}>Отмена</button>
@@ -259,6 +306,7 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
       )}
     >
       <div className="settings">
+        <div className="settings-main">
         <section className="settings-group" aria-labelledby="settings-alerts-title">
           <h3 className="settings-group-title" id="settings-alerts-title">Оповещения</h3>
           <div className="settings-card">
@@ -288,6 +336,8 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
             <DesktopNotificationsRow
               enabled={!!draft.desktopNotificationsEnabled}
               disabled={!draft.notificationsEnabled}
+              status={desktopStatus}
+              onStatus={setDesktopStatus}
               onChange={(value) => update({ desktopNotificationsEnabled: value })}
             />
           </div>
@@ -346,7 +396,13 @@ export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: 
           </div>
         </section>
 
-        <p className="settings-footnote">В диалогах с режимом «Без звука» оповещений и звука нет.</p>
+        </div>
+
+        <aside className="settings-aside" aria-label="Подсказки">
+          {draft.notificationsEnabled ? <DesktopHelp status={desktopStatus} /> : null}
+          <NotificationPreview draft={draft} />
+          <p className="settings-footnote">В диалогах с режимом «Без звука» оповещений и звука нет.</p>
+        </aside>
       </div>
     </Modal>
   );
