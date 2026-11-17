@@ -32,6 +32,22 @@ async function mockApp(page: Page, user: typeof currentUser) {
     const found = colleagues.find((item) => item.id === id);
     return found ? fulfillJson(route, found) : route.fulfill({ status: 404, body: '' });
   });
+  const day = (offset: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T00:00:00Z`;
+  };
+  await page.route(/\/api\/my-work(\?.*)?$/, (route) => fulfillJson(route, {
+    assigned: [
+      { id: 11, userFromId: 2, userFromName: 'Петрова Анна Сергеевна', orgName: 'ООО «Ромашка»', message: 'Подготовить акт сверки', dateToUtc: day(-2), isCompleted: false },
+      { id: 12, userFromId: 3, userFromName: 'Иванов Олег Петрович', task: 'Звонок клиенту', dateToUtc: day(0), isCompleted: false },
+      { id: 13, userFromId: 2, userFromName: 'Петрова Анна Сергеевна', message: 'Разобрать почту', isCompleted: false }
+    ],
+    assignedTotal: 7,
+    overdue: 1,
+    delegated: [{ id: 14, userToId: 4, userToName: 'Сидорова Ольга', message: 'Проверить договор', dateToUtc: day(5), isCompleted: false }],
+    delegatedTotal: 1
+  }));
   await page.route(/\/api\/colleagues\/\d+\/photo$/, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
   await page.route(/\/api\/dashboard$/, (route) => {
     calls.dashboard += 1;
@@ -62,6 +78,19 @@ test('an employee sees only the dashboard, chat and colleagues', async ({ page }
   await expect(birthdays).toContainText('Сегодня');
   await expect(birthdays.getByRole('button', { name: 'Поздравить' })).toHaveCount(2);
   await expect(page.locator('.home-links a')).toHaveText([/Чат/, /Сотрудники/]);
+
+  // «Мои задачи»: просроченные сверху, срок плашкой, «от кого» открывает карточку, поручения от меня — под спойлером.
+  const tasks = page.getByRole('region', { name: 'Мои задачи' });
+  await expect(tasks.locator('.home-card-badge')).toHaveText('Просрочено: 1');
+  await expect(tasks.getByRole('list', { name: 'Поручено мне' }).locator('.home-task-title')).toHaveText(['Подготовить акт сверки', 'Звонок клиенту', 'Разобрать почту']);
+  await expect(tasks.getByRole('list', { name: 'Поручено мне' }).locator('.home-task-due')).toHaveText(['Просрочено на 2 дня', 'Сегодня', 'Без срока']);
+  await expect(tasks).toContainText('ООО «Ромашка»');
+  await expect(tasks).toContainText('И еще 4 — в Пульсе.');
+  await tasks.getByRole('group').getByText('Я поручил: 1').click();
+  await expect(tasks.getByRole('list', { name: 'Поручено мной' })).toContainText('Проверить договор');
+  await tasks.getByRole('button', { name: 'Петрова А.' }).first().click();
+  await expect(page.getByRole('dialog', { name: 'Карточка сотрудника' })).toBeVisible();
+  await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { level: 2, name: 'Рассылки' })).toHaveCount(0);
   expect(calls.dashboard).toBe(0);
 
