@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { openColleagueCard } from '../../app/colleagueCard';
 import { Modal } from '../Modal';
 import { useChat } from '../../app/ChatContext';
 import {
@@ -549,7 +550,17 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
                 <div key={participant.userId} className="chat-member-row">
                   <ChatAvatar name={participant.displayName} seed={participant.userId} size={34} online={onlineUserIds.has(participant.userId)} />
                   <span className="chat-user-row-text">
-                    <span className="chat-user-row-name">{participant.displayName}{isMe ? ' (вы)' : ''}</span>
+                    <button
+                      type="button"
+                      className="chat-user-row-name chat-member-card-link"
+                      onClick={() => {
+                        onClose();
+                        openColleagueCard(participant.userId);
+                      }}
+                      title="Карточка сотрудника"
+                    >
+                      {participant.displayName}{isMe ? ' (вы)' : ''}
+                    </button>
                     <span className="chat-user-row-meta">
                       {rank === 2 ? 'Создатель' : rank === 1 ? 'Администратор' : 'Участник'}
                       {participant.isInactive ? ' · уволен' : ''}

@@ -6,6 +6,7 @@ import { AppLoader } from '../components/AppLoader';
 import { ColleagueAvatar } from '../components/ColleagueAvatar';
 import { WriteInChatButton } from '../components/chat/WriteInChat';
 import { formatStatus, getStatusNote, isStatusActive } from '../app/profile';
+import { openColleagueCard } from '../app/colleagueCard';
 
 function normalize(value: string | null | undefined) {
   return (value ?? '').toLowerCase().replace(/ё/g, 'е');
@@ -27,7 +28,9 @@ export function ColleagueCard({ colleague, online }: { colleague: ColleagueDto; 
       <div className="colleague-card-head">
         <ColleagueAvatar colleague={colleague} size={56} online={online} />
         <div className="colleague-card-title">
-          <h3>{colleague.fullName}</h3>
+          <h3>
+            <button type="button" className="colleague-card-name" onClick={() => openColleagueCard(colleague.id)} title="Карточка сотрудника">{colleague.fullName}</button>
+          </h3>
           {colleague.position ? <div className="colleague-card-position">{colleague.position}</div> : null}
           {colleague.department ? <div className="colleague-card-department">{colleague.department}</div> : null}
         </div>

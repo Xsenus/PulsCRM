@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCampaign, getOrganization } from '../../app/api';
 import { getColleague } from '../../app/colleagues';
+import { openColleagueCard } from '../../app/colleagueCard';
 
 export type AppLinkKind = 'organization' | 'campaign' | 'employee';
 
@@ -105,7 +106,12 @@ export function ChatLinkPreview({ link }: { link: AppLink }) {
   }, [link]);
 
   return (
-    <button type="button" className="chat-link-preview" onClick={() => navigate(link.path)} title={`Открыть: ${meta.label.toLowerCase()} #${link.id}`}>
+    <button
+      type="button"
+      className="chat-link-preview"
+      // Сотрудник — карточка коллеги поверх чата (полная карточка в /employees — только для администраторов).
+      onClick={() => (link.kind === 'employee' ? openColleagueCard(link.id) : navigate(link.path))}
+      title={`Открыть: ${meta.label.toLowerCase()} #${link.id}`}>
       <span className="chat-link-preview-icon" aria-hidden="true">{meta.icon}</span>
       <span className="chat-link-preview-text">
         <span className="chat-link-preview-kind">{meta.label} #{link.id}</span>

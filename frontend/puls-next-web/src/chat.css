@@ -658,10 +658,38 @@ textarea.chat-input {
 }
 
 .chat-bubble-author {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-size: 12px;
   font-weight: 700;
   color: var(--brand-2);
   margin-bottom: 2px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-bubble-author:hover,
+.chat-member-card-link:hover {
+  text-decoration: underline;
+}
+
+.chat-member-card-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .chat-bubble-text {

@@ -27,6 +27,11 @@ async function mockApp(page: Page, user: typeof currentUser) {
   await page.route(/\/api\/chat\/dock$/, (route) => fulfillJson(route, { open: false, conversationId: null, width: null, height: null }));
   await page.route(/\/api\/chat\/conversations(\?.*)?$/, (route) => fulfillJson(route, []));
   await page.route(/\/api\/colleagues$/, (route) => fulfillJson(route, colleagues));
+  await page.route(/\/api\/colleagues\/(\d+)$/, (route) => {
+    const id = Number(/\/(\d+)$/.exec(route.request().url())![1]);
+    const found = colleagues.find((item) => item.id === id);
+    return found ? fulfillJson(route, found) : route.fulfill({ status: 404, body: '' });
+  });
   await page.route(/\/api\/colleagues\/\d+\/photo$/, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: PNG }));
   await page.route(/\/api\/dashboard$/, (route) => {
     calls.dashboard += 1;
@@ -124,4 +129,39 @@ test('an administrator keeps every section, the table and can switch to cards', 
   // Выбор вида запоминается.
   await page.reload();
   await expect(page.locator('.colleague-card')).toHaveCount(3);
+});
+
+test('the colleague card opens from employees and the dashboard', async ({ page }) => {
+  await mockApp(page, regularUser);
+  await page.goto('/employees');
+
+  await page.getByRole('article', { name: 'Иванов Олег Петрович' }).getByRole('button', { name: 'Иванов Олег Петрович' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Карточка сотрудника' });
+  await expect(dialog.getByRole('heading', { name: 'Иванов Олег Петрович' })).toBeVisible();
+  await expect(dialog).toContainText('Менеджер');
+  await expect(dialog).toContainText('Продажи');
+  await expect(dialog.locator('.colleague-card-user-status')).toContainText('📅 На совещании');
+  await expect(dialog.getByRole('link', { name: 'ivanov@example.test' })).toHaveAttribute('href', 'mailto:ivanov@example.test');
+  await expect(dialog.getByRole('button', { name: /Написать/ })).toBeVisible();
+  // Обычному сотруднику полная карточка (редактирование) недоступна.
+  await expect(dialog.getByRole('button', { name: 'Редактировать' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+
+  await page.goto('/');
+  await page.getByRole('region', { name: 'Дни рождения' }).getByRole('button', { name: /Петрова Анна Сергеевна/ }).click();
+  await expect(dialog.getByRole('heading', { name: 'Петрова Анна Сергеевна' })).toBeVisible();
+  await expect(dialog.getByRole('link', { name: '+7 900 111-22-33' })).toHaveAttribute('href', 'tel:+79001112233');
+  await expect(dialog).toContainText('201');
+  await expect(dialog.locator('.colleague-avatar-photo img')).toHaveAttribute('src', /^blob:/);
+});
+
+test('an administrator can open the full employee card from the colleague card', async ({ page }) => {
+  await mockApp(page, currentUser);
+  await page.goto('/');
+  await page.getByRole('region', { name: 'Дни рождения' }).getByRole('button', { name: /Иванов Олег Петрович/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Карточка сотрудника' });
+  await dialog.getByRole('button', { name: 'Редактировать' }).click();
+  await expect(page).toHaveURL(/\/employees\/3\/edit$/);
+  await expect(dialog).toHaveCount(0);
 });

@@ -6,6 +6,7 @@ import { canAccess, type AccessLevel } from '../app/access';
 import { ChatProvider, useChat } from '../app/ChatContext';
 import { ChatDock } from './chat/ChatDock';
 import { ChatNotifications } from './chat/ChatNotifications';
+import { ColleagueCardHost } from './ColleagueCardDialog';
 
 type MenuIconKey = 'dashboard' | 'chat' | 'analytics' | 'employees' | 'organizations' | 'campaigns' | 'dispatch' | 'settings' | 'status';
 
@@ -457,6 +458,7 @@ function AppShellLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="content">{children}</main>
+        <ColleagueCardHost />
       </div>
     </div>
   );
