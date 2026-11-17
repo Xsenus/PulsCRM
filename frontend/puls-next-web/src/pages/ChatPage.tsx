@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useChat } from '../app/ChatContext';
-import { ChatSettingsDialog, NewChatDialog } from '../components/chat/ChatDialogs';
+import { NewChatDialog } from '../components/chat/ChatDialogs';
+import { ChatSettingsDialog } from '../components/chat/ChatSettingsDialog';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
 import '../chat.css';
 import { ConversationListItem } from '../components/chat/ConversationListItem';
