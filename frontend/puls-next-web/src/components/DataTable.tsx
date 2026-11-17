@@ -259,8 +259,12 @@ export function DataTable<T>({
     active: boolean;
   } | null>(null);
 
+  // Настройки перечитываются только при смене набора колонок (сигнатуры), а не при каждом новом массиве columns.
+  const resolvedColumnsRef = useRef(resolvedColumns);
+  resolvedColumnsRef.current = resolvedColumns;
+
   useEffect(() => {
-    const loaded = loadSettings(settingsKey, resolvedColumns);
+    const loaded = loadSettings(settingsKey, resolvedColumnsRef.current);
     setSettings(loaded);
     setDraftSettings(loaded);
   }, [columnsSignature, settingsKey]);

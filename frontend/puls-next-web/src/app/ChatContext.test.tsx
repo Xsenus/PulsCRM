@@ -103,11 +103,12 @@ let latest: ReturnType<typeof useChat> | null = null;
 function Probe({ active }: { active?: number }) {
   const chat = useChat();
   latest = chat;
+  const { setActiveConversationId } = chat;
   useEffect(() => {
     if (active) {
-      chat.setActiveConversationId(active);
+      setActiveConversationId(active);
     }
-  }, [active, chat.setActiveConversationId]);
+  }, [active, setActiveConversationId]);
   return null;
 }
 

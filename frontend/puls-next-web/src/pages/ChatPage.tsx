@@ -70,18 +70,20 @@ export function ChatPage() {
 
   const activeId = routeId ? Number(routeId) : null;
   const active = chat.conversations.find((item) => item.id === activeId) ?? null;
+  const activeFound = !!active;
+  const { setActiveConversationId, conversationsLoaded, refreshConversations } = chat;
 
   useEffect(() => {
-    chat.setActiveConversationId(activeId);
-    return () => chat.setActiveConversationId(null);
-  }, [activeId, chat.setActiveConversationId]);
+    setActiveConversationId(activeId);
+    return () => setActiveConversationId(null);
+  }, [activeId, setActiveConversationId]);
 
   useEffect(() => {
-    if (activeId && chat.conversationsLoaded && !active) {
+    if (activeId && conversationsLoaded && !activeFound) {
       // Диалог мог прийти позже (новый чат, архив) — один раз перечитываем список.
-      void chat.refreshConversations();
+      void refreshConversations();
     }
-  }, [activeId, chat.conversationsLoaded]);
+  }, [activeFound, activeId, conversationsLoaded, refreshConversations]);
 
   const filtered = useMemo(() => {
     const term = filter.trim().toLowerCase();
@@ -299,7 +301,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
   headerExtra?: React.ReactNode;
 }) {
   const chat = useChat();
-  const { currentUserId, status } = chat;
+  const { currentUserId, status, markConversationReadLocally, subscribe } = chat;
   const isGroup = isGroupConversation(conversation);
   const myRank = roleRank(conversation.myRole);
 
@@ -395,11 +397,11 @@ export function ConversationView({ conversation, onBack, compact = false, header
     }
 
     lastMarkedRef.current = upToId;
-    chat.markConversationReadLocally(conversation.id, upToId, remainingUnread);
+    markConversationReadLocally(conversation.id, upToId, remainingUnread);
     markChatRead(conversation.id, upToId).catch(() => {
       lastMarkedRef.current = 0;
     });
-  }, [chat.markConversationReadLocally, conversation.id]);
+  }, [markConversationReadLocally, conversation.id]);
 
   const loadLatest = useCallback(async () => {
     try {
@@ -453,10 +455,10 @@ export function ConversationView({ conversation, onBack, compact = false, header
     initialLoadStartedRef.current = true;
     lastMarkedRef.current = conversation.myLastReadMessageId;
     void loadInitial();
-  }, [conversation.id]);
+  }, [conversation.myLastReadMessageId, loadInitial]);
 
   /** Отмечает прочитанным все, что сотрудник уже увидел на экране, а не только когда долистал до конца. */
-  function markVisibleRead() {
+  const markVisibleRead = useCallback(() => {
     const element = scrollRef.current;
     if (!element || document.visibilityState !== 'visible' || !initialScrollDoneRef.current) {
       return;
@@ -482,7 +484,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
     const remaining = messagesRef.current.filter((item) => item.id > upTo && item.senderUserId !== currentUserId && !isSystemMessage(item) && !item.isDeleted).length;
     markRead(upTo, remaining);
-  }
+  }, [currentUserId, markRead]);
 
   /** Верхнее видимое сообщение и его сдвиг; null — лента внизу. */
   function readScrollPosition(): ChatScrollPosition | null {
@@ -526,7 +528,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
     rememberPositionRef.current();
   }, []);
 
-  useEffect(() => chat.subscribe((event) => {
+  useEffect(() => subscribe((event) => {
     if (event.type === 'reconnected') {
       void loadLatest();
       return;
@@ -551,7 +553,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
     setMessages((current) => event.type === 'messageUpdated' && !current.some((item) => item.id === event.message.id)
       ? current
       : mergeMessages(current, [event.message]));
-  }), [chat.subscribe, conversation.id, currentUserId, loadLatest]);
+  }), [subscribe, conversation.id, currentUserId, loadLatest]);
 
   useLayoutEffect(() => {
     const element = scrollRef.current;
@@ -615,7 +617,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
       nearBottomRef.current = true;
       setAtBottom(true);
     }
-  }, [messages]);
+  }, [markVisibleRead, messages, savedPosition]);
 
   useEffect(() => {
     if (nearBottomRef.current && lastMessageId > 0) {
@@ -632,11 +634,13 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [lastMessageId, markRead]);
+  }, [markVisibleRead]);
 
+  // При закрытии диалога освобождаем превью еще не отправленных вложений (раньше освобождался пустой начальный список).
+  const uploadsRef = useRef(uploads);
+  uploadsRef.current = uploads;
   useEffect(() => () => {
-    uploads.forEach((item) => item.previewUrl && URL.revokeObjectURL(item.previewUrl));
-    // Только при размонтировании.
+    uploadsRef.current.forEach((item) => item.previewUrl && URL.revokeObjectURL(item.previewUrl));
   }, []);
 
   const loadOlder = async () => {

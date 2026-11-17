@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   deleteOrganization,
@@ -98,14 +98,14 @@ export function OrganizationsPage() {
     [appliedSearch, raions, selectedRaionIds]
   );
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
 
     try {
       const [organizationsResponse, raionsResponse] = await Promise.all([
         getOrganizations({
           search: appliedSearch,
-          raionIds: selectedRaionIds,
+          raionIds: selectedRaionIdsKey ? selectedRaionIdsKey.split(',').map(Number) : [],
           skip: (page - 1) * pageSize,
           take: pageSize
         }),
@@ -116,19 +116,18 @@ export function OrganizationsPage() {
       setTotalCount(organizationsResponse.totalCount);
       setRaions(raionsResponse);
 
-      if (organizationsResponse.items.every((item) => item.id !== selectedRowId)) {
-        setSelectedRowId(organizationsResponse.items[0]?.id);
-      }
+      // Выбранная строка сохраняется, если она есть на новой странице, иначе выбирается первая.
+      setSelectedRowId((current) => (organizationsResponse.items.some((item) => item.id === current) ? current : organizationsResponse.items[0]?.id));
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedSearch, page, pageSize, selectedRaionIdsKey]);
 
   useEffect(() => {
     void loadData().catch((error) => {
       showToast(getApiErrorMessage(error), 'error');
     });
-  }, [appliedSearch, page, pageSize, selectedRaionIdsKey]);
+  }, [loadData]);
 
   useEffect(() => {
     setPageSize(loadStoredPageSize(pageSizeStorageKey, DEFAULT_PAGE_SIZE, legacyPageSizeStorageKey));

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import dayjs from 'dayjs';
 import { downloadParusLicenseFile, getParusLicenseAnalytics } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
@@ -1023,13 +1023,13 @@ export function AnalyticsPage() {
   const showSalaryOnlyFilter = groupStatus === 'expiring';
   const activeSalaryOnly = showSalaryOnlyFilter && salaryOnly;
 
-  const load = async (
-    range = appliedRange,
-    page = groupPage,
-    search = groupSearch,
-    status = groupStatus,
-    pageSize = groupPageSize,
-    onlySalary = activeSalaryOnly
+  const load = useCallback(async (
+    range: typeof appliedRange,
+    page: number,
+    search: string,
+    status: typeof groupStatus,
+    pageSize: number,
+    onlySalary: boolean
   ) => {
     setLoading(true);
     try {
@@ -1047,7 +1047,7 @@ export function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -1055,7 +1055,7 @@ export function AnalyticsPage() {
     }, 250);
 
     return () => window.clearTimeout(handle);
-  }, [activeSalaryOnly, appliedRange, groupPage, groupPageSize, groupSearch, groupStatus]);
+  }, [activeSalaryOnly, appliedRange, groupPage, groupPageSize, groupSearch, groupStatus, load]);
 
   useEffect(() => {
     if (groupStatus !== 'expiring' && salaryOnly) {

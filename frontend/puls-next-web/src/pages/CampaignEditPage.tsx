@@ -19,7 +19,6 @@ import { buildRecipientSourceSummary } from '../app/campaignRecipients';
 import { campaignReadinessSummary, campaignReadinessTone } from '../app/campaignReadiness';
 import { useAuth } from '../app/AuthContext';
 import { getApiErrorMessage } from '../app/apiErrors';
-import { formatDateTime } from '../app/format';
 import { campaignStatusOptions, labelOf, recipientSourceOptions } from '../app/lookups';
 import { validateMessageContent } from '../app/messageValidation';
 import { DEFAULT_CAMPAIGN_TIME_ZONE } from '../app/scheduleValidation';
@@ -212,7 +211,7 @@ export function CampaignEditPage() {
     [recipientPreviewData]
   );
   const canApplyMessageTemplate = canApplyDefaultCampaignMessageTemplate(model.htmlBody, model.plainTextBody);
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const transportResponse = await getTransportProfiles();
@@ -244,11 +243,11 @@ export function CampaignEditPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     void load();
-  }, [id]);
+  }, [load]);
 
   useEffect(() => {
     setReadiness(null);

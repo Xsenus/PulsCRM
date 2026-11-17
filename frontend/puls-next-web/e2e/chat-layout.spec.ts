@@ -128,7 +128,7 @@ test.describe('chat page on a full HD screen', () => {
 
     const textarea = page.getByLabel('Текст сообщения');
     await expect(textarea).toBeVisible();
-    let size = await scrollSize(textarea);
+    const size = await scrollSize(textarea);
     expect(size.scrollHeight).toBeLessThanOrEqual(size.clientHeight);
     await expect(textarea).toHaveCSS('overflow-y', 'hidden');
 
@@ -139,7 +139,6 @@ test.describe('chat page on a full HD screen', () => {
 
     // Длинный текст: поле растет до 200 px и только тогда прокручивается.
     await textarea.fill(Array.from({ length: 20 }, (_, index) => `строка ${index}`).join('\n'));
-    size = await scrollSize(textarea);
     expect(Math.round((await textarea.boundingBox())!.height)).toBe(200);
     await expect(textarea).toHaveCSS('overflow-y', 'auto');
   });

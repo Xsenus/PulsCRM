@@ -266,7 +266,7 @@ export function LoginPage() {
 
     try {
       await login(normalizedLogin, password);
-      const destination = (location.state as any)?.from?.pathname || '/';
+      const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
       navigate(destination, { replace: true });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, 'Не удалось войти.'));

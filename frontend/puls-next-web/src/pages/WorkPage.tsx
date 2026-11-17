@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { getEmployees, getOrganizations, getWork } from '../app/api';
 import { getApiErrorMessage } from '../app/apiErrors';
 import { useAuth } from '../app/AuthContext';
@@ -69,7 +69,7 @@ export function WorkPage() {
     }
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getWork(
@@ -89,7 +89,7 @@ export function WorkPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [appliedFilters, page, pageSize]);
 
   useEffect(() => {
     void loadLookups().catch((error) => {
@@ -101,7 +101,7 @@ export function WorkPage() {
     void load().catch((error) => {
       showToast(getApiErrorMessage(error, 'Не удалось загрузить задачи.'), 'error', 4000);
     });
-  }, [appliedFilters, page, pageSize]);
+  }, [load]);
 
   useEffect(() => {
     setPageSize(loadStoredPageSize(pageSizeStorageKey));

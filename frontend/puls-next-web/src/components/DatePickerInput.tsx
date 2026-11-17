@@ -98,14 +98,15 @@ export function DatePickerInput({ id, value, disabled = false, onChange }: DateP
   const selectedDate = parseValue(value);
   const [open, setOpen] = useState(false);
   const [viewMonth, setViewMonth] = useState((selectedDate ?? dayjs()).startOf('month'));
+  const selectedTime = selectedDate?.valueOf();
 
   useEffect(() => {
     if (!open) {
       return;
     }
 
-    setViewMonth((selectedDate ?? dayjs()).startOf('month'));
-  }, [open, selectedDate?.valueOf()]);
+    setViewMonth((selectedTime === undefined ? dayjs() : dayjs(selectedTime)).startOf('month'));
+  }, [open, selectedTime]);
 
   useEffect(() => {
     if (!open) {

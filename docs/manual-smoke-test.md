@@ -24,6 +24,7 @@
 dotnet test backend\PulsNextMailing.sln --configuration Release --no-restore
 
 Push-Location frontend\puls-next-web
+npm run lint
 npm test
 npm run test:e2e
 Pop-Location

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cancelDispatchItem,
   getDispatchBatches,
@@ -106,7 +106,7 @@ export function DispatchPage() {
   const summary = useMemo(() => buildDispatchItemsSummary(items), [items]);
   const latestProblemItem = summary.latestProblemItem;
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setItemsLoading(true);
     try {
       const result = await getDispatchItems(buildDispatchItemQuery(
@@ -123,9 +123,9 @@ export function DispatchPage() {
     } finally {
       setItemsLoading(false);
     }
-  };
+  }, [appliedFilters, itemPage, itemPageSize]);
 
-  const loadBatches = async () => {
+  const loadBatches = useCallback(async () => {
     setBatchesLoading(true);
     try {
       const result = await getDispatchBatches(buildDispatchBatchQuery(
@@ -142,7 +142,7 @@ export function DispatchPage() {
     } finally {
       setBatchesLoading(false);
     }
-  };
+  }, [appliedFilters.campaignId, batchPage, batchPageSize]);
 
   const refresh = async (options: { force?: boolean } = {}) => {
     if (refreshing && !options.force) {
@@ -161,13 +161,13 @@ export function DispatchPage() {
     void loadItems().catch((error) => {
       showToast(getApiErrorMessage(error, 'Не удалось загрузить сообщения очереди.'), 'error', 4000);
     });
-  }, [appliedFilters, itemPage, itemPageSize]);
+  }, [loadItems]);
 
   useEffect(() => {
     void loadBatches().catch((error) => {
       showToast(getApiErrorMessage(error, 'Не удалось загрузить партии отправки.'), 'error', 4000);
     });
-  }, [appliedFilters.campaignId, batchPage, batchPageSize]);
+  }, [loadBatches]);
 
   useEffect(() => {
     setItemPageSize(loadStoredPageSize(itemPageSizeStorageKey));
