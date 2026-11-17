@@ -13,8 +13,7 @@ import {
   setChatMemberRole,
   updateGroupChat
 } from '../../app/chatApi';
-import { CHAT_SOUNDS, playChatSound } from '../../app/chatSounds';
-import type { ChatConversationDto, ChatMessageDto, ChatSoundName, ChatUserDto, ChatUserSettingsDto } from '../../app/chatTypes';
+import type { ChatConversationDto, ChatMessageDto, ChatUserDto } from '../../app/chatTypes';
 import { isGroupConversation, roleRank } from '../../app/chatTypes';
 import { getApiErrorMessage } from '../../app/apiErrors';
 import { showToast } from '../../app/toast';
@@ -22,7 +21,6 @@ import { ChatAvatar } from './ChatAvatar';
 import { describeMessageBody } from '../../app/chatFormat';
 import { GROUP_ICONS } from './EmojiPicker';
 import { ChatAttachmentMiniThumb } from './ChatAttachmentView';
-import { DesktopNotificationsSetting } from './DesktopNotificationsSetting';
 
 function useUserSearch(open: boolean) {
   const [search, setSearch] = useState('');
@@ -616,125 +614,6 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
           </button>
         </>
       ) : null}
-    </Modal>
-  );
-}
-
-export function ChatSettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { settings, saveSettings } = useChat();
-  const [draft, setDraft] = useState<ChatUserSettingsDto>(settings);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      setDraft(settings);
-    }
-  }, [open, settings]);
-
-  const update = (patch: Partial<ChatUserSettingsDto>) => setDraft((current) => ({ ...current, ...patch }));
-
-  return (
-    <Modal
-      open={open}
-      title="Оповещения чата"
-      onClose={onClose}
-      maxWidth={520}
-      actions={(
-        <div className="button-group">
-          <button type="button" className="secondary-button button-inline" onClick={onClose}>Отмена</button>
-          <button
-            type="button"
-            className="primary-button button-inline"
-            disabled={saving}
-            onClick={async () => {
-              setSaving(true);
-              try {
-                await saveSettings(draft);
-                showToast('Настройки сохранены.', 'success');
-                onClose();
-              } catch (error) {
-                showToast(getApiErrorMessage(error, 'Не удалось сохранить настройки.'), 'error');
-              } finally {
-                setSaving(false);
-              }
-            }}
-          >
-            Сохранить
-          </button>
-        </div>
-      )}
-    >
-      <div className="chat-settings">
-        <label className="chat-toggle">
-          <input type="checkbox" checked={draft.notificationsEnabled} onChange={(event) => update({ notificationsEnabled: event.target.checked })} />
-          <span>Показывать оповещения о новых сообщениях</span>
-        </label>
-        <label className="chat-toggle">
-          <input
-            type="checkbox"
-            checked={draft.showMessagePreview}
-            disabled={!draft.notificationsEnabled}
-            onChange={(event) => update({ showMessagePreview: event.target.checked })}
-          />
-          <span>Показывать текст сообщения в оповещении</span>
-        </label>
-        <DesktopNotificationsSetting
-          enabled={!!draft.desktopNotificationsEnabled}
-          disabled={!draft.notificationsEnabled}
-          onChange={(value) => update({ desktopNotificationsEnabled: value })}
-        />
-        <label className="chat-toggle">
-          <input type="checkbox" checked={draft.soundEnabled} onChange={(event) => update({ soundEnabled: event.target.checked })} />
-          <span>Звук при новом сообщении</span>
-        </label>
-
-        <div className={`chat-sound-options${draft.soundEnabled ? '' : ' disabled'}`}>
-          <div className="chat-section-title">Звук</div>
-          <div className="chat-sound-list" role="radiogroup" aria-label="Звук оповещения">
-            {CHAT_SOUNDS.map((sound) => (
-              <label key={sound.name} className={`chat-sound-item${draft.soundName === sound.name ? ' active' : ''}`}>
-                <input
-                  type="radio"
-                  name="chat-sound"
-                  value={sound.name}
-                  checked={draft.soundName === sound.name}
-                  disabled={!draft.soundEnabled}
-                  onChange={() => {
-                    update({ soundName: sound.name as ChatSoundName });
-                    void playChatSound(sound.name, draft.soundVolume);
-                  }}
-                />
-                <span>{sound.label}</span>
-                <button
-                  type="button"
-                  className="chat-sound-play"
-                  disabled={!draft.soundEnabled}
-                  onClick={(event) => { event.preventDefault(); void playChatSound(sound.name, draft.soundVolume); }}
-                  aria-label={`Прослушать «${sound.label}»`}
-                >
-                  ▶
-                </button>
-              </label>
-            ))}
-          </div>
-
-          <label className="chat-volume">
-            <span>Громкость: {draft.soundVolume}%</span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={draft.soundVolume}
-              disabled={!draft.soundEnabled}
-              onChange={(event) => update({ soundVolume: Number(event.target.value) })}
-              onMouseUp={() => void playChatSound(draft.soundName, draft.soundVolume)}
-              onTouchEnd={() => void playChatSound(draft.soundName, draft.soundVolume)}
-            />
-          </label>
-        </div>
-        <div className="chat-muted">Звук и оповещения не срабатывают для диалогов, у которых включен режим «Без звука».</div>
-      </div>
     </Modal>
   );
 }

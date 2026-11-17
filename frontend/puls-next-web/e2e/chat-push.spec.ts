@@ -20,16 +20,23 @@ test('without HTTPS the chat settings explain how to allow system notifications'
   await page.goto('/chat');
 
   await page.getByRole('button', { name: 'Оповещения и звук' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Оповещения чата' });
-  await expect(dialog.getByRole('checkbox', { name: /Системные уведомления/ })).toBeDisabled();
-  await expect(dialog.locator('.notify-status')).toHaveText('Нужна настройка');
-  await expect(dialog.locator('.notify-steps li')).toHaveCount(3);
+  const dialog = page.getByRole('dialog', { name: 'Уведомления' });
+  // Группы «Оповещения» и «Звук», настройки — переключатели.
+  await expect(dialog.getByRole('heading', { level: 3 })).toHaveText(['Оповещения', 'Звук']);
+  await expect(dialog.getByRole('switch', { name: 'Новые сообщения' })).toHaveAttribute('aria-checked', 'true');
+  const desktop = dialog.getByRole('switch', { name: 'Уведомления Windows' });
+  await expect(desktop).toBeDisabled();
+  await expect(dialog.locator('.settings-badge')).toHaveText('Нужна настройка');
+  // Ничего не изменено — сохранять нечего.
+  await expect(dialog.getByRole('button', { name: 'Сохранить' })).toBeDisabled();
 
-  // Главный путь — файл настройки для Windows с адресом этой CRM для Chrome, Edge и Яндекса.
+  // Один понятный путь: скачать файл настройки; после скачивания подсвечивается следующий шаг.
+  const setup = dialog.getByRole('region', { name: 'Настройка браузера' });
+  await expect(setup.locator('.settings-steps li')).toHaveCount(3);
   const origin = new URL(page.url()).origin;
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    dialog.getByRole('button', { name: 'Скачать настройку для Windows' }).click()
+    setup.getByRole('button', { name: 'Скачать файл настройки' }).click()
   ]);
   expect(download.suggestedFilename()).toBe('puls-crm-uvedomleniya.reg');
   const bytes = await (await download.createReadStream()).toArray().then((chunks) => Buffer.concat(chunks));
@@ -40,12 +47,33 @@ test('without HTTPS the chat settings explain how to allow system notifications'
     expect(text).toContain(`[HKEY_CURRENT_USER\\Software\\Policies\\${key}\\OverrideSecurityRestrictionsOnInsecureOrigin]`);
   }
   expect(text).toContain(`"1"="${origin}"`);
+  await expect(setup.locator('.settings-steps li').first()).toHaveClass(/done/);
+  await expect(setup.locator('.settings-steps li').nth(1)).toHaveClass(/current/);
 
-  // Запасной путь — вручную, две строки с кнопками «Копировать»; заметка для администратора (пользователь демо — админ).
-  await dialog.getByRole('button', { name: /Настроить вручную/ }).click();
-  await expect(dialog.locator('.notify-copy-row code')).toHaveText(['chrome://flags/#unsafely-treat-insecure-origin-as-secure', origin]);
-  await expect(dialog.getByRole('button', { name: 'Копировать' })).toHaveCount(2);
-  await expect(dialog.locator('.notify-admin-note')).toContainText('OverrideSecurityRestrictionsOnInsecureOrigin');
+  // Запасной путь и способ для администратора — свернуты (пользователь демо — администратор).
+  await expect(setup.locator('.settings-copy code').first()).toBeHidden();
+  await setup.getByText('Другой способ — через настройки браузера').click();
+  await expect(setup.locator('.settings-more').first().locator('code')).toHaveText(['chrome://flags/#unsafely-treat-insecure-origin-as-secure', origin]);
+  await setup.getByText('Для администратора: включить на всех компьютерах').click();
+  await expect(setup.locator('.settings-admin code')).toContainText('HKLM\\SOFTWARE\\Policies\\Google\\Chrome\\OverrideSecurityRestrictionsOnInsecureOrigin');
+
+  // Выключили оповещения — зависимые настройки недоступны, а «Сохранить» включается.
+  await dialog.getByRole('switch', { name: 'Новые сообщения' }).click();
+  await expect(dialog.getByRole('switch', { name: 'Текст сообщения' })).toBeDisabled();
+  await expect(setup).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Сохранить' })).toBeEnabled();
+});
+
+test('a regular employee does not see the administrator setup', async ({ page }) => {
+  await mockChat(page);
+  await page.route(/\/api\/auth\/me(?:\?.*)?$/, (route) => fulfillJson(route, { ...currentUser, isRoot: false }));
+  await page.addInitScript(() => Object.defineProperty(window, 'isSecureContext', { configurable: true, get: () => false }));
+  await page.goto('/chat');
+  await page.getByRole('button', { name: 'Оповещения и звук' }).click();
+  const setup = page.getByRole('dialog', { name: 'Уведомления' }).getByRole('region', { name: 'Настройка браузера' });
+  await expect(setup.getByRole('button', { name: 'Скачать файл настройки' })).toBeVisible();
+  await expect(setup.getByText('Другой способ — через настройки браузера')).toBeVisible();
+  await expect(setup.locator('.settings-admin')).toHaveCount(0);
 });
 
 test('the chat service worker shows a push notification only when CRM is not on screen', async ({ page, context, baseURL }) => {
