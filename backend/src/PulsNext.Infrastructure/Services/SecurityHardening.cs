@@ -57,7 +57,8 @@ public sealed class JwtSigningKeyNoticeHostedService(JwtSigningKey key, ILogger<
     {
         if (key.Generated)
         {
-            logger.LogWarning(
+            // Штатная ситуация (ключ сгенерирован и сохранен), а не проблема: в списке предупреждений не нужна.
+            logger.LogInformation(
                 "Jwt:SigningKey в конфиге не задан, короткий или заглушка — для подписи входа используется случайный ключ из {Path}. "
                 + "Чтобы задать свой, впишите в Jwt:SigningKey случайную строку от 32 символов.",
                 key.FilePath);

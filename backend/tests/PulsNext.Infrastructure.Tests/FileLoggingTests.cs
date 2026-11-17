@@ -87,7 +87,12 @@ public sealed class FileLoggingTests : IDisposable
     public void BackupCheckReportsMissingFreshStaleAndFailedBackups()
     {
         var now = new DateTime(2026, 11, 16, 10, 0, 0);
-        Assert.Equal("warn", SystemStatusService.CheckBackups(Path.Combine(_directory, "none"), now).Status);
+        var missing = SystemStatusService.CheckBackups(Path.Combine(_directory, "none"), now);
+        Assert.Equal("warn", missing.Status);
+        // Замечание с действием: готовая команда для сервера с папкой копий, если она не по умолчанию.
+        Assert.Contains("register-backup-task.ps1 -At 02:30", missing.Command);
+        Assert.Contains($"-BackupRoot \"{Path.Combine(_directory, "none")}\"", missing.Command);
+        Assert.NotNull(missing.Hint);
 
         Directory.CreateDirectory(Path.Combine(_directory, "20261115-023000"));
         Directory.CreateDirectory(Path.Combine(_directory, "files"));
@@ -95,7 +100,10 @@ public sealed class FileLoggingTests : IDisposable
         Assert.Equal("ok", fresh.Status);
         Assert.Contains("15.11.2026 02:30", fresh.Detail);
 
-        Assert.Equal("warn", SystemStatusService.CheckBackups(_directory, now.AddDays(2)).Status);
+        Assert.Null(fresh.Command);
+        var stale = SystemStatusService.CheckBackups(_directory, now.AddDays(2));
+        Assert.Equal("warn", stale.Status);
+        Assert.Contains("Start-ScheduledTask", stale.Command);
 
         File.WriteAllLines(Path.Combine(_directory, "backup.log"),
         [
@@ -107,6 +115,7 @@ public sealed class FileLoggingTests : IDisposable
         var failed = SystemStatusService.CheckBackups(_directory, now);
         Assert.Equal("error", failed.Status);
         Assert.Contains("pg_dump завершился с кодом 1", failed.Detail);
+        Assert.Contains("backup.log", failed.Command);
     }
 
     [Theory]

@@ -13,7 +13,10 @@ namespace PulsNext.Infrastructure;
 /// <summary>
 /// Одна проверка: ok — в порядке, warn — стоит обратить внимание, error — не работает.
 /// </summary>
-public sealed record SystemCheckDto(string Name, string Status, string Detail, long DurationMs);
+/// <summary>
+/// Результат проверки. Hint — что сделать (для замечаний), Command — готовая команда для сервера, если она есть.
+/// </summary>
+public sealed record SystemCheckDto(string Name, string Status, string Detail, long DurationMs, string? Hint = null, string? Command = null);
 
 public sealed record StorageUsageDto(string Name, string Path, long Bytes, int Files);
 
@@ -109,6 +112,10 @@ public sealed class SystemStatusService(
             var status = free < DiskErrorBytes ? "error" : free < DiskWarnBytes ? "warn" : "ok";
             return (status, $"Свободно {FormatBytes(free.Value)} из {FormatBytes(total.Value)} на диске {drive.Name}.");
         }));
+        if (checks[^1] is { Status: not "ok", Name: "Место на диске" } diskCheck)
+        {
+            checks[^1] = diskCheck with { Hint = "Освободите место: старые резервные копии, журналы, временные файлы. Размеры папок CRM — в разделе «Файлы на сервере»." };
+        }
 
         checks.Add(Check("Каталог ключей", () =>
         {
@@ -121,12 +128,13 @@ public sealed class SystemStatusService(
 
         checks.Add(CheckBackups(paths.BackupRoot, DateTime.Now));
 
+        // Сгенерированный ключ — штатный и безопасный вариант, а не замечание.
         checks.Add(new SystemCheckDto(
             "Ключ подписи входа",
-            jwtSigningKey.Generated ? "warn" : "ok",
+            "ok",
             jwtSigningKey.Generated
-                ? $"В конфиге заглушка — используется сгенерированный ключ ({JwtSigningKey.FileName}). Это безопасно; не удаляйте файл."
-                : "Задан в конфиге.",
+                ? $"Создан автоматически и хранится в {jwtSigningKey.FilePath ?? JwtSigningKey.FileName}. Не удаляйте файл — иначе всем придется войти заново."
+                : "Задан в конфиге (Jwt:SigningKey).",
             0));
 
         var overview = new OverviewService(services.GetRequiredService<LegacyUnitOfWork>(), services.GetRequiredService<MailingUnitOfWork>());
@@ -152,7 +160,7 @@ public sealed class SystemStatusService(
         var problems = recentLog.Snapshot(50);
         if (problems.Any(x => x.Level is "Error" or "Critical" && x.TimestampUtc > DateTime.UtcNow.AddHours(-24)))
         {
-            checks.Add(new SystemCheckDto("Ошибки за сутки", "warn", "В журнале есть ошибки за последние 24 часа — см. список ниже.", 0));
+            checks.Add(new SystemCheckDto("Ошибки за сутки", "warn", "В журнале есть ошибки за последние 24 часа.", 0, "Откройте подробности в разделе «Последние предупреждения и ошибки» ниже или скачайте журнал."));
         }
 
         return new SystemStatusDto
@@ -184,9 +192,19 @@ public sealed class SystemStatusService(
     public static SystemCheckDto CheckBackups(string? backupRoot, DateTime nowLocal)
     {
         const string name = "Резервная копия";
+        const string task = "Start-ScheduledTask -TaskName 'Puls Next — резервная копия'";
         if (string.IsNullOrWhiteSpace(backupRoot) || !Directory.Exists(backupRoot))
         {
-            return new SystemCheckDto(name, "warn", $"Копий нет в {backupRoot ?? "(Backup:Root не задан)"} — настройте по docs/backup.md (scripts/register-backup-task.ps1).", 0);
+            var rootArgument = string.IsNullOrWhiteSpace(backupRoot) || string.Equals(backupRoot, @"C:\PulsCRMBackups", StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : $" -BackupRoot \"{backupRoot}\"";
+            return new SystemCheckDto(
+                name,
+                "warn",
+                $"Ежедневные копии еще не настроены: папки {backupRoot ?? "(Backup:Root не задан)"} нет.",
+                0,
+                "Один раз откройте PowerShell на сервере от имени администратора в папке репозитория PulsCRM и выполните команду — копия будет делаться каждую ночь в 02:30. Скрипт спросит пароль PostgreSQL.",
+                $"powershell -ExecutionPolicy Bypass -File scripts\\register-backup-task.ps1 -At 02:30{rootArgument}");
         }
 
         var latest = Directory.EnumerateDirectories(backupRoot)
@@ -196,7 +214,7 @@ public sealed class SystemStatusService(
             .Max();
         if (latest is null)
         {
-            return new SystemCheckDto(name, "warn", $"В {backupRoot} нет ни одной копии — запустите задачу «Puls Next — резервная копия».", 0);
+            return new SystemCheckDto(name, "warn", $"В {backupRoot} еще нет ни одной копии.", 0, "Запустите задачу копирования вручную (PowerShell от имени администратора) и обновите страницу через минуту.", task);
         }
 
         var age = nowLocal - latest.Value;
@@ -204,10 +222,12 @@ public sealed class SystemStatusService(
         var detail = $"Последняя: {latest:dd.MM.yyyy HH:mm} ({FormatAge(age)} назад) в {backupRoot}.";
         if (lastError is not null)
         {
-            return new SystemCheckDto(name, "error", $"{detail} Последний запуск с ошибкой: {lastError}", 0);
+            return new SystemCheckDto(name, "error", $"{detail} Последний запуск с ошибкой: {lastError}", 0, "Посмотрите журнал копии на сервере, исправьте причину и запустите задачу снова.", $"Get-Content '{Path.Combine(backupRoot, "backup.log")}' -Tail 30");
         }
 
-        return new SystemCheckDto(name, age > TimeSpan.FromHours(36) ? "warn" : "ok", age > TimeSpan.FromHours(36) ? $"{detail} Копия устарела — проверьте задачу планировщика." : detail, 0);
+        return age > TimeSpan.FromHours(36)
+            ? new SystemCheckDto(name, "warn", $"{detail} Копия устарела.", 0, "Проверьте задачу «Puls Next — резервная копия» в планировщике заданий или запустите ее вручную.", task)
+            : new SystemCheckDto(name, "ok", detail, 0);
     }
 
     /// <summary>

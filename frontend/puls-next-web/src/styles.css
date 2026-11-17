@@ -6377,156 +6377,495 @@ body.is-dragging-column {
 }
 
 /* ---------- Состояние системы ---------- */
+.system-status {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
 
-.status-overall {
+.sys-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.sys-refresh svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
+/* Показатели: на телефоне — по два в ряд. */
+.system-status .stats-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.sys-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sys-section-title {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 18px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  font-size: 1rem;
+  gap: 8px;
+  margin: 0;
+  font-size: 1.02rem;
 }
 
-.status-overall.ok { background: #f0fdf4; border-color: #bbf7d0; }
-.status-overall.warn { background: #fffbeb; border-color: #fde68a; }
-.status-overall.error { background: #fef2f2; border-color: #fecaca; }
-
-.status-overall-time {
-  margin-left: auto;
+.sys-count {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
 
-.status-dot {
+.sys-pill {
   flex: none;
-  width: 10px;
-  height: 10px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.sys-pill.warn { background: #fef3c7; color: #92400e; }
+.sys-pill.error { background: #fee2e2; color: #991b1b; }
+
+/* Итог проверки */
+.sys-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 20px;
+  border: 1px solid #bbf7d0;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.sys-summary.warn { border-color: #fde68a; background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%); }
+.sys-summary.error { border-color: #fecaca; background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%); }
+
+.sys-summary-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: #16a34a;
+  color: #ffffff;
+  font-size: 1.4rem;
+  font-weight: 800;
 }
 
-.warn > .status-dot, .status-overall.warn .status-dot { background: #d97706; }
-.error > .status-dot, .status-overall.error .status-dot { background: #dc2626; }
+.sys-summary.warn .sys-summary-icon { background: #f59e0b; }
+.sys-summary.error .sys-summary-icon { background: #dc2626; }
 
-.status-checks,
-.status-problems {
+.sys-summary-text {
+  flex: 1;
+  min-width: 0;
   display: grid;
   gap: 2px;
+}
+
+.sys-summary-text strong {
+  font-size: 1.15rem;
+}
+
+.sys-summary-text span,
+.sys-summary-time {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.sys-summary-time {
+  flex: none;
+}
+
+/* Замечания */
+.sys-issues {
+  display: grid;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.status-check {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 4px;
-  border-bottom: 1px solid var(--border);
-}
-
-.status-check:last-child { border-bottom: 0; }
-
-.status-check-text {
-  flex: 1;
+.sys-issue {
+  display: grid;
+  gap: 8px;
   min-width: 0;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid #fde68a;
+  border-left: 4px solid #f59e0b;
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
-.status-check-name { font-weight: 700; }
-
-.status-check-detail {
-  color: var(--text-muted);
-  font-size: 0.88rem;
-  overflow-wrap: anywhere;
+.sys-issue.error {
+  border-color: #fecaca;
+  border-left-color: #dc2626;
 }
 
-.status-badge-pill {
-  flex: none;
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge-pill.warn { background: #fef3c7; color: #92400e; }
-.status-badge-pill.error { background: #fee2e2; color: #991b1b; }
-
-.status-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.status-table th,
-.status-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-}
-
-.status-table th { color: var(--text-muted); font-weight: 700; }
-
-.status-path {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  overflow-wrap: anywhere;
-}
-
-.status-problem-head {
+.sys-issue-head {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  padding: 8px 4px;
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  background: none;
-  color: var(--text);
+  min-width: 0;
+}
+
+.sys-issue-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.sys-issue.error .sys-issue-icon { background: #dc2626; }
+
+.sys-issue-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.sys-issue-detail,
+.sys-issue-hint {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.sys-issue-hint {
+  color: var(--text-muted);
+}
+
+.sys-command {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sys-command code {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.sys-command-copy {
+  flex: none;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--brand-2);
   font: inherit;
-  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.status-problem-head:hover { background: #f8fafc; }
+.sys-command-copy:hover { border-color: var(--brand); }
 
-.status-problem-time {
-  flex: none;
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  font-variant-numeric: tabular-nums;
+/* Пройденные проверки — плитками */
+.sys-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.status-problem-message {
-  flex: 1;
+.sys-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   min-width: 0;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.sys-check-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.sys-check-text {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.sys-check-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.sys-check-detail {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Панели: файлы, журнал */
+.sys-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sys-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.sys-disk {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.sys-disk-bar {
+  width: 120px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.sys-disk-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand);
+}
+
+.sys-storage {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sys-storage-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(80px, 0.6fr) minmax(90px, 0.6fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.sys-storage-row:last-child { border-bottom: 0; }
+
+.sys-storage-name { font-weight: 600; }
+
+.sys-storage-size { font-variant-numeric: tabular-nums; }
+
+.sys-storage-files { color: var(--text-muted); }
+
+.sys-storage-path {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.status-problem-details {
-  margin: 0 0 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
+.sys-problems {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sys-problem {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sys-problem-head {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sys-problem-head:hover { background: #f8fafc; }
+
+.sys-problem-time {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+/* Сообщение переносится (две строки, целиком — в подробностях), а не растягивает страницу. */
+.sys-problem-message {
+  min-width: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sys-problem.open .sys-problem-message {
+  display: block;
+}
+
+.sys-problem-chevron {
+  color: var(--text-muted);
+}
+
+.sys-problem-details {
+  margin: 0;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
   background: #0f172a;
   color: #e2e8f0;
   font-size: 0.78rem;
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   max-height: 320px;
-  overflow: auto;
+  overflow-y: auto;
 }
 
-.status-muted { color: var(--text-muted); font-size: 0.88rem; }
+.sys-muted {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
 
-.status-log-files {
+.sys-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.sys-log-files {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.sys-log-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.sys-log-file:hover {
+  border-color: var(--brand);
+  color: var(--brand-2);
+}
+
+@media (max-width: 720px) {
+  .sys-summary {
+    flex-wrap: wrap;
+  }
+
+  .sys-summary-time {
+    flex-basis: 100%;
+    padding-left: 64px;
+  }
+
+  .sys-storage-row {
+    grid-template-columns: 1fr auto;
+    gap: 2px 12px;
+  }
+
+  .sys-storage-files { grid-column: 1 / -1; font-size: 0.84rem; }
+
+  .sys-storage-path { grid-column: 1 / -1; }
+
+  .sys-problem-head {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .sys-problem-message {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .sys-command {
+    flex-direction: column;
+  }
+
+  .sys-command-copy {
+    min-height: 36px;
+    align-self: flex-end;
+  }
 }
 
 /* «Мой профиль» */
