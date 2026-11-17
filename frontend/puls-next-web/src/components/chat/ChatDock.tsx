@@ -6,6 +6,7 @@ import { ConversationView } from './ConversationView';
 import { NewChatDialog } from './ChatDialogs';
 import '../../chat.css';
 import { ChatSearchResults, useChatMessageSearch } from './ChatSearch';
+import { ChatIcon } from './ChatIcon';
 
 export const DOCK_DEFAULT_SIZE = { width: 390, height: 600 };
 export const DOCK_MIN_SIZE = { width: 320, height: 380 };
@@ -172,10 +173,10 @@ export function ChatDock() {
         title="Открыть на всю страницу"
         aria-label="Открыть на всю страницу"
       >
-        ⤢
+        <ChatIcon name="expand" size={18} />
       </button>
       <button type="button" className="chat-icon-button" onClick={chat.minimizeDock} title="Свернуть" aria-label="Свернуть чат">
-        —
+        <ChatIcon name="minimize" />
       </button>
     </>
   );
@@ -206,7 +207,7 @@ export function ChatDock() {
               {chat.totalUnread > 0 ? <span className="chat-unread-badge">{chat.totalUnread}</span> : null}
             </span>
             <button type="button" className="chat-icon-button chat-icon-button-primary" onClick={() => setNewChatOpen(true)} title="Новый чат" aria-label="Новый чат">
-              ✎
+              <ChatIcon name="newChat" />
             </button>
             {windowButtons}
           </header>

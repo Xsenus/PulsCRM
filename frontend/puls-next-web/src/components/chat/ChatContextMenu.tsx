@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { ChatIcon, type ChatIconName } from './ChatIcon';
 
 export interface ChatMenuPosition {
   x: number;
@@ -23,14 +24,14 @@ export function getContextMenuPosition(event: { clientX: number; clientY: number
 
 /** Пункт контекстного меню: иконка в своей колонке и подпись. */
 export function ChatMenuItem({ icon, danger = false, onClick, children }: {
-  icon: string;
+  icon: ChatIconName;
   danger?: boolean;
   onClick: () => void;
   children: ReactNode;
 }) {
   return (
     <button type="button" role="menuitem" className={`chat-menu-item${danger ? ' danger' : ''}`} onClick={onClick}>
-      <span className="chat-menu-icon" aria-hidden="true">{icon}</span>
+      <span className="chat-menu-icon" aria-hidden="true"><ChatIcon name={icon} size={18} /></span>
       <span className="chat-menu-label">{children}</span>
     </button>
   );

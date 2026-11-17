@@ -7,6 +7,7 @@ import { ChatSearchResults, useChatMessageSearch } from '../components/chat/Chat
 import '../chat.css';
 import { ConversationListItem } from '../components/chat/ConversationListItem';
 import { ConversationView } from '../components/chat/ConversationView';
+import { ChatIcon } from '../components/chat/ChatIcon';
 
 export function ChatPage() {
   const { conversationId: routeId } = useParams();
@@ -76,10 +77,10 @@ export function ChatPage() {
             onChange={(event) => setFilter(event.target.value)}
           />
           <button type="button" className="chat-icon-button" onClick={() => setSettingsOpen(true)} title="Оповещения и звук" aria-label="Оповещения и звук">
-            🔔
+            <ChatIcon name="bell" />
           </button>
           <button type="button" className="chat-icon-button chat-icon-button-primary" onClick={() => setNewChatOpen(true)} title="Новый чат" aria-label="Новый чат">
-            ✎
+            <ChatIcon name="newChat" />
           </button>
         </div>
 

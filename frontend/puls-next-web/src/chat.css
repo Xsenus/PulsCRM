@@ -1071,10 +1071,16 @@ textarea.chat-input {
 
 .chat-menu-icon {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 20px;
-  font-size: 16px;
-  line-height: 1;
-  text-align: center;
+  color: var(--text-muted);
+}
+
+.chat-menu-item:hover .chat-menu-icon,
+.chat-menu-item:focus-visible .chat-menu-icon {
+  color: inherit;
 }
 
 .chat-menu-item:hover,
@@ -2945,4 +2951,43 @@ textarea.chat-input {
   .ui-switch-thumb {
     transition: none;
   }
+}
+
+/* SVG-иконки чата: размер задает атрибут, цвет — кнопка (currentColor). */
+.chat-svg-icon {
+  display: block;
+  flex: none;
+}
+
+.chat-send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-send-button .chat-svg-icon {
+  /* Самолетик визуально смещен вправо-вверх — чуть возвращаем к центру. */
+  margin-left: -2px;
+}
+
+.chat-conversation-flag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.chat-pinned-icon,
+.chat-upload-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand-2);
+}
+
+.chat-voice-toggle .chat-svg-icon {
+  margin-left: 1px;
+}
+
+.chat-menu-item.danger .chat-menu-icon {
+  color: inherit;
 }

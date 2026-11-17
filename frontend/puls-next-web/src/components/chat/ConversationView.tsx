@@ -22,6 +22,7 @@ import { useColleagueStatus } from '../../app/useColleagueStatus';
 import { extractClipboardFiles, isTextInputTarget } from '../../app/clipboardFiles';
 import { getVoiceSupport, useVoiceRecorder, type RecordedVoice } from '../../app/voiceRecorder';
 import { ChatVoiceRecorderBar } from './ChatVoice';
+import { ChatIcon } from './ChatIcon';
 
 const PAGE_SIZE = 50;
 /** Переход к старому сообщению догружает историю крупными страницами, но не бесконечно. */
@@ -860,7 +861,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
       }}
     >
       <header className="chat-view-head">
-        <button type="button" className="chat-icon-button chat-back-button" onClick={onBack} aria-label="К списку диалогов">‹</button>
+        <button type="button" className="chat-icon-button chat-back-button" onClick={onBack} aria-label="К списку диалогов"><ChatIcon name="back" /></button>
         <button type="button" className="chat-view-title" onClick={() => setInfoOpen(true)} title="О чате">
           <ChatAvatar
             name={conversation.title}
@@ -884,7 +885,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
             title={conversation.isPinned ? 'Открепить' : 'Закрепить'}
             aria-label={conversation.isPinned ? 'Открепить' : 'Закрепить'}
           >
-            📌
+            <ChatIcon name="pin" />
           </button>
           )}
           <button
@@ -894,11 +895,11 @@ export function ConversationView({ conversation, onBack, compact = false, header
             title={conversation.isMuted ? 'Включить звук' : 'Без звука'}
             aria-label={conversation.isMuted ? 'Включить звук' : 'Без звука'}
           >
-            {conversation.isMuted ? '🔕' : '🔔'}
+            <ChatIcon name={conversation.isMuted ? 'bellOff' : 'bell'} />
           </button>
           {compact ? null : (
             <button type="button" className="chat-icon-button" onClick={() => void togglePreference({ isArchived: true })} title="В архив" aria-label="В архив">
-              🗄
+              <ChatIcon name="archive" />
             </button>
           )}
           <button
@@ -909,10 +910,10 @@ export function ConversationView({ conversation, onBack, compact = false, header
             aria-label="Поиск в диалоге"
             aria-pressed={searchOpen}
           >
-            🔍
+            <ChatIcon name="search" />
           </button>
           <button type="button" className="chat-icon-button" onClick={() => setInfoOpen(true)} title="О чате" aria-label="О чате">
-            ⓘ
+            <ChatIcon name="info" />
           </button>
           {headerExtra}
         </div>
@@ -937,7 +938,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
               }}
             />
             <button type="button" className="chat-icon-button" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} aria-label="Закрыть поиск">
-              ×
+              <ChatIcon name="close" size={18} />
             </button>
           </div>
           <ChatSearchResults
@@ -956,7 +957,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
             onClick={() => void scrollToMessage(conversation.pinnedMessage!.id)}
             title="Перейти к закрепленному сообщению"
           >
-            <span className="chat-pinned-icon" aria-hidden="true">📌</span>
+            <span className="chat-pinned-icon" aria-hidden="true"><ChatIcon name="pin" size={18} /></span>
             <span className="chat-pinned-text">
               <strong>Закрепленное сообщение</strong>
               <span>{isGroup ? `${conversation.pinnedMessage.senderName.split(' ')[0]}: ` : ''}{describeMessageBody(conversation.pinnedMessage)}</span>
@@ -964,7 +965,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
           </button>
           {conversation.canPinMessages ? (
             <button type="button" className="chat-icon-button" onClick={() => void changePinnedMessage(null)} title="Открепить сообщение" aria-label="Открепить сообщение">
-              ×
+              <ChatIcon name="close" size={18} />
             </button>
           ) : null}
         </div>
@@ -1053,7 +1054,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
 
       {!atBottom || newBelow > 0 ? (
         <button type="button" className="chat-jump-bottom" onClick={scrollToBottom} aria-label="К последним сообщениям" title="К последним сообщениям">
-          ↓
+          <ChatIcon name="arrowDown" size={18} />
           {Math.max(newBelow, conversation.unreadCount) > 0 ? (
             <span className="chat-unread-badge">{Math.max(newBelow, conversation.unreadCount)}</span>
           ) : null}
@@ -1080,7 +1081,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
               }}
               aria-label="Отменить"
             >
-              ×
+              <ChatIcon name="close" size={18} />
             </button>
           </div>
         ) : null}
@@ -1089,7 +1090,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
           <div className="chat-upload-list">
             {uploads.map((upload) => (
               <div key={upload.key} className={`chat-upload${upload.error ? ' failed' : ''}`} title={upload.error ?? upload.file.name}>
-                {upload.previewUrl ? <img src={upload.previewUrl} alt="" /> : <span className="chat-upload-icon">📎</span>}
+                {upload.previewUrl ? <img src={upload.previewUrl} alt="" /> : <span className="chat-upload-icon"><ChatIcon name="paperclip" size={18} /></span>}
                 <span className="chat-upload-meta">
                   <span className="chat-upload-name">{upload.file.name}</span>
                   <span className="chat-upload-size">
@@ -1136,7 +1137,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
               title="Прикрепить файлы"
               aria-label="Прикрепить файлы"
             >
-              📎
+              <ChatIcon name="paperclip" />
             </button>
             <input
               ref={fileInputRef}
@@ -1187,7 +1188,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
             />
             <div className="chat-emoji-anchor">
               <button type="button" className="chat-icon-button" onClick={() => setEmojiOpen((value) => !value)} title="Эмодзи" aria-label="Эмодзи">
-                😊
+                <ChatIcon name="smile" />
               </button>
               {emojiOpen ? (
                 <EmojiPicker
@@ -1213,7 +1214,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
                 title={voiceSupport === 'insecure' ? 'Голосовое сообщение (нужна настройка браузера)' : 'Записать голосовое сообщение'}
                 aria-label="Записать голосовое сообщение"
               >
-                🎤
+                <ChatIcon name="mic" />
               </button>
             ) : (
               <button
@@ -1224,7 +1225,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
                 title={editing ? 'Сохранить (Enter)' : 'Отправить (Enter)'}
                 aria-label={editing ? 'Сохранить' : 'Отправить'}
               >
-                {editing ? '✓' : '➤'}
+                <ChatIcon name={editing ? 'check' : 'send'} />
               </button>
             )}
           </div>
