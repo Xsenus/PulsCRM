@@ -183,6 +183,10 @@ function getCurrentSection(pathname: string) {
     return 'Очередь рассылок';
   }
 
+  if (pathname.startsWith('/profile')) {
+    return 'Мой профиль';
+  }
+
   return menu.find((item) => item.to && (item.to === '/' ? pathname === '/' : pathname.startsWith(item.to)))?.label || 'Раздел';
 }
 
@@ -288,12 +292,8 @@ function AppShellLayout({ children }: { children: React.ReactNode }) {
   }, [profileOpen]);
 
   const handleOpenProfile = () => {
-    if (!user?.id) {
-      return;
-    }
-
     setProfileOpen(false);
-    navigate(`/employees/${user.id}/edit`);
+    navigate('/profile');
   };
 
   return (
@@ -435,13 +435,12 @@ function AppShellLayout({ children }: { children: React.ReactNode }) {
                       type="button"
                       className="profile-menu-action profile-menu-action-secondary"
                       onClick={handleOpenProfile}
-                      disabled={!user?.id}
-                      title={user?.id ? 'Открыть карточку сотрудника' : 'Карточка сотрудника недоступна'}
+                      title="Фото, телефоны, статус и пароль"
                     >
                       <span className="profile-menu-action-icon">
                         <ProfileIcon />
                       </span>
-                      <span>Профиль</span>
+                      <span>Мой профиль</span>
                     </button>
 
                     <button type="button" className="profile-menu-action profile-menu-action-danger" onClick={logout}>

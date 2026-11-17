@@ -1,5 +1,6 @@
 import { api } from './api';
 import { throwApiError } from './apiErrors';
+import type { UserStatusDto } from './profile';
 
 /** Коллега из общего справочника (/api/colleagues): только рабочие контакты. */
 export interface ColleagueDto {
@@ -15,6 +16,8 @@ export interface ColleagueDto {
   birthdayDay?: number | null;
   hasPhoto: boolean;
   isMale: boolean;
+  /** Статус из «Моего профиля» («В отпуске до …»); null — нет. */
+  status?: UserStatusDto | null;
 }
 
 export async function getColleagues(): Promise<ColleagueDto[]> {
@@ -35,7 +38,34 @@ export async function getColleague(id: number): Promise<ColleagueDto> {
   }
 }
 
+let colleaguesCache: { at: number; promise: Promise<ColleagueDto[]> } | null = null;
+
+/** Справочник коллег с кэшем на maxAgeMs (для статусов в чате: не запрашивать на каждый диалог). */
+export function getColleaguesCached(maxAgeMs = 60_000): Promise<ColleagueDto[]> {
+  if (!colleaguesCache || Date.now() - colleaguesCache.at > maxAgeMs) {
+    const promise = getColleagues().catch((error) => {
+      colleaguesCache = null;
+      throw error;
+    });
+    colleaguesCache = { at: Date.now(), promise };
+  }
+
+  return colleaguesCache.promise;
+}
+
+/** Сбросить кэш справочника (например, после смены своего статуса). */
+export function forgetColleaguesCache() {
+  colleaguesCache = null;
+}
+
 const photoCache = new Map<number, Promise<string | null>>();
+
+/** Забыть фото коллеги (после смены своего фото в профиле). */
+export function forgetColleaguePhoto(id: number) {
+  const cached = photoCache.get(id);
+  photoCache.delete(id);
+  void cached?.then((url) => url && URL.revokeObjectURL(url));
+}
 
 /** Фото коллеги как object URL (запрос с токеном), один раз на вкладку; null — фото нет. */
 export function loadColleaguePhoto(id: number): Promise<string | null> {

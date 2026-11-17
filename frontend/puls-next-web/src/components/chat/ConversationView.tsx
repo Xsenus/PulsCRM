@@ -17,6 +17,8 @@ import { loadChatScrollPosition, saveChatScrollPosition, type ChatScrollPosition
 import { collectMentionedUserIds, findMentionQuery, getMentionCandidates, insertMention } from '../../app/chatMentions';
 import '../../chat.css';
 import { MessageBubble } from './MessageBubble';
+import { formatStatus } from '../../app/profile';
+import { useColleagueStatus } from '../../app/useColleagueStatus';
 
 const PAGE_SIZE = 50;
 /** Переход к старому сообщению догружает историю крупными страницами, но не бесконечно. */
@@ -129,12 +131,14 @@ export function ConversationView({ conversation, onBack, compact = false, header
   const typing = (chat.typingByConversation[conversation.id] ?? []).filter((item) => item.userId !== currentUserId);
   const onlineCount = conversation.participants.filter((item) => chat.onlineUserIds.has(item.userId)).length;
   const peerInactive = !!peer?.isInactive;
+  // Статус собеседника из «Моего профиля»: «🌴 В отпуске до 25 ноября включительно».
+  const peerStatus = useColleagueStatus(peer && !peerInactive ? peer.userId : null);
 
   const subtitle = typing.length > 0
     ? (isGroup ? `${typing.map((item) => item.displayName.split(' ')[0]).join(', ')} печата${typing.length > 1 ? 'ют' : 'ет'}…` : 'печатает…')
     : isGroup
       ? `${conversation.participants.length} участник${pluralSuffix(conversation.participants.length)}${onlineCount > 0 ? `, ${onlineCount} в сети` : ''}`
-      : peerInactive ? 'уволен' : peer && chat.onlineUserIds.has(peer.userId) ? 'в сети' : 'не в сети';
+      : peerInactive ? 'уволен' : `${peer && chat.onlineUserIds.has(peer.userId) ? 'в сети' : 'не в сети'}${peerStatus ? ` · ${formatStatus(peerStatus)}` : ''}`;
 
   const markRead = useCallback((upToId: number, remainingUnread = 0) => {
     if (upToId <= 0 || upToId <= lastMarkedRef.current || document.visibilityState !== 'visible') {
