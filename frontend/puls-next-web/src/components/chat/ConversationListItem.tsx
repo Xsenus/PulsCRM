@@ -9,6 +9,7 @@ import { ChatTicks } from './ChatTicks';
 import { ChatConversationMenu } from './ChatConversationMenu';
 import { useChatDraft } from '../../app/chatDrafts';
 import '../../chat.css';
+import { ChatIcon } from './ChatIcon';
 
 export function ConversationListItem({ conversation, active, onClick, onRemoved }: {
   conversation: ChatConversationDto;
@@ -53,8 +54,8 @@ export function ConversationListItem({ conversation, active, onClick, onRemoved 
           {conversation.lastMessage && !conversation.lastMessage.isDeleted && conversation.lastMessage.senderUserId === currentUserId && !isSystemMessage(conversation.lastMessage) ? (
             <ChatTicks status={getReadStatus(conversation.lastMessage, conversation.participants, currentUserId)} className="in-list" />
           ) : null}
-          {conversation.isMuted ? <span className="chat-conversation-flag" title="Без звука">🔕</span> : null}
-          {conversation.isPinned ? <span className="chat-conversation-flag" title="Закреплен">📌</span> : null}
+          {conversation.isMuted ? <span className="chat-conversation-flag" title="Без звука"><ChatIcon name="bellOff" size={14} /></span> : null}
+          {conversation.isPinned ? <span className="chat-conversation-flag" title="Закреплен"><ChatIcon name="pin" size={14} /></span> : null}
           <span className="chat-conversation-time">{conversation.lastMessage ? formatConversationTime(conversation.lastMessageAtUtc) : ''}</span>
         </span>
         <span className="chat-conversation-bottom">

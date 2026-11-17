@@ -4,6 +4,7 @@ import type { ChatAttachmentDto } from '../../app/chatTypes';
 import { showToast } from '../../app/toast';
 import { formatVoiceDuration } from '../../app/voiceRecorder';
 import { downloadChatAttachment } from './ChatAttachmentView';
+import { ChatIcon } from './ChatIcon';
 
 /**
  * Проигрыватель голосового сообщения (и любого аудиовложения): кнопка, полоса прогресса с перемоткой, время.
@@ -89,7 +90,7 @@ export function ChatVoicePlayer({ attachment }: { attachment: ChatAttachmentDto 
   return (
     <div className={`chat-voice${state === 'playing' ? ' playing' : ''}`}>
       <button type="button" className="chat-voice-toggle" onClick={() => void toggle()} aria-label={label} title={label} disabled={state === 'loading'}>
-        {state === 'loading' ? <span className="chat-voice-spinner" aria-hidden="true" /> : state === 'playing' ? '❚❚' : '▶'}
+        {state === 'loading' ? <span className="chat-voice-spinner" aria-hidden="true" /> : <ChatIcon name={state === 'playing' ? 'pause' : 'play'} size={16} />}
       </button>
       <div
         className="chat-voice-track"
@@ -103,7 +104,7 @@ export function ChatVoicePlayer({ attachment }: { attachment: ChatAttachmentDto 
         <span className="chat-voice-progress" style={{ width: `${progress}%` }} />
       </div>
       <span className="chat-voice-time">{durationMs > 0 || state !== 'idle' ? formatVoiceDuration(shownTime) : '🎤'}</span>
-      <button type="button" className="chat-voice-download" onClick={() => void downloadChatAttachment(attachment)} aria-label="Скачать запись" title="Скачать запись">⤓</button>
+      <button type="button" className="chat-voice-download" onClick={() => void downloadChatAttachment(attachment)} aria-label="Скачать запись" title="Скачать запись"><ChatIcon name="download" size={16} /></button>
     </div>
   );
 }
@@ -122,11 +123,11 @@ export function ChatVoiceRecorderBar({ elapsedMs, onCancel, onSend }: { elapsedM
         }
       }}
     >
-      <button type="button" className="chat-icon-button" onClick={onCancel} aria-label="Отменить запись" title="Отменить запись (Esc)">✕</button>
+      <button type="button" className="chat-icon-button" onClick={onCancel} aria-label="Отменить запись" title="Отменить запись (Esc)"><ChatIcon name="close" /></button>
       <span className="chat-voice-recording-dot" aria-hidden="true" />
       <span className="chat-voice-recording-time" aria-live="off">{formatVoiceDuration(elapsedMs, true)}</span>
       <span className="chat-voice-recording-hint">Идет запись…</span>
-      <button type="button" className="chat-send-button" onClick={onSend} aria-label="Отправить голосовое сообщение" title="Отправить (Enter)" autoFocus>➤</button>
+      <button type="button" className="chat-send-button" onClick={onSend} aria-label="Отправить голосовое сообщение" title="Отправить (Enter)" autoFocus><ChatIcon name="send" /></button>
     </div>
   );
 }

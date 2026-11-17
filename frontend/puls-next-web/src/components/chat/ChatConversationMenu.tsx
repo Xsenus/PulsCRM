@@ -69,20 +69,20 @@ export function ChatConversationMenu({ conversation, position, onClose, onOpenIn
       <ChatMenuGroups
         groups={[
           [
-            <ChatMenuItem icon="📌" onClick={run(() => setPreference({ isPinned: !conversation.isPinned }))}>
+            <ChatMenuItem icon="pin" onClick={run(() => setPreference({ isPinned: !conversation.isPinned }))}>
               {conversation.isPinned ? 'Открепить' : 'Закрепить вверху'}
             </ChatMenuItem>,
-            <ChatMenuItem icon={conversation.isMuted ? '🔔' : '🔕'} onClick={run(() => setPreference({ isMuted: !conversation.isMuted }))}>
+            <ChatMenuItem icon={conversation.isMuted ? 'bell' : 'bellOff'} onClick={run(() => setPreference({ isMuted: !conversation.isMuted }))}>
               {conversation.isMuted ? 'Включить звук' : 'Без звука'}
             </ChatMenuItem>,
-            conversation.unreadCount > 0 ? <ChatMenuItem icon="✓" onClick={run(markRead)}>Отметить прочитанным</ChatMenuItem> : null
+            conversation.unreadCount > 0 ? <ChatMenuItem icon="checkCheck" onClick={run(markRead)}>Отметить прочитанным</ChatMenuItem> : null
           ],
           [
-            <ChatMenuItem icon={isGroup ? '⚙️' : 'ⓘ'} onClick={run(onOpenInfo)}>
+            <ChatMenuItem icon={isGroup ? 'settings' : 'info'} onClick={run(onOpenInfo)}>
               {isGroup ? 'Настройки группы' : 'О собеседнике'}
             </ChatMenuItem>
           ],
-          [<ChatMenuItem icon="🗄️" onClick={run(() => setPreference({ isArchived: true }))}>В архив</ChatMenuItem>]
+          [<ChatMenuItem icon="archive" onClick={run(() => setPreference({ isArchived: true }))}>В архив</ChatMenuItem>]
         ]}
       />
     </ChatContextMenu>

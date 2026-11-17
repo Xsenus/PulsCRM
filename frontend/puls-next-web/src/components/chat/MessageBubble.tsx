@@ -220,18 +220,18 @@ export function MessageBubble({
           <ChatMenuGroups
             groups={[
               [
-                <ChatMenuItem icon="↩️" onClick={run(onReply)}>Ответить</ChatMenuItem>,
-                onForward ? <ChatMenuItem icon="↪️" onClick={run(onForward)}>Переслать</ChatMenuItem> : null
+                <ChatMenuItem icon="reply" onClick={run(onReply)}>Ответить</ChatMenuItem>,
+                onForward ? <ChatMenuItem icon="forward" onClick={run(onForward)}>Переслать</ChatMenuItem> : null
               ],
               [
-                message.text ? <ChatMenuItem icon="📋" onClick={run(() => void copy())}>Копировать текст</ChatMenuItem> : null,
-                own ? <ChatMenuItem icon="✏️" onClick={run(onEdit)}>Изменить</ChatMenuItem> : null,
+                message.text ? <ChatMenuItem icon="copy" onClick={run(() => void copy())}>Копировать текст</ChatMenuItem> : null,
+                own ? <ChatMenuItem icon="edit" onClick={run(onEdit)}>Изменить</ChatMenuItem> : null,
                 pinState ? (
-                  <ChatMenuItem icon="📌" onClick={run(() => onTogglePin?.())}>{pinState === 'pinned' ? 'Открепить' : 'Закрепить'}</ChatMenuItem>
+                  <ChatMenuItem icon="pin" onClick={run(() => onTogglePin?.())}>{pinState === 'pinned' ? 'Открепить' : 'Закрепить'}</ChatMenuItem>
                 ) : null
               ],
               [
-                own || canModerate ? <ChatMenuItem icon="🗑️" danger onClick={run(onDelete)}>Удалить</ChatMenuItem> : null
+                own || canModerate ? <ChatMenuItem icon="trash" danger onClick={run(onDelete)}>Удалить</ChatMenuItem> : null
               ],
               [
                 <div className="chat-context-reactions" role="group" aria-label="Реакции">
