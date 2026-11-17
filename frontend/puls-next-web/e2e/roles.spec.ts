@@ -12,7 +12,8 @@ function soon(days: number) {
 
 const colleagues = [
   { id: 2, fullName: 'Петрова Анна Сергеевна', position: 'Главный бухгалтер', department: 'Бухгалтерия', email: 'petrova@example.test', phone: '+7 900 111-22-33', internalPhone: '201', ...soon(0), hasPhoto: true, isMale: false },
-  { id: 3, fullName: 'Иванов Олег Петрович', position: 'Менеджер', department: 'Продажи', email: 'ivanov@example.test', phone: null, internalPhone: null, ...soon(5), hasPhoto: false, isMale: true },
+  { id: 3, fullName: 'Иванов Олег Петрович', position: 'Менеджер', department: 'Продажи', email: 'ivanov@example.test', phone: null, internalPhone: null, ...soon(5), hasPhoto: false, isMale: true,
+    status: { kind: 'meeting', text: 'Вернусь к 15:00', untilUtc: null } },
   { id: 4, fullName: 'Сидорова Ольга', position: 'Юрист', department: 'Юридический отдел', email: null, phone: null, internalPhone: null, birthdayMonth: null, birthdayDay: null, hasPhoto: false, isMale: false }
 ];
 
@@ -86,6 +87,12 @@ test('an employee sees colleagues as cards with contacts and search', async ({ p
   await expect(petrova).toContainText('201');
   await expect(petrova.locator('.colleague-avatar-photo img')).toHaveAttribute('src', /^blob:/);
   await expect(petrova.getByRole('button', { name: /Написать/ })).toBeVisible();
+
+  // Статус из «Моего профиля» виден в карточке.
+  const ivanov = page.getByRole('article', { name: 'Иванов Олег Петрович' });
+  await expect(ivanov.locator('.colleague-card-user-status')).toContainText('📅 На совещании');
+  await expect(ivanov.locator('.colleague-card-user-status')).toContainText('Вернусь к 15:00');
+  await expect(petrova.locator('.colleague-card-user-status')).toHaveCount(0);
 
   await page.getByLabel('Поиск сотрудников').fill('юрист');
   await expect(cards).toHaveCount(1);

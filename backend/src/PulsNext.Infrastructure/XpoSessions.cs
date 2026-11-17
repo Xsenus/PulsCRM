@@ -165,6 +165,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IColleagueService, ColleagueService>();
+        services.AddScoped<IUserStatusService, UserStatusService>();
+        services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IAccessService, AccessService>();
         services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, AdminAuthorizationHandler>();
         services.AddScoped<IOverviewService, OverviewService>();

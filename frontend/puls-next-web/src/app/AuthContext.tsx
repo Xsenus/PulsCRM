@@ -11,6 +11,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (login: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Перечитать данные вошедшего сотрудника (после правок в «Моем профиле»). */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -68,6 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       void disableWebPush({ notifyServer: false });
       setToken(null);
       setUser(null);
+    },
+    refreshUser: async () => {
+      const current = await getCurrentUser();
+      if (current) {
+        setUser(current);
+      }
     }
   }), [loading, user]);
 

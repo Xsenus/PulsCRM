@@ -6207,8 +6207,9 @@ body.is-dragging-column {
 }
 
 .colleague-card {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  /* Колонка: шапка, (статус), контакты растягиваются, действия внизу. */
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   padding: 18px;
   background: var(--surface);
@@ -6252,6 +6253,32 @@ body.is-dragging-column {
   gap: 6px;
   margin: 0;
   align-content: start;
+  flex: 1;
+}
+
+.colleague-card-user-status {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #eef4ff;
+  color: #1e3a8a;
+  font-size: 0.86rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.colleague-card-user-status.status-vacation,
+.colleague-card-user-status.status-sick,
+.colleague-card-user-status.status-business-trip {
+  background: #fff7e6;
+  color: #92400e;
+}
+
+.colleague-card-user-status-note {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.82rem;
 }
 
 .colleague-card-contacts > div {
@@ -6500,4 +6527,172 @@ body.is-dragging-column {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* «Мой профиль» */
+.profile-page {
+  display: grid;
+  gap: 18px;
+}
+
+.profile-identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.profile-photo {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.profile-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile-photo-remove {
+  color: var(--danger);
+}
+
+.profile-identity-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.profile-identity-copy h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.profile-identity-position {
+  font-size: 0.95rem;
+}
+
+.profile-identity-department {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.profile-identity-meta {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 0;
+}
+
+.profile-identity-meta > div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.profile-identity-meta dt {
+  color: var(--text-muted);
+}
+
+.profile-identity-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-current-status {
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #eef4ff;
+  color: #1e3a8a;
+  font-weight: 600;
+  justify-self: start;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.profile-current-status-note {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.profile-section {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-section h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.profile-section .field-hint {
+  margin: -6px 0 0;
+}
+
+.profile-status-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-status-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.profile-status-option:hover {
+  border-color: var(--brand);
+}
+
+.profile-status-option.selected {
+  border-color: var(--brand);
+  background: #eef4ff;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.profile-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .profile-identity {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-identity-meta > div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .profile-current-status {
+    justify-self: stretch;
+  }
+
+  .profile-section-actions > button {
+    flex: 1 1 auto;
+  }
 }

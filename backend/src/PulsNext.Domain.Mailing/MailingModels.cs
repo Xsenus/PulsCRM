@@ -17,7 +17,8 @@ public static class MailingPersistentTypes
         typeof(MailStoredFile),
         typeof(MailCampaignAttachment),
         typeof(MailDispatchBatch),
-        typeof(MailDispatchItem)
+        typeof(MailDispatchItem),
+        typeof(MailUserStatus)
     };
 }
 
@@ -982,5 +983,65 @@ public class MailDispatchItem(Session session) : XPObject(session)
     {
         get => _dispatchKey;
         set => SetPropertyValue(nameof(DispatchKey), ref _dispatchKey, value);
+    }
+}
+
+/// <summary>
+/// Статус сотрудника, который он сам выставил в «Моем профиле»: «На совещании», «В отпуске» и т. п.
+/// Хранится здесь, а не в базе Пульса (ее схему этот проект не меняет). Одна запись на сотрудника.
+/// </summary>
+public class MailUserStatus(Session session) : XPObject(session)
+{
+    private int _legacyUserId;
+    private string _kind = string.Empty;
+    private string? _text;
+    private DateTime? _untilUtc;
+    private DateTime _updatedAtUtc;
+
+    public MailUserStatus() : this(Session.DefaultSession) { }
+
+    /// <summary>
+    /// Идентификатор сотрудника в базе Пульса (set_User).
+    /// </summary>
+    [Indexed(Unique = true)]
+    public int LegacyUserId
+    {
+        get => _legacyUserId;
+        set => SetPropertyValue(nameof(LegacyUserId), ref _legacyUserId, value);
+    }
+
+    /// <summary>
+    /// Вид статуса: meeting, vacation, sick, business-trip, remote, away, custom.
+    /// </summary>
+    [Size(32)]
+    public string Kind
+    {
+        get => _kind;
+        set => SetPropertyValue(nameof(Kind), ref _kind, value);
+    }
+
+    /// <summary>
+    /// Пояснение сотрудника («Вернусь в 15:00»); для custom — сам текст статуса.
+    /// </summary>
+    [Size(200)]
+    public string? Text
+    {
+        get => _text;
+        set => SetPropertyValue(nameof(Text), ref _text, value);
+    }
+
+    /// <summary>
+    /// До какого момента действует статус (UTC); null — пока сотрудник сам не снимет.
+    /// </summary>
+    public DateTime? UntilUtc
+    {
+        get => _untilUtc;
+        set => SetPropertyValue(nameof(UntilUtc), ref _untilUtc, value);
+    }
+
+    public DateTime UpdatedAtUtc
+    {
+        get => _updatedAtUtc;
+        set => SetPropertyValue(nameof(UpdatedAtUtc), ref _updatedAtUtc, value);
     }
 }

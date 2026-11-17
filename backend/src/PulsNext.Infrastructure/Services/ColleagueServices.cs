@@ -27,6 +27,10 @@ public sealed class ColleagueDto
     public int? BirthdayDay { get; set; }
     public bool HasPhoto { get; set; }
     public bool IsMale { get; set; }
+    /// <summary>
+    /// Статус, выставленный сотрудником в «Моем профиле» («В отпуске до …»); null — нет.
+    /// </summary>
+    public UserStatusDto? Status { get; set; }
 }
 
 internal static class ColleagueRules
@@ -35,6 +39,11 @@ internal static class ColleagueRules
 
     public static bool IsDismissed(LegacyUser user)
         => string.Equals(user.UserGroup?.Name, DismissedGroupName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Изображение ли это (DetectContentType для неизвестных данных возвращает application/octet-stream).
+    /// </summary>
+    public static bool IsImage(byte[]? bytes) => BinaryImageHelper.DetectContentType(bytes)?.StartsWith("image/", StringComparison.Ordinal) == true;
 
     public static byte[]? GetPhoto(LegacyUser user)
     {
@@ -57,20 +66,29 @@ public interface IColleagueService
 /// Справочник коллег для всех сотрудников (карточки «Сотрудники», дашборд, карточки ссылок в чате).
 /// Уволенные и служебные учетные записи без имени не показываются.
 /// </summary>
-public sealed class ColleagueService(LegacyUnitOfWork legacyUnitOfWork) : IColleagueService
+public sealed class ColleagueService(LegacyUnitOfWork legacyUnitOfWork, IUserStatusService? statusService = null) : IColleagueService
 {
     public IReadOnlyCollection<ColleagueDto> GetAll()
-        => new XPQuery<LegacyUser>(legacyUnitOfWork)
+    {
+        var statuses = statusService?.GetActive() ?? new Dictionary<int, UserStatusDto>();
+        return new XPQuery<LegacyUser>(legacyUnitOfWork)
             .ToList()
             .Where(IsVisible)
-            .Select(ToDto)
+            .Select(user => WithStatus(ToDto(user), statuses.GetValueOrDefault(user.Oid)))
             .OrderBy(x => x.FullName, StringComparer.CurrentCultureIgnoreCase)
             .ToArray();
+    }
 
     public ColleagueDto? GetById(int id)
     {
         var user = id > 0 ? legacyUnitOfWork.GetObjectByKey<LegacyUser>(id) : null;
-        return user is not null && IsVisible(user) ? ToDto(user) : null;
+        return user is not null && IsVisible(user) ? WithStatus(ToDto(user), statusService?.GetActive(user.Oid)) : null;
+    }
+
+    private static ColleagueDto WithStatus(ColleagueDto dto, UserStatusDto? status)
+    {
+        dto.Status = status;
+        return dto;
     }
 
     public (byte[] Content, string ContentType)? GetPhoto(int id)
@@ -82,8 +100,7 @@ public sealed class ColleagueService(LegacyUnitOfWork legacyUnitOfWork) : IColle
         }
 
         var photo = ColleagueRules.GetPhoto(user);
-        var contentType = BinaryImageHelper.DetectContentType(photo);
-        return photo is null || contentType is null ? null : (photo, contentType);
+        return ColleagueRules.IsImage(photo) ? (photo!, BinaryImageHelper.DetectContentType(photo)!) : null;
     }
 
     private static bool IsVisible(LegacyUser user)
@@ -105,7 +122,7 @@ public sealed class ColleagueService(LegacyUnitOfWork legacyUnitOfWork) : IColle
             InternalPhone = TextHelper.NullIfWhiteSpace(info?.PhoneWorkRedirect),
             BirthdayMonth = birthday?.Month,
             BirthdayDay = birthday?.Day,
-            HasPhoto = BinaryImageHelper.DetectContentType(photo) is not null,
+            HasPhoto = ColleagueRules.IsImage(photo),
             IsMale = user.MaleFemale
         };
     }

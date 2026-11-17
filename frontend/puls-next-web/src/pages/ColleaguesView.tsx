@@ -5,6 +5,7 @@ import { getApiErrorMessage } from '../app/apiErrors';
 import { AppLoader } from '../components/AppLoader';
 import { ColleagueAvatar } from '../components/ColleagueAvatar';
 import { WriteInChatButton } from '../components/chat/WriteInChat';
+import { formatStatus, getStatusNote, isStatusActive } from '../app/profile';
 
 function normalize(value: string | null | undefined) {
   return (value ?? '').toLowerCase().replace(/ё/g, 'е');
@@ -31,6 +32,13 @@ export function ColleagueCard({ colleague, online }: { colleague: ColleagueDto; 
           {colleague.department ? <div className="colleague-card-department">{colleague.department}</div> : null}
         </div>
       </div>
+
+      {isStatusActive(colleague.status) ? (
+        <div className={`colleague-card-user-status status-${colleague.status.kind}`}>
+          <span>{formatStatus(colleague.status)}</span>
+          {getStatusNote(colleague.status) ? <span className="colleague-card-user-status-note">{getStatusNote(colleague.status)}</span> : null}
+        </div>
+      ) : null}
 
       <dl className="colleague-card-contacts">
         {colleague.phone ? (
