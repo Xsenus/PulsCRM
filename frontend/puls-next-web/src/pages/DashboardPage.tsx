@@ -15,6 +15,7 @@ import {
   type ColleagueDto
 } from '../app/colleagues';
 import { showToast } from '../app/toast';
+import { openColleagueCard } from '../app/colleagueCard';
 import type { DashboardDto } from '../app/types';
 import { ActionIcon } from '../components/ActionIcon';
 import { AppLoader } from '../components/AppLoader';
@@ -112,7 +113,9 @@ function BirthdaysCard({ colleagues }: { colleagues: ColleagueDto[] | null }) {
           <li key={colleague.id} className={`home-list-row static${inDays === 0 ? ' today' : ''}`}>
             <ColleagueAvatar colleague={colleague} size={38} />
             <span className="home-list-text">
-              <span className="home-list-title">{inDays === 0 ? '🎉 ' : ''}{colleague.fullName}</span>
+              <button type="button" className="home-list-title home-list-title-link" onClick={() => openColleagueCard(colleague.id)} title="Карточка сотрудника">
+                {inDays === 0 ? '🎉 ' : ''}{colleague.fullName}
+              </button>
               <span className="home-list-subtitle">
                 {describeBirthdayDistance(inDays)} · {formatBirthday(colleague.birthdayMonth!, colleague.birthdayDay!)}
               </span>

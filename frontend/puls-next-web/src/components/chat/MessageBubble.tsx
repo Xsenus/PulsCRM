@@ -9,6 +9,7 @@ import { ChatLinkPreview, extractAppLinks, parseAppLink } from './ChatLinkPrevie
 import { ChatTicks } from './ChatTicks';
 import { ChatContextMenu, ChatMenuGroups, ChatMenuItem, getContextMenuPosition, type ChatMenuPosition } from './ChatContextMenu';
 import { splitMentions } from '../../app/chatMentions';
+import { openColleagueCard } from '../../app/colleagueCard';
 import '../../chat.css';
 
 export function MessageBubble({
@@ -117,7 +118,11 @@ export function MessageBubble({
       onPointerCancel={cancelLongPress}
     >
       <div className={`chat-bubble${message.isDeleted ? ' deleted' : ''}${bigEmoji ? ' emoji-only' : ''}`}>
-        {showAuthor ? <div className="chat-bubble-author">{message.senderName}</div> : null}
+        {showAuthor ? (
+          <button type="button" className="chat-bubble-author" onClick={() => openColleagueCard(message.senderUserId)} title="Карточка сотрудника">
+            {message.senderName}
+          </button>
+        ) : null}
 
         {message.forwardedFrom && !message.isDeleted ? (
           <div className="chat-bubble-forwarded">↪ Переслано от <strong>{message.forwardedFrom.name}</strong></div>

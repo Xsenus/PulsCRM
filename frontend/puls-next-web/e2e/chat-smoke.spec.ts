@@ -257,6 +257,43 @@ test('links to CRM objects show a card and the employee card can start a chat', 
   await expect(page).toHaveURL(/\/employees\/2\/edit$/);
 });
 
+test('employee links and authors in a group open the colleague card', async ({ page, baseURL }) => {
+  await mockChat(page);
+  const petrova = { id: 2, fullName: 'Петрова Анна Сергеевна', position: 'Главный бухгалтер', department: 'Бухгалтерия', email: 'petrova@example.test', phone: null, internalPhone: '201', birthdayMonth: null, birthdayDay: null, hasPhoto: false, isMale: false,
+    status: { kind: 'vacation', text: null, untilUtc: null } };
+  const ivanov = { ...petrova, id: 3, fullName: 'Иванов Олег', position: 'Менеджер', department: 'Продажи', internalPhone: null, status: null };
+  await page.route(/\/api\/colleagues\/2$/, (route) => fulfillJson(route, petrova));
+  await page.route(/\/api\/colleagues\/3$/, (route) => fulfillJson(route, ivanov));
+  await page.route(/\/api\/chat\/conversations\/11\/messages(\?.*)?$/, (route) => fulfillJson(route, {
+    items: [{ id: 9, conversationId: 11, kind: 0, senderUserId: 3, senderName: 'Иванов Олег', text: `Вопрос к ${baseURL}/employees/2/edit по отчету`, createdAtUtc: iso(30), isDeleted: false, attachments: [], reactions: [] }],
+    hasMoreBefore: false
+  }));
+  let directRequest: unknown = null;
+  await page.route(/\/api\/chat\/conversations\/direct$/, async (route) => {
+    directRequest = route.request().postDataJSON();
+    await fulfillJson(route, conversations[0]);
+  });
+
+  await page.goto('/chat/11');
+  const dialog = page.getByRole('dialog', { name: 'Карточка сотрудника' });
+  await page.getByRole('button', { name: 'Иванов Олег', exact: true }).click();
+  await expect(dialog.getByRole('heading', { name: 'Иванов Олег' })).toBeVisible();
+  await expect(dialog).toContainText('Менеджер');
+  await dialog.getByRole('button', { name: 'Закрыть' }).click();
+
+  // Ссылка на сотрудника открывает карточку поверх чата, а не страницу администратора.
+  const preview = page.locator('.chat-link-preview');
+  await expect(preview).toContainText('Сотрудник #2');
+  await expect(preview).toContainText('Петрова Анна Сергеевна');
+  await preview.click();
+  await expect(page).toHaveURL(/\/chat\/11$/);
+  await expect(dialog.getByRole('heading', { name: 'Петрова Анна Сергеевна' })).toBeVisible();
+  await expect(dialog.locator('.colleague-card-user-status')).toContainText('🌴 В отпуске');
+  await dialog.getByRole('button', { name: /Написать/ }).click();
+  await expect.poll(() => directRequest).toEqual({ userId: 2 });
+  await expect(dialog).toHaveCount(0);
+});
+
 test('large images are uploaded with a thumbnail and the feed loads the thumbnail', async ({ page }) => {
   await mockChat(page);
   const uploads: { body: string; length: number }[] = [];
