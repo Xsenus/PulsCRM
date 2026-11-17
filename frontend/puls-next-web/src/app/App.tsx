@@ -17,6 +17,7 @@ const OrganizationEditPage = lazy(() => import('../pages/OrganizationEditPage').
 const CampaignsPage = lazy(() => import('../pages/CampaignsPage').then((module) => ({ default: module.CampaignsPage })));
 const CampaignEditPage = lazy(() => import('../pages/CampaignEditPage').then((module) => ({ default: module.CampaignEditPage })));
 const DispatchPage = lazy(() => import('../pages/DispatchPage').then((module) => ({ default: module.DispatchPage })));
+const OrganizationDirectoryPage = lazy(() => import('../pages/OrganizationDirectoryPage').then((module) => ({ default: module.OrganizationDirectoryPage })));
 const ProfilePage = lazy(() => import('../pages/ProfilePage').then((module) => ({ default: module.ProfilePage })));
 const SystemStatusPage = lazy(() => import('../pages/SystemStatusPage').then((module) => ({ default: module.SystemStatusPage })));
 const TransportProfilesPage = lazy(() => import('../pages/TransportProfilesPage').then((module) => ({ default: module.TransportProfilesPage })));
@@ -46,6 +47,7 @@ export function App() {
             <Route path="/chat/:conversationId" element={<ChatPage />} />
             <Route path="/employees" element={<EmployeesSection />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/directory/organizations" element={<OrganizationDirectoryPage />} />
             {/* Разделы администрирования: без прав — на дашборд (API проверяет права само). */}
             <Route element={<RequireAccess level="admin" />}>
               <Route path="/analytics" element={<Navigate to="/analytics/parus-tornado" replace />} />

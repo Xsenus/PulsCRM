@@ -6943,3 +6943,159 @@ body.is-dragging-column {
   font-weight: 600;
   margin-bottom: 6px;
 }
+
+/* Справочник организаций (только чтение) */
+.org-directory-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.org-directory-search {
+  max-width: 520px;
+}
+
+.org-directory-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transition: opacity 0.15s ease;
+}
+
+.org-directory-list.loading {
+  opacity: 0.6;
+}
+
+.org-directory-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.org-directory-item:hover {
+  border-color: var(--brand);
+  background: #f8fbff;
+}
+
+.org-directory-item-main,
+.org-directory-item-contacts {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.org-directory-item-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.org-directory-item-meta,
+.org-directory-item-contacts {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.org-directory-item-contacts {
+  flex: none;
+  max-width: 45%;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.org-directory-card {
+  display: grid;
+  gap: 16px;
+}
+
+.org-directory-card-fullname {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.org-directory-fields {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.org-directory-fields > div {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 10px;
+  font-size: 0.92rem;
+}
+
+.org-directory-fields dt {
+  color: var(--text-muted);
+}
+
+.org-directory-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.org-directory-card a {
+  color: var(--brand-2);
+}
+
+.org-directory-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.98rem;
+}
+
+.org-directory-contacts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.org-directory-person {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--surface-muted);
+  font-size: 0.9rem;
+}
+
+.org-directory-person span {
+  color: var(--text-muted);
+}
+
+.org-directory-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+  .org-directory-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .org-directory-item-contacts {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .org-directory-fields > div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

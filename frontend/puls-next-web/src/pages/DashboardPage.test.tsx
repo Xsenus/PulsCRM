@@ -99,7 +99,8 @@ describe('DashboardPage', () => {
     expect(birthdays.textContent).not.toContain('Сидоров');
     // Быстрые ссылки — только разделы сотрудника; показатели рассылок не запрашиваются.
     const links = Array.from(view.querySelectorAll('.home-links a')).map((link) => link.getAttribute('href'));
-    expect(links).toEqual(['/employees']);
+    // Сотруднику — справочник организаций только для чтения (полный раздел — администратору).
+    expect(links).toEqual(['/employees', '/directory/organizations']);
     expect(view.textContent).not.toContain('Рассылки');
     expect(apiMocks.getDashboard).not.toHaveBeenCalled();
   });

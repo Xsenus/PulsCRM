@@ -175,6 +175,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<IWorkService, WorkService>();
         services.AddScoped<IMyWorkService, MyWorkService>();
+        services.AddScoped<IOrganizationDirectoryService, OrganizationDirectoryService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<IStorageDiagnosticsService, StorageDiagnosticsService>();
 
