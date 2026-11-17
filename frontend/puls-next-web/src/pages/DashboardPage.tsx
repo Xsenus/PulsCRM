@@ -20,6 +20,7 @@ import type { DashboardDto } from '../app/types';
 import { ActionIcon } from '../components/ActionIcon';
 import { AppLoader } from '../components/AppLoader';
 import { ColleagueAvatar } from '../components/ColleagueAvatar';
+import { MyTasksCard } from '../components/MyTasksCard';
 import { PageHeader } from '../components/PageHeader';
 import { StatsCards } from '../components/StatsCards';
 import { ChatAvatar } from '../components/chat/ChatAvatar';
@@ -267,6 +268,7 @@ export function DashboardPage() {
       <PageHeader title={`${greeting(today)}${name ? `, ${name}` : ''}!`} subtitle={dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)} />
 
       <div className="home-grid">
+        <MyTasksCard />
         <ChatCard />
         <BirthdaysCard colleagues={colleagues} />
         <OnlineCard colleagues={colleagues} />

@@ -174,6 +174,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IParusLicenseImportService, ParusLicenseImportService>();
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddScoped<IWorkService, WorkService>();
+        services.AddScoped<IMyWorkService, MyWorkService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<IStorageDiagnosticsService, StorageDiagnosticsService>();
 
