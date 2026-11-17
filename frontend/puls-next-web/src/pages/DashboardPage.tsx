@@ -172,6 +172,7 @@ function QuickLinks({ admin }: { admin: boolean }) {
   const links = [
     chat?.enabled ? { to: '/chat', title: 'Чат', text: 'Личные и групповые переписки с коллегами.' } : null,
     { to: '/employees', title: 'Сотрудники', text: 'Контакты коллег: телефоны, e-mail, должности.' },
+    admin ? null : { to: '/directory/organizations', title: 'Организации', text: 'Справочник клиентов: реквизиты, телефоны и контакты.' },
     admin ? { to: '/campaigns/new', title: 'Новая рассылка', text: 'Создать кампанию, выбрать организации и письмо.' } : null,
     admin ? { to: '/campaigns', title: 'Рассылки', text: 'Статусы кампаний, запуск и статистика.' } : null,
     admin ? { to: '/organizations', title: 'Организации', text: 'Карточки организаций и контакты.' } : null,

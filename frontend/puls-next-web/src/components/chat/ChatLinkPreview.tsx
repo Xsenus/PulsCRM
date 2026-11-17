@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getCampaign, getOrganization } from '../../app/api';
 import { getColleague } from '../../app/colleagues';
 import { openColleagueCard } from '../../app/colleagueCard';
+import { getOrganizationDirectoryCard } from '../../app/organizationDirectory';
 
 export type AppLinkKind = 'organization' | 'campaign' | 'employee';
 
@@ -65,6 +66,8 @@ export function extractAppLinks(hrefs: string[], origin?: string, limit = 3): Ap
 interface PreviewData {
   title: string;
   subtitle?: string;
+  /** Открывать справочник организаций (полная карточка недоступна — сотрудник не администратор). */
+  directory?: boolean;
 }
 
 const KIND_META: Record<AppLinkKind, { icon: string; label: string }> = {
@@ -80,7 +83,14 @@ function loadPreview(link: AppLink): Promise<PreviewData | null> {
   let promise = previewCache.get(link.path);
   if (!promise) {
     const request: Promise<PreviewData> = link.kind === 'organization'
-      ? getOrganization(link.id).then((item) => ({ title: item.smallName || item.name, subtitle: [item.inn ? `ИНН ${item.inn}` : '', item.raion ?? ''].filter(Boolean).join(' · ') || undefined }))
+      ? getOrganization(link.id)
+        .then((item): PreviewData => ({ title: item.smallName || item.name, subtitle: [item.inn ? `ИНН ${item.inn}` : '', item.raion ?? ''].filter(Boolean).join(' · ') || undefined }))
+        // Полная карточка — только администраторам; остальным — справочник организаций (только чтение).
+        .catch(() => getOrganizationDirectoryCard(link.id).then((item): PreviewData => ({
+          title: item.name,
+          subtitle: [item.inn ? `ИНН ${item.inn}` : '', item.raion ?? ''].filter(Boolean).join(' · ') || undefined,
+          directory: true
+        })))
       : link.kind === 'campaign'
         ? getCampaign(link.id).then((item) => ({ title: item.name, subtitle: item.subject || undefined }))
         // Справочник коллег доступен всем сотрудникам, а полная карточка — только администраторам.
@@ -110,7 +120,9 @@ export function ChatLinkPreview({ link }: { link: AppLink }) {
       type="button"
       className="chat-link-preview"
       // Сотрудник — карточка коллеги поверх чата (полная карточка в /employees — только для администраторов).
-      onClick={() => (link.kind === 'employee' ? openColleagueCard(link.id) : navigate(link.path))}
+      onClick={() => (link.kind === 'employee'
+        ? openColleagueCard(link.id)
+        : navigate(data?.directory ? `/directory/organizations?open=${link.id}` : link.path))}
       title={`Открыть: ${meta.label.toLowerCase()} #${link.id}`}>
       <span className="chat-link-preview-icon" aria-hidden="true">{meta.icon}</span>
       <span className="chat-link-preview-text">

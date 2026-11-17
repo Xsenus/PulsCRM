@@ -69,7 +69,9 @@ test('an employee sees only the dashboard, chat and colleagues', async ({ page }
   await page.goto('/');
 
   const menu = page.locator('nav.menu');
-  await expect(menu.locator('.menu-link-label')).toHaveText(['Дашборд', 'Чат', 'Сотрудники']);
+  // «Организации» у сотрудника — справочник только для чтения (полный раздел — только администратору).
+  await expect(menu.locator('.menu-link-label')).toHaveText(['Дашборд', 'Чат', 'Сотрудники', 'Организации']);
+  await expect(menu.getByRole('link', { name: 'Организации' })).toHaveAttribute('href', '/directory/organizations');
 
   // Дашборд: приветствие, дни рождения, быстрые ссылки; показатели рассылок не запрашиваются.
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Мария!');
@@ -77,7 +79,7 @@ test('an employee sees only the dashboard, chat and colleagues', async ({ page }
   await expect(birthdays.locator('.home-list-title')).toHaveText(['🎉 Петрова Анна Сергеевна', 'Иванов Олег Петрович']);
   await expect(birthdays).toContainText('Сегодня');
   await expect(birthdays.getByRole('button', { name: 'Поздравить' })).toHaveCount(2);
-  await expect(page.locator('.home-links a')).toHaveText([/Чат/, /Сотрудники/]);
+  await expect(page.locator('.home-links a')).toHaveText([/Чат/, /Сотрудники/, /Организации/]);
 
   // «Мои задачи»: просроченные сверху, срок плашкой, «от кого» открывает карточку, поручения от меня — под спойлером.
   const tasks = page.getByRole('region', { name: 'Мои задачи' });

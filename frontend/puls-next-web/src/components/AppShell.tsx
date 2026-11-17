@@ -20,6 +20,8 @@ const menu: Array<{ to?: string; label: string; icon: MenuIconKey; access: Acces
   { to: '/', label: 'Дашборд', icon: 'dashboard', access: 'everyone' },
   { to: '/chat', label: 'Чат', icon: 'chat', access: 'everyone' },
   { to: '/employees', label: 'Сотрудники', icon: 'employees', access: 'everyone' },
+  // Справочник только для чтения — сотрудникам; у администратора вместо него полный раздел «Организации».
+  { to: '/directory/organizations', label: 'Организации', icon: 'organizations', access: 'employee' },
   { label: 'Аналитика', icon: 'analytics', access: 'admin', children: [{ to: '/analytics/parus-tornado', label: 'Парус Торнадо' }] },
   { to: '/organizations', label: 'Организации', icon: 'organizations', access: 'admin' },
   { to: '/campaigns', label: 'Рассылки', icon: 'campaigns', access: 'admin' },
@@ -182,6 +184,10 @@ function getCurrentSection(pathname: string) {
 
   if (pathname.startsWith('/dispatch')) {
     return 'Очередь рассылок';
+  }
+
+  if (pathname.startsWith('/directory/organizations')) {
+    return 'Организации';
   }
 
   if (pathname.startsWith('/profile')) {
