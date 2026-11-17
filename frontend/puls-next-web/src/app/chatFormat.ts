@@ -147,7 +147,7 @@ export function sortConversations(items: ChatConversationDto[]) {
 export function describeMessageBody(message: ChatMessageDto) {
   const body = message.text?.trim()
     || (message.attachments.length === 1
-      ? (message.attachments[0].isImage ? '🖼 Фото' : `📎 ${message.attachments[0].fileName}`)
+      ? (message.attachments[0].isImage ? '🖼 Фото' : message.attachments[0].isAudio ? '🎤 Голосовое сообщение' : `📎 ${message.attachments[0].fileName}`)
       : message.attachments.length > 1 ? `📎 Файлы: ${message.attachments.length}` : '');
   return body.replace(/\s+/g, ' ');
 }

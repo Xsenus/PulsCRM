@@ -328,4 +328,10 @@ public sealed class ChatAttachmentUploadRequest
     /// </summary>
     [FromForm(Name = "height")]
     public int? Height { get; set; }
+
+    /// <summary>
+    /// Длительность аудио в миллисекундах (голосовое сообщение), необязательно.
+    /// </summary>
+    [FromForm(Name = "durationMs")]
+    public int? DurationMs { get; set; }
 }

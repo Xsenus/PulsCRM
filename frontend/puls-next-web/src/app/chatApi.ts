@@ -127,6 +127,10 @@ export function uploadChatAttachment(
     formData.append('width', String(extras.width));
     formData.append('height', String(extras.height));
   }
+
+  if (extras.durationMs && extras.durationMs > 0) {
+    formData.append('durationMs', String(Math.round(extras.durationMs)));
+  }
   return call(() => api.post<ChatAttachmentDto>(`/api/chat/conversations/${conversationId}/attachments`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (event) => {

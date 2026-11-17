@@ -611,8 +611,19 @@ public class ChatAttachment(Session session) : XPObject(session)
     private int _imageWidth;
     private int _imageHeight;
     private string? _previewDataUrl;
+    private int _audioDurationMs;
 
     public ChatAttachment() : this(Session.DefaultSession) { }
+
+    /// <summary>
+    /// Длительность аудио (голосового сообщения) в миллисекундах, 0 — неизвестна. Браузер передает ее при
+    /// загрузке: в записях MediaRecorder (webm) длительность в самом файле обычно не указана.
+    /// </summary>
+    public int AudioDurationMs
+    {
+        get => _audioDurationMs;
+        set => SetPropertyValue(nameof(AudioDurationMs), ref _audioDurationMs, value);
+    }
 
     /// <summary>
     /// Диалог, в который загружен файл.

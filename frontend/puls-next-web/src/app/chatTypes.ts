@@ -45,6 +45,10 @@ export interface ChatAttachmentDto {
   /** Размеры оригинала изображения в пикселях, если известны. */
   width?: number | null;
   height?: number | null;
+  /** Аудио (голосовое сообщение или звуковой файл) — показывается проигрыватель. */
+  isAudio?: boolean;
+  /** Длительность аудио в миллисекундах, если известна. */
+  durationMs?: number | null;
   uploadedAtUtc: string;
 }
 

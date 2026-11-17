@@ -84,6 +84,11 @@ public sealed partial class ChatService
             return images == 1 ? "📷 Фото" : $"📷 Фото: {images}";
         }
 
+        if (attachments.Length == 1 && attachments[0].IsAudio)
+        {
+            return "🎤 Голосовое сообщение";
+        }
+
         return attachments.Length == 1 ? $"📎 {attachments[0].FileName}" : $"📎 Вложений: {attachments.Length}";
     }
 
