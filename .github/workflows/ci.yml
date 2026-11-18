@@ -87,7 +87,8 @@ jobs:
         run: npm test
 
       - name: Audit frontend dependencies
-        run: npm audit --audit-level=moderate
+        # npm audit (moderate и выше) с временными исключениями из audit-allowlist.json — scripts/audit-check.mjs.
+        run: npm run audit:check
 
       - name: Build frontend
         run: npm run build

@@ -70,7 +70,7 @@
 - `npm ci`
 - `npm run lint` (ESLint: правила TypeScript и хуков React, конфиг `eslint.config.js`)
 - `npm test` (vitest)
-- `npm audit --audit-level=moderate`
+- `npm run audit:check` — `npm audit` (уязвимости moderate и выше) с временными исключениями из `frontend/puls-next-web/audit-allowlist.json`: исключение — только для предупреждения без исправленной версии в пакете, не попадающем в код для браузера, со сроком `until` и причиной, и только с согласия владельца репозитория; просроченное исключение снова останавливает проверку
 - `npm run build` (`tsc -b` — проверка типов — и `vite build`)
 
 Для фронтенда есть ESLint (`npm run lint`, в CI и перед деплоем); форматтеров и `dotnet format` нет — новые инструменты без согласования не добавляй. E2E-тесты (`npm run test:e2e`, Playwright) идут в CI отдельной джобой «E2E (Playwright)»; локально запускай их, если менял сценарии, которые они покрывают.
