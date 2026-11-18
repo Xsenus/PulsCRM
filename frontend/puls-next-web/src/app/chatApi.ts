@@ -58,6 +58,9 @@ export const setChatMemberRole = (id: number, userId: number, role: 'Member' | '
 
 export const leaveChat = (id: number) => call(() => api.post<void>(`/api/chat/conversations/${id}/leave`));
 
+/** Удалить групповой чат (только создатель): пропадет у всех, в базе только помечается удаленным. */
+export const deleteGroupChat = (id: number) => call(() => api.delete<void>(`/api/chat/conversations/${id}`));
+
 export const updateChatPreferences = (id: number, request: ChatConversationPreferencesRequest) =>
   call(() => api.put<ChatConversationDto>(`/api/chat/conversations/${id}/preferences`, request));
 

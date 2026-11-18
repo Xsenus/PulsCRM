@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useChat } from '../app/ChatContext';
+import { getChatConversations } from '../app/chatApi';
+import type { ChatConversationDto } from '../app/chatTypes';
 import { NewChatDialog } from '../components/chat/ChatDialogs';
 import { ChatSettingsDialog } from '../components/chat/ChatSettingsDialog';
 import { ChatSearchResults, useChatMessageSearch } from '../components/chat/ChatSearch';
@@ -20,9 +22,11 @@ export function ChatPage() {
   const jumpMessageId = Number(searchParams.get('message')) || null;
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [archived, setArchived] = useState<ChatConversationDto[]>([]);
+  const [showArchive, setShowArchive] = useState(false);
 
   const activeId = routeId ? Number(routeId) : null;
-  const active = chat.conversations.find((item) => item.id === activeId) ?? null;
+  const active = chat.conversations.find((item) => item.id === activeId) ?? archived.find((item) => item.id === activeId) ?? null;
   const activeFound = !!active;
   const { setActiveConversationId, conversationsLoaded, refreshConversations } = chat;
 
@@ -38,15 +42,34 @@ export function ChatPage() {
     }
   }, [activeFound, activeId, conversationsLoaded, refreshConversations]);
 
+  // Архив: диалоги, которые пользователь убрал из списка. Перечитываем, когда меняется основной список —
+  // диалог ушел в архив, вернулся из него или вернулся сам с новым сообщением.
+  const conversationIdsKey = chat.conversations.map((item) => item.id).join(',');
+  useEffect(() => {
+    if (!chat.enabled || !conversationsLoaded) {
+      return;
+    }
+
+    let alive = true;
+    getChatConversations(true)
+      .then((items) => alive && setArchived(items.filter((item) => item.isArchived)))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [chat.enabled, conversationsLoaded, conversationIdsKey]);
+
+  const archiveMode = showArchive && archived.length > 0;
+  const listSource = archiveMode ? archived : chat.conversations;
   const filtered = useMemo(() => {
     const term = filter.trim().toLowerCase();
     if (!term) {
-      return chat.conversations;
+      return listSource;
     }
 
-    return chat.conversations.filter((item) => item.title.toLowerCase().includes(term)
+    return listSource.filter((item) => item.title.toLowerCase().includes(term)
       || item.participants.some((participant) => participant.displayName.toLowerCase().includes(term)));
-  }, [chat.conversations, filter]);
+  }, [listSource, filter]);
 
   if (!chat.status) {
     return <div className="chat-page chat-page-loading">Загрузка чата…</div>;
@@ -90,15 +113,25 @@ export function ChatPage() {
           </div>
         ) : null}
 
+        {archiveMode ? (
+          <div className="chat-archive-head">
+            <button type="button" className="chat-icon-button" onClick={() => setShowArchive(false)} title="Назад к чатам" aria-label="Назад к чатам">
+              <ChatIcon name="back" />
+            </button>
+            <strong>Архив</strong>
+            <span className="chat-muted">Диалог вернется в список сам, когда придет новое сообщение.</span>
+          </div>
+        ) : null}
+
         <div className="chat-conversation-list">
           {!chat.conversationsLoaded ? <div className="chat-muted chat-list-hint">Загрузка…</div> : null}
-          {chat.conversationsLoaded && chat.conversations.length === 0 ? (
+          {chat.conversationsLoaded && chat.conversations.length === 0 && !archiveMode ? (
             <div className="chat-list-empty">
               <div className="chat-muted">Здесь появятся ваши диалоги.</div>
               <button type="button" className="primary-button button-inline" onClick={() => setNewChatOpen(true)}>Начать чат</button>
             </div>
           ) : null}
-          {chat.conversationsLoaded && chat.conversations.length > 0 && filtered.length === 0 && !messageSearch.enabled ? (
+          {chat.conversationsLoaded && listSource.length > 0 && filtered.length === 0 && !messageSearch.enabled ? (
             <div className="chat-muted chat-list-hint">Ничего не найдено</div>
           ) : null}
           {messageSearch.enabled && filtered.length > 0 ? <div className="chat-list-section">Чаты</div> : null}
@@ -111,6 +144,13 @@ export function ChatPage() {
               onRemoved={conversation.id === activeId ? () => navigate('/chat') : undefined}
             />
           ))}
+          {!archiveMode && archived.length > 0 && !messageSearch.enabled ? (
+            <button type="button" className="chat-archive-link" onClick={() => setShowArchive(true)}>
+              <ChatIcon name="archive" size={18} />
+              <span>Архив</span>
+              <span className="chat-archive-count">{archived.length}</span>
+            </button>
+          ) : null}
           {messageSearch.enabled ? (
             <>
               <div className="chat-list-section">Сообщения</div>

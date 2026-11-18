@@ -705,6 +705,43 @@ public sealed class ChatServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteGroup_OnlyOwner_HidesForEveryoneButKeepsData()
+    {
+        As(Alice);
+        var group = await _service.CreateGroupAsync(new ChatCreateGroupRequest { Title = "Проект", MemberUserIds = [Bob, Carol] }, CancellationToken.None);
+        await _service.SetMemberRoleAsync(group.Id, Bob, ChatParticipantRole.Admin, CancellationToken.None);
+        await _service.SendMessageAsync(group.Id, new ChatSendMessageRequest { Text = "Старт" }, CancellationToken.None);
+
+        // Администратор и участник удалить не могут — только создатель; личный диалог — тоже нет.
+        As(Bob);
+        await Assert.ThrowsAsync<ValidationException>(() => _service.DeleteGroupAsync(group.Id, CancellationToken.None));
+        var direct = await _service.OpenDirectAsync(Carol, CancellationToken.None);
+        await Assert.ThrowsAsync<ValidationException>(() => _service.DeleteGroupAsync(direct.Id, CancellationToken.None));
+
+        As(Alice);
+        _publisher.Events.Clear();
+        await _service.DeleteGroupAsync(group.Id, CancellationToken.None);
+
+        var removed = Assert.Single(_publisher.Events, x => x.Name == ChatEventNames.ConversationRemoved);
+        Assert.Equal([Alice, Bob, Carol], removed.UserIds.Order());
+        foreach (var user in new[] { Alice, Bob, Carol })
+        {
+            As(user);
+            Assert.DoesNotContain(await _service.GetConversationsAsync(includeArchived: true, CancellationToken.None), x => x.Id == group.Id);
+        }
+
+        As(Bob);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GetMessagesAsync(group.Id, null, 50, CancellationToken.None));
+
+        // В базе чат только помечен удаленным: запись и сообщения на месте.
+        var stored = _unitOfWork.GetObjectByKey<ChatConversation>(group.Id);
+        Assert.True(stored.IsRemoved);
+        Assert.Equal(Alice, stored.RemovedByUserId);
+        Assert.NotNull(stored.RemovedAtUtc);
+        Assert.Contains(new XPQuery<ChatMessage>(_unitOfWork), x => x.Conversation != null && x.Conversation.Oid == group.Id && x.Text == "Старт");
+    }
+
+    [Fact]
     public async Task ArchivedConversation_ReturnsOnNewMessage()
     {
         As(Alice);

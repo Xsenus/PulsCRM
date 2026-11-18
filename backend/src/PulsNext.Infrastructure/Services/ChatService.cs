@@ -386,6 +386,7 @@ public sealed partial class ChatService(
         if (remaining.Count == 0)
         {
             conversation.IsRemoved = true;
+            conversation.RemovedAtUtc = now;
         }
         else if (mine.Role == ChatParticipantRole.Owner)
         {
@@ -410,6 +411,25 @@ public sealed partial class ChatService(
         {
             await PublishConversationUpdatedAsync(conversation, cancellationToken);
         }
+    }
+
+    public async Task DeleteGroupAsync(int conversationId, CancellationToken cancellationToken)
+    {
+        var me = CurrentUserId;
+        var (conversation, mine) = RequireMembership(conversationId, me);
+        ValidationHelper.Guard(conversation.Kind == ChatConversationKind.Group, "Удалить можно только групповой чат — личный диалог можно убрать в архив.");
+        ValidationHelper.Guard(mine.Role == ChatParticipantRole.Owner, "Удалить групповой чат может только его создатель.");
+
+        // Мягкое удаление: чат перестает показываться всем, но запись, участники и сообщения остаются в базе.
+        var members = GetActiveUserIds(conversation.Oid);
+        var now = DateTime.UtcNow;
+        conversation.IsRemoved = true;
+        conversation.RemovedAtUtc = now;
+        conversation.RemovedByUserId = me;
+        conversation.UpdatedAtUtc = now;
+        unitOfWork.CommitChanges();
+
+        await eventPublisher.PublishAsync(members, ChatEventNames.ConversationRemoved, new ChatConversationRemovedEventDto { ConversationId = conversation.Oid }, cancellationToken);
     }
 
     public async Task<ChatConversationDto> PinMessageAsync(int conversationId, int? messageId, CancellationToken cancellationToken)

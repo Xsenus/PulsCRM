@@ -16,7 +16,7 @@ function phoneHref(phone: string) {
 }
 
 /** Содержимое карточки: фото, должность, статус, контакты, день рождения и действия. */
-export function ColleagueCardView({ colleague, online, onClose }: { colleague: ColleagueDto; online: boolean; onClose: () => void }) {
+export function ColleagueCardView({ colleague, online, onClose, showWrite = true }: { colleague: ColleagueDto; online: boolean; onClose: () => void; showWrite?: boolean }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { canWrite, write, busyUserId } = useWriteInChat();
@@ -64,7 +64,7 @@ export function ColleagueCardView({ colleague, online, onClose }: { colleague: C
             Редактировать
           </button>
         ) : null}
-        {canWrite(colleague.id) ? (
+        {showWrite && canWrite(colleague.id) ? (
           <button
             type="button"
             className="primary-button button-inline"

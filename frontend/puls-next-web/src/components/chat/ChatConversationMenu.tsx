@@ -19,9 +19,12 @@ export function useConversationActions(conversation: ChatConversationDto, onRemo
       if (patch.isArchived) {
         chat.removeConversation(conversation.id);
         onRemoved?.();
-        showToast('Диалог перенесен в архив. Он вернется, когда придет новое сообщение.', 'info', 4000);
+        showToast('Диалог в архиве. Вернется в список с новым сообщением.', 'info', 4000);
       } else {
         chat.upsertConversation(updated);
+        if (patch.isArchived === false) {
+          showToast('Диалог возвращен из архива.', 'success');
+        }
       }
     } catch (error) {
       showToast(getApiErrorMessage(error, 'Не удалось изменить настройки диалога.'), 'error');
@@ -82,7 +85,11 @@ export function ChatConversationMenu({ conversation, position, onClose, onOpenIn
               {isGroup ? 'Настройки группы' : 'О собеседнике'}
             </ChatMenuItem>
           ],
-          [<ChatMenuItem icon="archive" onClick={run(() => setPreference({ isArchived: true }))}>В архив</ChatMenuItem>]
+          [
+            <ChatMenuItem icon="archive" onClick={run(() => setPreference({ isArchived: !conversation.isArchived }))}>
+              {conversation.isArchived ? 'Вернуть из архива' : 'В архив'}
+            </ChatMenuItem>
+          ]
         ]}
       />
     </ChatContextMenu>

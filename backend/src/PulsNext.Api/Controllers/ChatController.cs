@@ -180,6 +180,18 @@ public sealed class ChatController(IChatService chatService) : ControllerBase
     }
 
     /// <summary>
+    /// Удаление группового чата (только создатель): чат пропадает у всех участников; в базе он только
+    /// помечается удаленным, сообщения сохраняются.
+    /// </summary>
+    [HttpDelete("conversations/{id:int}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteGroup([FromRoute] int id, CancellationToken cancellationToken)
+    {
+        await chatService.DeleteGroupAsync(id, cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Личные настройки диалога: без звука, закреплен, в архиве.
     /// </summary>
     [HttpPut("conversations/{id:int}/preferences")]
