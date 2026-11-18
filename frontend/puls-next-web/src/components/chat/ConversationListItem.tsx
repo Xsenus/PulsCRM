@@ -47,7 +47,7 @@ export function ConversationListItem({ conversation, active, onClick, onRemoved 
         }
       }}
     >
-      <ChatAvatar name={conversation.title} seed={conversation.peerUserId ?? `g${conversation.id}`} icon={conversation.icon} online={online} group={isGroup} size={44} />
+      <ChatAvatar name={conversation.title} seed={conversation.peerUserId ?? `g${conversation.id}`} userId={isGroup ? null : conversation.peerUserId} icon={conversation.icon} online={online} group={isGroup} size={44} />
       <span className="chat-conversation-body">
         <span className="chat-conversation-top">
           <span className="chat-conversation-title">{conversation.title}</span>

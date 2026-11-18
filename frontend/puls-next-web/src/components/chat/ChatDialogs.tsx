@@ -87,7 +87,7 @@ function UserPicker({ users, loading, search, onSearch, selected, onToggle, excl
               className={`chat-user-row${isSelected ? ' selected' : ''}`}
               onClick={() => onToggle(user)}
             >
-              <ChatAvatar name={user.displayName} seed={user.id} size={36} online={onlineUserIds.has(user.id)} />
+              <ChatAvatar name={user.displayName} seed={user.id} userId={user.id} size={36} online={onlineUserIds.has(user.id)} />
               <span className="chat-user-row-text">
                 <span className="chat-user-row-name">{user.displayName}</span>
                 <span className="chat-user-row-meta">{[user.login, user.groupName].filter(Boolean).join(' · ')}</span>
@@ -279,7 +279,7 @@ export function ForwardMessageDialog({ message, onClose }: {
                 className={`chat-user-row${isSelected ? ' selected' : ''}`}
                 onClick={() => toggle(item.id)}
               >
-                <ChatAvatar name={item.title} seed={item.peerUserId ?? `g${item.id}`} icon={item.icon} group={isGroupConversation(item)} size={36} />
+                <ChatAvatar name={item.title} seed={item.peerUserId ?? `g${item.id}`} userId={item.peerUserId} icon={item.icon} group={isGroupConversation(item)} size={36} />
                 <span className="chat-user-row-text">
                   <span className="chat-user-row-name">{item.title}</span>
                   <span className="chat-user-row-meta">{isGroupConversation(item) ? `Групповой · ${item.participants.length}` : 'Личный'}</span>
@@ -492,7 +492,7 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
         </div>
       ) : (
         <div className="chat-info-head">
-          <ChatAvatar name={conversation.title} seed={conversation.peerUserId ?? conversation.id} icon={conversation.icon} size={56} group={isGroup} />
+          <ChatAvatar name={conversation.title} seed={conversation.peerUserId ?? conversation.id} userId={isGroup ? null : conversation.peerUserId} icon={conversation.icon} size={56} group={isGroup} />
           <div>
             <div className="chat-info-title">{conversation.title}</div>
             {conversation.description ? <div className="chat-muted">{conversation.description}</div> : null}
@@ -546,7 +546,7 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
               const isMe = participant.userId === currentUserId;
               return (
                 <div key={participant.userId} className="chat-member-row">
-                  <ChatAvatar name={participant.displayName} seed={participant.userId} size={34} online={onlineUserIds.has(participant.userId)} />
+                  <ChatAvatar name={participant.displayName} seed={participant.userId} userId={participant.userId} size={34} online={onlineUserIds.has(participant.userId)} />
                   <span className="chat-user-row-text">
                     <button
                       type="button"

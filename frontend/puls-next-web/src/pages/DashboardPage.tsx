@@ -78,6 +78,7 @@ function ChatCard() {
               <ChatAvatar
                 name={conversation.title}
                 seed={conversation.peerUserId ?? `g${conversation.id}`}
+                userId={isGroupConversation(conversation) ? null : conversation.peerUserId}
                 icon={conversation.icon}
                 group={isGroupConversation(conversation)}
                 online={!!conversation.peerUserId && chat.onlineUserIds.has(conversation.peerUserId)}

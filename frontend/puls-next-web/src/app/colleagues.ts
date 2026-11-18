@@ -65,6 +65,24 @@ export function forgetColleaguePhoto(id: number) {
   const cached = photoCache.get(id);
   photoCache.delete(id);
   void cached?.then((url) => url && URL.revokeObjectURL(url));
+  forgetColleaguesCache();
+}
+
+/**
+ * Фото сотрудника по id (для аватаров в чате): по справочнику (кэш на 5 минут) проверяем, есть ли фото,
+ * и только тогда качаем его — без лишних запросов за теми, у кого фото нет. null — фото нет.
+ */
+export async function loadUserPhoto(id: number): Promise<string | null> {
+  if (photoCache.has(id)) {
+    return photoCache.get(id)!;
+  }
+
+  try {
+    const colleague = (await getColleaguesCached(5 * 60_000)).find((item) => item.id === id);
+    return colleague?.hasPhoto ? loadColleaguePhoto(id) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Фото коллеги как object URL (запрос с токеном), один раз на вкладку; null — фото нет. */
