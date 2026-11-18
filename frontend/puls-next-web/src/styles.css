@@ -5309,16 +5309,23 @@ body.is-dragging-column {
   top: 20px;
   z-index: 1000;
   display: grid;
+  justify-items: end;
   gap: 10px;
-  width: min(420px, calc(100vw - 40px));
+  /* Ширина по тексту: короткое сообщение — в одну строку, длинное переносится не раньше 560 px. */
+  max-width: min(560px, calc(100vw - 40px));
+  pointer-events: none;
 }
 
 .toast {
   position: relative;
   display: grid;
   gap: 5px;
-  min-width: 0;
+  width: max-content;
+  min-width: 240px;
+  max-width: 100%;
   padding: 14px 16px 14px 18px;
+  overflow-wrap: anywhere;
+  pointer-events: auto;
   border-radius: 14px;
   border: 1px solid transparent;
   color: var(--text);

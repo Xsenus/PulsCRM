@@ -30,7 +30,9 @@ const apiMocks = vi.hoisted(() => ({
   addChatMembers: vi.fn(),
   removeChatMember: vi.fn(),
   setChatMemberRole: vi.fn(),
-  leaveChat: vi.fn()
+  leaveChat: vi.fn(),
+  deleteGroupChat: vi.fn(),
+  getChatConversations: vi.fn()
 }));
 
 const chatState = vi.hoisted(() => ({ value: null as any }));
@@ -164,6 +166,7 @@ beforeEach(() => {
   chatState.value = createChat();
   apiMocks.getChatMessages.mockResolvedValue({ items: [message(1), message(2), message(3, { senderUserId: ME, senderName: 'Алиса' })], hasMoreBefore: false });
   apiMocks.markChatRead.mockResolvedValue(undefined);
+  apiMocks.getChatConversations.mockResolvedValue([]);
   apiMocks.sendChatMessage.mockImplementation(async (_id: number, request: { text?: string; replyToMessageId?: number }) => message(50, {
     senderUserId: ME,
     senderName: 'Алиса',
@@ -219,6 +222,32 @@ describe('ChatPage', () => {
     expect(item.textContent).toContain('Сообщение 2');
     expect(item.querySelector('.chat-unread-badge')?.textContent).toBe('1');
     expect(container!.textContent).toContain('Выберите диалог');
+  });
+
+  it('shows archived conversations behind the Archive link and returns one back to the list', async () => {
+    const archivedConversation = conversation({ id: 30, kind: 1, peerUserId: null, title: 'Старый проект', isArchived: true, unreadCount: 0 });
+    apiMocks.getChatConversations.mockResolvedValue([conversation(), archivedConversation]);
+    apiMocks.updateChatPreferences.mockResolvedValue({ ...archivedConversation, isArchived: false });
+    render('/chat');
+    await flush();
+
+    expect(apiMocks.getChatConversations).toHaveBeenCalledWith(true);
+    const link = container!.querySelector('.chat-archive-link') as HTMLButtonElement;
+    expect(link.textContent).toContain('Архив');
+    expect(link.textContent).toContain('1');
+    act(() => link.click());
+
+    const items = Array.from(container!.querySelectorAll('.chat-conversation-item'));
+    expect(items).toHaveLength(1);
+    expect(items[0].textContent).toContain('Старый проект');
+    act(() => (items[0] as HTMLElement).click());
+    await flush();
+
+    const unarchive = container!.querySelector('button[aria-label="Вернуть из архива"]') as HTMLButtonElement;
+    act(() => unarchive.click());
+    await flush();
+    expect(apiMocks.updateChatPreferences).toHaveBeenCalledWith(30, { isArchived: false });
+    expect(chatState.value.upsertConversation).toHaveBeenCalledWith(expect.objectContaining({ id: 30, isArchived: false }));
   });
 
   it('loads messages, shows unread divider, read ticks and marks conversation read', async () => {

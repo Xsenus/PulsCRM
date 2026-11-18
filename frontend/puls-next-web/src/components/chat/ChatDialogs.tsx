@@ -6,6 +6,7 @@ import {
   addChatMembers,
   createGroupChat,
   forwardChatMessage,
+  deleteGroupChat,
   leaveChat,
   openDirectChat,
   removeChatMember,
@@ -21,6 +22,8 @@ import { ChatAvatar } from './ChatAvatar';
 import { describeMessageBody } from '../../app/chatFormat';
 import { GROUP_ICONS } from './EmojiPicker';
 import { ChatAttachmentMiniThumb } from './ChatAttachmentView';
+import { ColleagueCardView } from '../ColleagueCardDialog';
+import { getColleague, type ColleagueDto } from '../../app/colleagues';
 
 function useUserSearch(open: boolean) {
   const [search, setSearch] = useState('');
@@ -433,10 +436,26 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [peer, setPeer] = useState<ColleagueDto | null>(null);
   const { search, setSearch, users, loading } = useUserSearch(open && adding);
+
+  // Личный диалог: сведения о собеседнике — из карточки сотрудника (справочник коллег).
+  useEffect(() => {
+    let active = true;
+    setPeer(null);
+    if (open && !isGroup && conversation.peerUserId) {
+      getColleague(conversation.peerUserId).then((value) => active && setPeer(value)).catch(() => undefined);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [open, isGroup, conversation.peerUserId]);
 
   useEffect(() => {
     if (open) {
+      setConfirmDelete(false);
       setTitle(conversation.title);
       setDescription(conversation.description ?? '');
       setIcon(conversation.icon ?? GROUP_ICONS[0]);
@@ -467,8 +486,10 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
   const dirty = title.trim() !== conversation.title || description.trim() !== (conversation.description ?? '') || icon !== (conversation.icon ?? GROUP_ICONS[0]);
 
   return (
-    <Modal open={open} title={isGroup ? 'О групповом чате' : 'О диалоге'} onClose={onClose} maxWidth={600}>
-      {isGroup && canManage ? (
+    <Modal open={open} title={isGroup ? 'О групповом чате' : 'О собеседнике'} onClose={onClose} maxWidth={isGroup ? 600 : 520}>
+      {!isGroup && peer ? (
+        <ColleagueCardView colleague={peer} online={onlineUserIds.has(peer.id)} onClose={onClose} showWrite={false} />
+      ) : isGroup && canManage ? (
         <div className="chat-group-form">
           <div className="chat-icon-picker" role="radiogroup" aria-label="Иконка чата">
             {GROUP_ICONS.map((item) => (
@@ -594,24 +615,53 @@ export function ConversationInfoDialog({ open, conversation, onClose, onLeft }: 
             })}
           </div>
 
-          <button
-            type="button"
-            className="secondary-button button-inline danger-button chat-leave-button"
-            disabled={busy}
-            onClick={() => {
-              if (!window.confirm('Покинуть чат? Вернуть вас сможет администратор.')) {
-                return;
-              }
+          {confirmDelete ? (
+            <div className="chat-delete-confirm" role="alertdialog" aria-label="Удалить чат">
+              <strong>Удалить чат «{conversation.title}» для всех?</strong>
+              <span>Чат пропадет из списка у всех участников. История сохранится в базе, но открыть чат будет нельзя.</span>
+              <div className="button-group">
+                <button type="button" className="secondary-button button-inline" onClick={() => setConfirmDelete(false)} disabled={busy}>Отмена</button>
+                <button
+                  type="button"
+                  className="secondary-button button-inline danger-button"
+                  disabled={busy}
+                  onClick={() => void run(async () => {
+                    await deleteGroupChat(conversation.id);
+                    removeConversation(conversation.id);
+                    onLeft();
+                  }, 'Чат удален.')}
+                >
+                  Удалить для всех
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="chat-group-danger">
+              <button
+                type="button"
+                className="secondary-button button-inline danger-button"
+                disabled={busy}
+                onClick={() => {
+                  if (!window.confirm('Покинуть чат? Вернуть вас сможет администратор.')) {
+                    return;
+                  }
 
-              void run(async () => {
-                await leaveChat(conversation.id);
-                removeConversation(conversation.id);
-                onLeft();
-              });
-            }}
-          >
-            Покинуть чат
-          </button>
+                  void run(async () => {
+                    await leaveChat(conversation.id);
+                    removeConversation(conversation.id);
+                    onLeft();
+                  });
+                }}
+              >
+                Покинуть чат
+              </button>
+              {myRank === 2 ? (
+                <button type="button" className="secondary-button button-inline danger-button" disabled={busy} onClick={() => setConfirmDelete(true)}>
+                  Удалить чат
+                </button>
+              ) : null}
+            </div>
+          )}
         </>
       ) : null}
     </Modal>

@@ -50,6 +50,10 @@ public interface IChatService
     Task<ChatConversationDto> RemoveMemberAsync(int conversationId, int userId, CancellationToken cancellationToken);
     Task<ChatConversationDto> SetMemberRoleAsync(int conversationId, int userId, ChatParticipantRole role, CancellationToken cancellationToken);
     Task LeaveAsync(int conversationId, CancellationToken cancellationToken);
+    /// <summary>
+    /// Удаление группового чата создателем: чат пропадает у всех, запись и сообщения остаются в базе.
+    /// </summary>
+    Task DeleteGroupAsync(int conversationId, CancellationToken cancellationToken);
     Task<ChatConversationDto> UpdatePreferencesAsync(int conversationId, ChatConversationPreferencesRequest request, CancellationToken cancellationToken);
     Task<ChatConversationDto> PinMessageAsync(int conversationId, int? messageId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<ChatSearchResultDto>> SearchMessagesAsync(string? query, int? conversationId, int take, CancellationToken cancellationToken);

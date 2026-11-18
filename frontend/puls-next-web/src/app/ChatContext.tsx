@@ -230,9 +230,10 @@ export function ChatProvider({ userId, children }: { userId: number | null; chil
   }, []);
 
   const upsertConversation = useCallback((conversation: ChatConversationDto) => {
+    // Архивный диалог в основной список не попадает (например, после переименования группы) — он виден в «Архиве».
     setConversations((current) => sortConversations([
       ...current.filter((item) => item.id !== conversation.id),
-      conversation
+      ...(conversation.isArchived ? [] : [conversation])
     ]));
   }, []);
 

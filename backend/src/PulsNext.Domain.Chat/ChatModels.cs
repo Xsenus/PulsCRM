@@ -306,12 +306,34 @@ public class ChatConversation(Session session) : XPObject(session)
     }
 
     /// <summary>
-    /// Диалог удален (например, из группы вышли все участники).
+    /// Диалог удален (из группы вышли все участники или создатель удалил группу). Запись и сообщения остаются
+    /// в базе — диалог только перестает показываться.
     /// </summary>
     public bool IsRemoved
     {
         get => _isRemoved;
         set => SetPropertyValue(nameof(IsRemoved), ref _isRemoved, value);
+    }
+
+    private DateTime? _removedAtUtc;
+    private int _removedByUserId;
+
+    /// <summary>
+    /// Когда диалог удален (null — не удален или удален до появления этого поля).
+    /// </summary>
+    public DateTime? RemovedAtUtc
+    {
+        get => _removedAtUtc;
+        set => SetPropertyValue(nameof(RemovedAtUtc), ref _removedAtUtc, value);
+    }
+
+    /// <summary>
+    /// Кто удалил диалог (0 — удален автоматически, когда вышли все участники).
+    /// </summary>
+    public int RemovedByUserId
+    {
+        get => _removedByUserId;
+        set => SetPropertyValue(nameof(RemovedByUserId), ref _removedByUserId, value);
     }
 }
 

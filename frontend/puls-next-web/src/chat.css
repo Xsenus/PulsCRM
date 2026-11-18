@@ -1803,16 +1803,6 @@ textarea.chat-input {
   font-weight: 700;
 }
 
-.chat-leave-button {
-  margin-top: 16px;
-  min-height: 40px;
-  border: 0;
-  border-radius: 12px;
-  padding: 0 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 /* Оповещения */
 .chat-notifications {
   position: fixed;
@@ -2998,4 +2988,75 @@ textarea.chat-input {
   height: 100%;
   border-radius: inherit;
   object-fit: cover;
+}
+
+/* Архив диалогов: ссылка внизу списка и шапка режима просмотра. */
+.chat-archive-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 16px);
+  margin: 6px 8px 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-archive-link:hover,
+.chat-archive-link:focus-visible {
+  background: var(--surface-muted, rgba(15, 23, 42, 0.04));
+  color: var(--text);
+}
+
+.chat-archive-count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--border);
+  color: var(--text);
+  font-size: 12px;
+  text-align: center;
+}
+
+.chat-archive-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 8px;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-archive-head .chat-muted {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+
+/* Опасные действия группы: «Покинуть» и «Удалить для всех» с подтверждением внутри окна. */
+.chat-group-danger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.chat-delete-confirm {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+}
+
+.chat-delete-confirm span {
+  color: var(--text-muted);
+  font-size: 13px;
 }
