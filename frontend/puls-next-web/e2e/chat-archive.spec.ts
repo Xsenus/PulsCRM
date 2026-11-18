@@ -82,6 +82,10 @@ test('archived chats open from the Archive link and return to the list', async (
   await expect(sidebar.locator('.chat-conversation-item')).toHaveCount(2);
   const archiveLink = sidebar.getByRole('button', { name: /Архив/ });
   await expect(archiveLink).toContainText('1');
+  // Ссылка закреплена внизу панели, а не сразу под списком.
+  const sidebarBox = (await sidebar.boundingBox())!;
+  const linkBox = (await archiveLink.boundingBox())!;
+  expect(sidebarBox.y + sidebarBox.height - (linkBox.y + linkBox.height)).toBeLessThan(16);
   await archiveLink.click();
 
   await expect(sidebar.locator('.chat-archive-head')).toContainText('Архив');
