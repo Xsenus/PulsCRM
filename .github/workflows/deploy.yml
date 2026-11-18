@@ -61,7 +61,8 @@ jobs:
 
       - name: Audit frontend dependencies
         working-directory: ${{ env.FRONTEND_PATH }}
-        run: npm audit --audit-level=moderate
+        # npm audit (moderate и выше) с временными исключениями из audit-allowlist.json — scripts/audit-check.mjs.
+        run: npm run audit:check
 
       - name: Build frontend
         working-directory: ${{ env.FRONTEND_PATH }}

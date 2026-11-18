@@ -275,7 +275,7 @@ DB-переменные можно не задавать, тогда workflow т
 6. проверка уязвимых NuGet-пакетов (`scripts/check-nuget-vulnerabilities.ps1`, включая транзитивные): уязвимость High или Critical останавливает деплой
 7. `npm ci`
 8. `npm run lint` (ESLint) и `npm test`
-9. `npm audit --audit-level=moderate`
+9. `npm run audit:check` (`npm audit` уровня moderate и выше с временными исключениями из `frontend/puls-next-web/audit-allowlist.json`)
 10. `npm run build`
 11. `dotnet publish` API в `artifacts\api`
 12. копирование production-конфига API

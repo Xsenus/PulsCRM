@@ -106,6 +106,7 @@ export function ChatSearchResults({ search, showConversation, onSelect }: {
               <ChatAvatar
                 name={result.conversationTitle}
                 seed={result.peerUserId ?? `g${result.conversationId}`}
+                userId={isGroup ? null : result.peerUserId}
                 icon={result.conversationIcon}
                 group={isGroup}
                 size={36}

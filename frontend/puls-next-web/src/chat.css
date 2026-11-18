@@ -2991,3 +2991,11 @@ textarea.chat-input {
 .chat-menu-item.danger .chat-menu-icon {
   color: inherit;
 }
+
+/* Фото сотрудника в аватаре чата (если есть в справочнике коллег). */
+.chat-avatar-photo img {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}

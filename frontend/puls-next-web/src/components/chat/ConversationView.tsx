@@ -866,6 +866,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
           <ChatAvatar
             name={conversation.title}
             seed={conversation.peerUserId ?? `g${conversation.id}`}
+            userId={isGroup ? null : (peer?.userId ?? conversation.peerUserId)}
             icon={conversation.icon}
             group={isGroup}
             online={!!peer && chat.onlineUserIds.has(peer.userId)}
@@ -1122,7 +1123,7 @@ export function ConversationView({ conversation, onBack, compact = false, header
                     onMouseDown={(event) => event.preventDefault()}
                     onClick={() => chooseMention(participant)}
                   >
-                    <ChatAvatar name={participant.displayName} seed={participant.userId} size={28} online={chat.onlineUserIds.has(participant.userId)} />
+                    <ChatAvatar name={participant.displayName} seed={participant.userId} userId={participant.userId} size={28} online={chat.onlineUserIds.has(participant.userId)} />
                     <span>{participant.displayName}</span>
                     {participant.login ? <span className="chat-muted">@{participant.login}</span> : null}
                   </button>

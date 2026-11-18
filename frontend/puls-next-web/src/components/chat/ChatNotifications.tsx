@@ -62,6 +62,7 @@ export function ChatNotifications() {
             <ChatAvatar
               name={notification.isGroup ? notification.title : notification.author}
               seed={notification.isGroup ? `g${notification.conversationId}` : notification.authorUserId}
+              userId={notification.isGroup ? null : notification.authorUserId}
               icon={notification.icon}
               group={notification.isGroup}
               size={40}

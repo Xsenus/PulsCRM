@@ -294,6 +294,30 @@ test('employee links and authors in a group open the colleague card', async ({ p
   await expect(dialog).toHaveCount(0);
 });
 
+test('chat avatars show the employee photo from the colleague directory', async ({ page }) => {
+  await mockChat(page);
+  const photoRequests: string[] = [];
+  await page.route(/\/api\/colleagues$/, (route) => fulfillJson(route, [
+    { id: 2, fullName: 'Петрова Анна Сергеевна', hasPhoto: true, isMale: false },
+    { id: 4, fullName: 'Смирнов Дмитрий', hasPhoto: false, isMale: true }
+  ]));
+  await page.route(/\/api\/colleagues\/\d+\/photo$/, (route) => {
+    photoRequests.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: 'image/png', body: pngPixel });
+  });
+
+  await page.goto('/chat/10');
+  const list = page.locator('.chat-conversation-item');
+  // Петрова — фото в списке и в шапке диалога; у Смирнова фото нет — инициалы и без запроса за фото.
+  await expect(list.filter({ hasText: 'Петрова Анна Сергеевна' }).locator('.chat-avatar img')).toHaveAttribute('src', /^blob:/);
+  await expect(page.locator('.chat-view-head .chat-avatar img')).toHaveAttribute('src', /^blob:/);
+  await expect(list.filter({ hasText: 'Смирнов Дмитрий' }).locator('.chat-avatar')).toHaveText('СД');
+  // У группы — своя иконка, а не фото.
+  await expect(list.filter({ hasText: 'Отдел продаж' }).locator('.chat-avatar img')).toHaveCount(0);
+  expect(photoRequests.every((url) => url.includes('/api/colleagues/2/photo'))).toBe(true);
+  expect(photoRequests).toHaveLength(1);
+});
+
 test('large images are uploaded with a thumbnail and the feed loads the thumbnail', async ({ page }) => {
   await mockChat(page);
   const uploads: { body: string; length: number }[] = [];
