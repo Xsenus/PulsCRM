@@ -2990,15 +2990,20 @@ textarea.chat-input {
   object-fit: cover;
 }
 
-/* Архив диалогов: ссылка внизу списка и шапка режима просмотра. */
+/* Архив диалогов: ссылка, закрепленная внизу панели, и шапка режима просмотра. */
+.chat-archive-footer {
+  flex-shrink: 0;
+  padding: 6px;
+  border-top: 1px solid var(--border);
+}
+
 .chat-archive-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: calc(100% - 16px);
-  margin: 6px 8px 10px;
+  width: 100%;
   padding: 10px 12px;
-  border: 1px dashed var(--border);
+  border: 0;
   border-radius: 12px;
   background: transparent;
   color: var(--text-muted);

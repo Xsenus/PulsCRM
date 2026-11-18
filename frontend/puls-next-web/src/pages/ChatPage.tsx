@@ -144,13 +144,6 @@ export function ChatPage() {
               onRemoved={conversation.id === activeId ? () => navigate('/chat') : undefined}
             />
           ))}
-          {!archiveMode && archived.length > 0 && !messageSearch.enabled ? (
-            <button type="button" className="chat-archive-link" onClick={() => setShowArchive(true)}>
-              <ChatIcon name="archive" size={18} />
-              <span>Архив</span>
-              <span className="chat-archive-count">{archived.length}</span>
-            </button>
-          ) : null}
           {messageSearch.enabled ? (
             <>
               <div className="chat-list-section">Сообщения</div>
@@ -162,6 +155,17 @@ export function ChatPage() {
             </>
           ) : null}
         </div>
+
+        {/* Архив закреплен внизу панели: не уезжает при прокрутке длинного списка. */}
+        {!archiveMode && archived.length > 0 && !messageSearch.enabled ? (
+          <div className="chat-archive-footer">
+            <button type="button" className="chat-archive-link" onClick={() => setShowArchive(true)}>
+              <ChatIcon name="archive" size={18} />
+              <span>Архив</span>
+              <span className="chat-archive-count">{archived.length}</span>
+            </button>
+          </div>
+        ) : null}
       </aside>
 
       <section className="chat-main">
